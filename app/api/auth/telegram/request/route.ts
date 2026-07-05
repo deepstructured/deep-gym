@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
   try {
     await sendTelegramMessage(
       link.chat_id,
-      `🔐 Your DeepGym login code: <b>${code}</b>\n\nIt expires in 5 minutes. If it wasn't you — just ignore this message.`,
+      `🔐 Your DeepGym login code:\n\n<code>${code}</code>\n\nTap the code to copy it. It expires in 5 minutes. If it wasn't you — just ignore this message.`,
     );
   } catch {
     return NextResponse.json(
