@@ -26,6 +26,5 @@ next-env.d.ts
 # local-only assets (not for the public repo)
 /behance-reference
 /fonts
-/supabase
 /.claude
 

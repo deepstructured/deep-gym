@@ -18,11 +18,9 @@ npm run dev
 ## 2. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com).
-2. Open **SQL Editor** and run every file from `supabase/migrations/` **in order**:
-   - `0001_init.sql` — schema, RLS, default muscle groups
-   - `0002_add_dumbbell.sql` — dumbbell equipment type
-   - `0003_exercise_unit.sql` — per-exercise kg/lb override
-   - `0004_plates_lb.sql` — plates denominated in lb (`profiles.plates_lb`)
+2. Open **SQL Editor** and run `supabase/migrations/0001_init.sql` —
+   it creates the full schema: tables, RLS policies and the default
+   muscle groups.
 3. **Project Settings → API**: copy into `.env.local`:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
