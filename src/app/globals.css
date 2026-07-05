@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-urbanist), ui-sans-serif, system-ui, -apple-system,
+    sans-serif;
+  --font-dot: var(--font-matricha), ui-monospace, monospace;
+
+  --color-bg: #0a0a0c;
+  --color-surface: #151518;
+  --color-raised: #1e1e23;
+  --color-line: #2a2a31;
+  --color-text: #f5f5f7;
+  --color-muted: #98989f;
+  --color-faint: #5c5c64;
+
+  --color-pink: #f56785;
+  --color-purple: #622585;
+  --color-indigo: #182788;
+  --color-indigo-bright: #4054d6;
+  --color-flame: #e04b2e;
+  --color-lime: #d7f651;
+
+  --radius-card: 1.75rem;
+  --radius-tile: 1.25rem;
+
+  --animate-sheet-up: sheet-up 0.28s cubic-bezier(0.32, 0.72, 0.2, 1);
+  --animate-fade-in: fade-in 0.2s ease-out;
+
+  @keyframes sheet-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+  }
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+}
+
+@layer components {
+  /* Gradient card fills — matched to the Airofit-style reference */
+  .grad-pink {
+    background:
+      radial-gradient(
+        130% 95% at 50% -10%,
+        #ff8ba4 0%,
+        #f56785 28%,
+        #a93b86 58%,
+        #622585 80%,
+        #2c1042 100%
+      );
+  }
+  .grad-indigo {
+    background:
+      radial-gradient(
+        135% 110% at 50% -15%,
+        #5468e6 0%,
+        #2e3fb8 35%,
+        #182788 62%,
+        #0a1040 100%
+      );
+  }
+  .grad-flame {
+    background:
+      radial-gradient(
+        125% 120% at 50% 118%,
+        #ff6a3d 0%,
+        #e04b2e 30%,
+        #8c2412 62%,
+        #330d05 100%
+      );
+  }
+  .glow-pink {
+    box-shadow: 0 16px 70px -14px rgba(245, 103, 133, 0.5);
+  }
+  .glow-indigo {
+    box-shadow: 0 16px 70px -14px rgba(64, 84, 214, 0.45);
+  }
+  .glow-flame {
+    box-shadow: 0 16px 70px -14px rgba(224, 75, 46, 0.45);
+  }
+
+  /* Dot-matrix decorative background */
+  .dots-bg {
+    background-image: radial-gradient(
+      rgba(255, 255, 255, 0.16) 1px,
+      transparent 1.4px
+    );
+    background-size: 13px 13px;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
