@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  @font-face {
+    font-family: "Matricha";
+    src: url("../../src/shared/fonts/matricha.ttf") format("truetype");
+  }
+  :root {
+    --bg: #0a0a0c;
+    --surface: #151518;
+    --line: #2a2a31;
+    --text: #f5f5f7;
+    --muted: #98989f;
+    --pink: #f56785;
+    --purple: #622585;
+    --lime: #d7f651;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Urbanist", sans-serif;
+    position: relative;
+  }
+  .glow {
+    position: absolute; top: -380px; right: -380px;
+    width: 1100px; height: 1000px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(245,103,133,.28), rgba(98,37,133,.16) 55%, transparent);
+  }
+  .glow2 {
+    position: absolute; bottom: -420px; left: -320px;
+    width: 1000px; height: 900px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(24,39,136,.38), transparent);
+  }
+  .dots {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255,255,255,.09) 2.2px, transparent 2.6px);
+    background-size: 34px 34px;
+    -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,.85), rgba(0,0,0,.12) 40%, rgba(0,0,0,.75));
+  }
+
+  .logo {
+    position: absolute; top: 84px; left: 0; right: 0; text-align: center;
+    font-family: "Matricha", monospace;
+    font-size: 56px; color: var(--lime); letter-spacing: 2px;
+  }
+
+  h1 {
+    position: absolute; top: 190px; left: 80px; right: 80px;
+    text-align: center; font-size: 84px; font-weight: 800; line-height: 1.12;
+    letter-spacing: -1px;
+  }
+  h1 span {
+    background: linear-gradient(92deg, var(--pink), #b06cf0);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  .features {
+    position: absolute; top: 430px; left: 72px; right: 72px;
+    display: flex; flex-direction: column; gap: 30px;
+  }
+  .feature {
+    display: flex; align-items: center; gap: 34px;
+    background: rgba(21,21,24,.82); border: 2px solid var(--line);
+    border-radius: 44px; padding: 34px 42px;
+    backdrop-filter: blur(6px);
+  }
+  .feature .emoji {
+    width: 96px; height: 96px; flex: none; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 52px; background: rgba(215,246,81,.12);
+    border: 2px solid rgba(215,246,81,.3);
+  }
+  .feature b { display: block; font-size: 44px; font-weight: 700; }
+  .feature p { font-size: 36px; color: var(--muted); margin-top: 6px; line-height: 1.25; }
+  .feature p em { color: var(--lime); font-style: normal; font-family: "Matricha", monospace; font-size: 32px; }
+  /* Matricha has no proper "×" glyph — keep it in Urbanist */
+  .feature p em i { font-style: normal; font-family: "Urbanist", sans-serif; font-weight: 700; }
+
+  .fade-bottom {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 460px;
+    background: linear-gradient(180deg, transparent, rgba(10,10,12,.92) 62%);
+  }
+
+  .phones {
+    position: absolute; top: 1130px; left: 0; right: 0;
+    display: flex; justify-content: center; gap: 44px;
+  }
+  .phone {
+    width: 420px; border-radius: 58px; overflow: hidden;
+    border: 8px solid #232329;
+  }
+  .phone.left  { transform: rotate(-4deg) translateY(26px);
+    box-shadow: 0 50px 130px -28px rgba(24,39,136,.6); }
+  .phone.right { transform: rotate(3deg);
+    box-shadow: 0 50px 130px -28px rgba(245,103,133,.45); }
+  .phone img { display: block; width: 100%; margin-top: -8%; }
+  .phone.right img { margin-top: -52%; }
+
+  .cta {
+    position: absolute; bottom: 88px; left: 0; right: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 22px;
+  }
+  .cta .pill {
+    background: var(--lime); color: #0a0a0c;
+    font-size: 50px; font-weight: 800;
+    padding: 34px 72px; border-radius: 999px;
+    box-shadow: 0 28px 90px -16px rgba(215,246,81,.55);
+  }
+  .cta p { font-size: 38px; color: var(--muted); font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="glow2"></div>
+  <div class="dots"></div>
+
+  <div class="logo">DeepGym</div>
+
+  <h1>Приложение<br />помнит <span>всё за тебя</span></h1>
+
+  <div class="features">
+    <div class="feature">
+      <div class="emoji">🏋️</div>
+      <div>
+        <b>Сам считает блины</b>
+        <p>60 кг → <em>2<i>×</i>20 + 2<i>×</i>10</em> — все варианты из твоих блинов</p>
+      </div>
+    </div>
+    <div class="feature">
+      <div class="emoji">📈</div>
+      <div>
+        <b>Показывает прогресс</b>
+        <p>график рабочего веса и статистика по каждому упражнению</p>
+      </div>
+    </div>
+    <div class="feature">
+      <div class="emoji">⚙️</div>
+      <div>
+        <b>Хранит настройки тренажёров</b>
+        <p>высота сиденья и спинки — всегда под рукой</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="phones">
+    <div class="phone left"><img src="../../docs/screenshots/exercise-detail.png" /></div>
+    <div class="phone right"><img src="../../docs/screenshots/plates-machine.png" /></div>
+  </div>
+
+  <div class="fade-bottom"></div>
+
+  <div class="cta">
+    <div class="pill">Попробовать бесплатно</div>
+    <p>ссылка в шапке профиля · работает как приложение</p>
+  </div>
+</body>
+</html>

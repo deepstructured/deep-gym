@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  @font-face {
+    font-family: "Matricha";
+    src: url("../../src/shared/fonts/matricha.ttf") format("truetype");
+  }
+  :root {
+    --bg: #0a0a0c;
+    --text: #f5f5f7;
+    --muted: #98989f;
+    --pink: #f56785;
+    --purple: #622585;
+    --lime: #d7f651;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1080px; height: 1920px; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Urbanist", sans-serif;
+    position: relative;
+  }
+  /* ambient glows */
+  .glow-top {
+    position: absolute; top: -420px; left: 50%; transform: translateX(-50%);
+    width: 1400px; height: 900px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(245,103,133,.34), rgba(98,37,133,.18) 55%, transparent);
+  }
+  .glow-bottom {
+    position: absolute; bottom: -500px; left: -300px;
+    width: 1100px; height: 900px; border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(24,39,136,.4), transparent);
+  }
+  .dots {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(255,255,255,.10) 2.2px, transparent 2.6px);
+    background-size: 34px 34px;
+    -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,.9), rgba(0,0,0,.15) 45%, rgba(0,0,0,.7));
+  }
+
+  .logo {
+    position: absolute; top: 96px; left: 0; right: 0; text-align: center;
+    font-family: "Matricha", monospace;
+    font-size: 64px; color: var(--lime); letter-spacing: 2px;
+  }
+
+  .hook {
+    position: absolute; top: 220px; left: 80px; right: 80px; text-align: center;
+  }
+  .hook h1 {
+    font-size: 96px; line-height: 1.12; font-weight: 800; letter-spacing: -1px;
+  }
+  .hook h1 .strike {
+    position: relative; white-space: nowrap; color: var(--muted);
+  }
+  .hook h1 .strike::after {
+    content: ""; position: absolute; left: -2%; right: -2%; top: 54%;
+    height: 7px; border-radius: 4px; background: var(--pink); transform: rotate(-2deg);
+  }
+  .hook p {
+    margin-top: 36px; font-size: 46px; font-weight: 500; color: var(--muted);
+  }
+  .hook p b { color: var(--text); font-weight: 700; }
+
+  .phone-wrap {
+    position: absolute; top: 640px; left: 50%; transform: translateX(-50%) rotate(-3deg);
+  }
+  .phone {
+    width: 560px; border-radius: 76px; overflow: hidden;
+    border: 10px solid #232329;
+    box-shadow:
+      0 60px 160px -30px rgba(245,103,133,.42),
+      0 30px 90px -20px rgba(98,37,133,.5);
+  }
+  .phone img { display: block; width: 100%; }
+
+  .badge {
+    position: absolute; top: 704px; right: 96px; transform: rotate(6deg);
+    background: var(--lime); color: #0a0a0c;
+    font-weight: 800; font-size: 40px; line-height: 1.15;
+    padding: 26px 38px; border-radius: 32px;
+    box-shadow: 0 24px 70px -12px rgba(215,246,81,.5);
+  }
+
+  .fade-bottom {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 420px;
+    background: linear-gradient(180deg, transparent, rgba(10,10,12,.92) 65%);
+  }
+  .cta {
+    position: absolute; bottom: 96px; left: 0; right: 0; text-align: center;
+  }
+  .cta .arrow { font-size: 52px; margin-bottom: 18px; }
+  .cta p { font-size: 48px; font-weight: 700; }
+  .cta p span { color: var(--lime); }
+</style>
+</head>
+<body>
+  <div class="glow-top"></div>
+  <div class="glow-bottom"></div>
+  <div class="dots"></div>
+
+  <div class="logo">DeepGym</div>
+
+  <div class="hook">
+    <h1>Тренировки<br /><span class="strike">в заметках</span> —<br />это боль</h1>
+    <p>вес · подходы · отказ · настройки тренажёров —<br /><b>всё держишь в голове?</b></p>
+  </div>
+
+  <div class="badge">беспл.<br />PWA 📲</div>
+
+  <div class="phone-wrap">
+    <div class="phone"><img src="../../docs/screenshots/home.png" /></div>
+  </div>
+
+  <div class="fade-bottom"></div>
+
+  <div class="cta">
+    <div class="arrow">👇</div>
+    <p>есть способ <span>лучше</span> — листай</p>
+  </div>
+</body>
+</html>
