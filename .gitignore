@@ -27,5 +27,6 @@ next-env.d.ts
 /behance-reference
 /fonts
 /.claude
-/docs
+# marketing stories are local-only; docs/screenshots stays (README uses it)
+/docs/stories
 
