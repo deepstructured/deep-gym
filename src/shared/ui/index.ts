@@ -1,4 +1,5 @@
 export { Button } from "./button";
+export { Calendar } from "./calendar";
 export { Card } from "./card";
 export { Chip } from "./chip";
 export { Input, TextArea, Field } from "./input";

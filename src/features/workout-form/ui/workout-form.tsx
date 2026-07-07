@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Exercise } from "@/entities/exercise";
 import { useMuscleGroups } from "@/entities/muscle-group";
+import { CompareButton } from "@/features/exercise-compare";
 import { MachineInfoButton } from "@/features/machine-info";
 import { PlateSheet, type PlateContext } from "@/features/plate-calculator";
 import { BASE_WORKOUT_TYPES } from "@/shared/config/workout";
@@ -234,6 +235,12 @@ function ExerciseEditor({
             machineSettings={exercise.machineSettings}
           />
         )}
+        <CompareButton
+          exerciseId={exercise.exerciseId}
+          exerciseName={exercise.name}
+          unit={exercise.unit ?? unit}
+          currentSets={exercise.sets}
+        />
         <button
           type="button"
           aria-label="Exercise note"
