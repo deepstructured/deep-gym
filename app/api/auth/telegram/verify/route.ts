@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = await getSupabaseServer();
-  const { error: verifyError } = await supabase.auth.verifyOtp({
+  const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
     type: "email",
     token_hash: linkData.properties.hashed_token,
   });
@@ -128,5 +128,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to sign in" }, { status: 500 });
   }
 
-  return NextResponse.json({ ok: true });
+  // Web clients get the session via cookies (set above); native clients
+  // (the Expo app) need the tokens in the body to call setSession().
+  return NextResponse.json({
+    ok: true,
+    session: verifyData.session
+      ? {
+          access_token: verifyData.session.access_token,
+          refresh_token: verifyData.session.refresh_token,
+        }
+      : null,
+  });
 }
