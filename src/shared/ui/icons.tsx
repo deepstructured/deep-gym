@@ -159,6 +159,17 @@ export function IconPlates(props: IconProps) {
   );
 }
 
+export function IconCompare(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 8h13" />
+      <path d="M14 5l3 3-3 3" />
+      <path d="M20 16H7" />
+      <path d="M10 13l-3 3 3 3" />
+    </svg>
+  );
+}
+
 export function IconNote(props: IconProps) {
   return (
     <svg {...base(props)}>
