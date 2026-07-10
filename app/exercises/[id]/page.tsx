@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
-import { ExerciseDetailView } from "@/views/exercise-detail";
+import type { Metadata } from 'next'
+import { ExerciseDetailView } from '@/views/exercise-detail'
 
-export const metadata: Metadata = { title: "Exercise" };
+export const metadata: Metadata = { title: 'Exercise' }
 
 export default async function ExercisePage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string }>
 }) {
-  const { id } = await params;
-  return <ExerciseDetailView exerciseId={id} />;
+  const { id } = await params
+  return <ExerciseDetailView exerciseId={id} />
 }

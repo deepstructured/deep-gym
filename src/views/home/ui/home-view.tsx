@@ -3,18 +3,13 @@
 import { differenceInCalendarWeeks, format, subDays } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useProfile } from "@/entities/user";
-import {
-  WorkoutCard,
-  useDeleteWorkout,
-  useWorkouts,
-} from "@/entities/workout";
+import { WorkoutCard, useWorkouts } from "@/entities/workout";
 import { toISODate, todayISO } from "@/shared/lib/dates";
 import { AppShell } from "@/widgets/app-shell";
 import {
   Card,
-  ConfirmSheet,
   DotValue,
   EmptyState,
   IconChevronRight,
@@ -43,8 +38,6 @@ function weekStreak(dates: string[]): number {
 export function HomeView() {
   const router = useRouter();
   const { data: profile } = useProfile();
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const deleteWorkout = useDeleteWorkout();
 
   const from = toISODate(subDays(new Date(), 180));
   const to = todayISO();
@@ -157,27 +150,12 @@ export function HomeView() {
                   unit={unit}
                   showDate
                   onEdit={() => router.push(`/workouts/${workout.id}/edit`)}
-                  onDelete={() => setDeleteId(workout.id)}
                 />
               ))}
             </div>
           )}
         </div>
       </div>
-
-      <ConfirmSheet
-        open={deleteId != null}
-        onClose={() => setDeleteId(null)}
-        title="Delete workout?"
-        message="This removes the workout with all its sets. There is no undo."
-        loading={deleteWorkout.isPending}
-        onConfirm={() => {
-          if (!deleteId) return;
-          deleteWorkout.mutate(deleteId, {
-            onSuccess: () => setDeleteId(null),
-          });
-        }}
-      />
     </AppShell>
   );
 }

@@ -1,0 +1,11 @@
+.card {
+  transition: border-color 0.2s ease;
+
+  &:focus {
+    border-color: #d7f651;
+  }
+
+  &:active {
+    border-color: #d7f651;
+  }
+}

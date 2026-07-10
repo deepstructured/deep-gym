@@ -4,7 +4,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useMuscleGroups } from "@/entities/muscle-group";
 import { useProfile } from "@/entities/user";
-import { useUpdateWorkout, useWorkout } from "@/entities/workout";
+import {
+  useDeleteWorkout,
+  useUpdateWorkout,
+  useWorkout,
+} from "@/entities/workout";
 import {
   WorkoutForm,
   draftToInput,
@@ -12,7 +16,7 @@ import {
   type WorkoutDraft,
 } from "@/features/workout-form";
 import { AppShell } from "@/widgets/app-shell";
-import { Button, ErrorNote, PageLoader } from "@/shared/ui";
+import { Button, ConfirmSheet, ErrorNote, PageLoader } from "@/shared/ui";
 
 export function WorkoutEditView({ workoutId }: { workoutId: string }) {
   const router = useRouter();
@@ -20,9 +24,11 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
   const { data: workout, isLoading, error: loadError } = useWorkout(workoutId);
   const { data: groups } = useMuscleGroups();
   const updateWorkout = useUpdateWorkout();
+  const deleteWorkout = useDeleteWorkout();
 
   const [draft, setDraft] = useState<WorkoutDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const unit = profile?.unit ?? "kg";
 
@@ -46,7 +52,24 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
   }
 
   const canSave =
-    draft != null && draft.exercises.length > 0 && !updateWorkout.isPending;
+    draft != null &&
+    draft.exercises.length > 0 &&
+    !updateWorkout.isPending &&
+    !deleteWorkout.isPending;
+
+  function remove() {
+    setError(null);
+    deleteWorkout.mutate(workoutId, {
+      onSuccess: () => {
+        setConfirmDelete(false);
+        router.replace("/history");
+      },
+      onError: (e) => {
+        setConfirmDelete(false);
+        setError((e as Error).message);
+      },
+    });
+  }
 
   return (
     <AppShell
@@ -84,8 +107,27 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
           >
             Save changes
           </Button>
+          <Button
+            variant="danger"
+            size="lg"
+            className="w-full"
+            onClick={() => setConfirmDelete(true)}
+            disabled={updateWorkout.isPending}
+            loading={deleteWorkout.isPending}
+          >
+            Delete workout
+          </Button>
         </div>
       )}
+
+      <ConfirmSheet
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title="Delete workout?"
+        message="This removes the workout with all its sets. There is no undo."
+        loading={deleteWorkout.isPending}
+        onConfirm={remove}
+      />
     </AppShell>
   );
 }

@@ -1,21 +1,21 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react'
 import {
   useCreateMuscleGroup,
   useDeleteMuscleGroup,
   useMuscleGroups,
-} from "@/entities/muscle-group";
-import { useProfile, useUpdateProfile } from "@/entities/user";
-import { SignOutButton } from "@/features/auth";
+} from '@/entities/muscle-group'
+import { useProfile, useUpdateProfile } from '@/entities/user'
+import { SignOutButton } from '@/features/auth'
 import {
   kgToUnit,
   parseWeight,
   roundWeight,
   unitToKg,
   type Unit,
-} from "@/shared/lib/weight";
-import { AppShell } from "@/widgets/app-shell";
+} from '@/shared/lib/weight'
+import { AppShell } from '@/widgets/app-shell'
 import {
   Button,
   Card,
@@ -27,86 +27,90 @@ import {
   PageLoader,
   Segmented,
   Tag,
-} from "@/shared/ui";
+} from '@/shared/ui'
 
 export function SettingsView() {
-  const { data: profile, isLoading } = useProfile();
-  const updateProfile = useUpdateProfile();
+  const { data: profile, isLoading } = useProfile()
+  const updateProfile = useUpdateProfile()
 
-  const [name, setName] = useState("");
-  const [barWeight, setBarWeight] = useState("");
-  const [newPlate, setNewPlate] = useState("");
-  const [newPlateUnit, setNewPlateUnit] = useState<Unit>("kg");
+  const [name, setName] = useState('')
+  const [barWeight, setBarWeight] = useState('')
+  const [newPlate, setNewPlate] = useState('')
+  const [newPlateUnit, setNewPlateUnit] = useState<Unit>('kg')
 
-  const unit: Unit = profile?.unit ?? "kg";
+  const unit: Unit = profile?.unit ?? 'kg'
 
   useEffect(() => {
     if (profile) {
-      setName(profile.display_name ?? "");
-      setBarWeight(String(roundWeight(kgToUnit(profile.bar_weight_kg, profile.unit))));
+      setName(profile.display_name ?? '')
+      setBarWeight(
+        String(roundWeight(kgToUnit(profile.bar_weight_kg, profile.unit))),
+      )
     }
-  }, [profile]);
+  }, [profile])
 
   if (isLoading || !profile) {
     return (
       <AppShell title="Settings">
         <PageLoader />
       </AppShell>
-    );
+    )
   }
 
   // combined plate list, heaviest first, each in its native denomination
   const plates: { value: number; unit: Unit; kg: number }[] = [
-    ...profile.plates_kg.map((value) => ({ value, unit: "kg" as Unit, kg: value })),
+    ...profile.plates_kg.map((value) => ({
+      value,
+      unit: 'kg' as Unit,
+      kg: value,
+    })),
     ...(profile.plates_lb ?? []).map((value) => ({
       value,
-      unit: "lb" as Unit,
-      kg: unitToKg(value, "lb"),
+      unit: 'lb' as Unit,
+      kg: unitToKg(value, 'lb'),
     })),
-  ].sort((a, b) => b.kg - a.kg);
+  ].sort((a, b) => b.kg - a.kg)
 
   function saveName() {
     if (name.trim() && name.trim() !== profile?.display_name) {
-      updateProfile.mutate({ display_name: name.trim() });
+      updateProfile.mutate({ display_name: name.trim() })
     }
   }
 
   function saveBarWeight() {
-    const parsed = parseWeight(barWeight);
+    const parsed = parseWeight(barWeight)
     if (parsed != null) {
       updateProfile.mutate({
         bar_weight_kg: Math.round(unitToKg(parsed, unit) * 100) / 100,
-      });
+      })
     }
   }
 
   function addPlate() {
-    const parsed = parseWeight(newPlate);
-    if (parsed == null) return;
-    if (newPlateUnit === "kg") {
+    const parsed = parseWeight(newPlate)
+    if (parsed == null) return
+    if (newPlateUnit === 'kg') {
       if (!profile!.plates_kg.includes(parsed)) {
-        updateProfile.mutate({ plates_kg: [...profile!.plates_kg, parsed] });
+        updateProfile.mutate({ plates_kg: [...profile!.plates_kg, parsed] })
       }
     } else {
-      const platesLb = profile!.plates_lb ?? [];
+      const platesLb = profile!.plates_lb ?? []
       if (!platesLb.includes(parsed)) {
-        updateProfile.mutate({ plates_lb: [...platesLb, parsed] });
+        updateProfile.mutate({ plates_lb: [...platesLb, parsed] })
       }
     }
-    setNewPlate("");
+    setNewPlate('')
   }
 
   function removePlate(plate: { value: number; unit: Unit }) {
-    if (plate.unit === "kg") {
+    if (plate.unit === 'kg') {
       updateProfile.mutate({
         plates_kg: profile!.plates_kg.filter((p) => p !== plate.value),
-      });
+      })
     } else {
       updateProfile.mutate({
-        plates_lb: (profile!.plates_lb ?? []).filter(
-          (p) => p !== plate.value,
-        ),
-      });
+        plates_lb: (profile!.plates_lb ?? []).filter((p) => p !== plate.value),
+      })
     }
   }
 
@@ -138,8 +142,8 @@ export function SettingsView() {
             value={unit}
             onChange={(next) => updateProfile.mutate({ unit: next })}
             options={[
-              { value: "kg", label: "Kilograms" },
-              { value: "lb", label: "Pounds" },
+              { value: 'kg', label: 'Kilograms' },
+              { value: 'lb', label: 'Pounds' },
             ]}
           />
         </Card>
@@ -157,7 +161,7 @@ export function SettingsView() {
             <Input
               value={barWeight}
               onChange={(e) =>
-                setBarWeight(e.target.value.replace(/[^\d.,]/g, ""))
+                setBarWeight(e.target.value.replace(/[^\d.,]/g, ''))
               }
               onBlur={saveBarWeight}
               inputMode="decimal"
@@ -189,30 +193,35 @@ export function SettingsView() {
             <Input
               value={newPlate}
               onChange={(e) =>
-                setNewPlate(e.target.value.replace(/[^\d.,]/g, ""))
+                setNewPlate(e.target.value.replace(/[^\d.,]/g, ''))
               }
-              onKeyDown={(e) => e.key === "Enter" && addPlate()}
+              onKeyDown={(e) => e.key === 'Enter' && addPlate()}
               inputMode="decimal"
               placeholder="Plate weight"
               className="h-10 flex-1"
             />
-            <div className="flex rounded-full border border-line bg-surface p-0.5">
-              {(["kg", "lb"] as const).map((option) => (
+            <div className="flex rounded-full border border-line bg-surface p-0.5 items-center">
+              {(['kg', 'lb'] as const).map((option) => (
                 <button
                   key={option}
                   type="button"
                   onClick={() => setNewPlateUnit(option)}
                   className={
                     newPlateUnit === option
-                      ? "h-9 rounded-full bg-lime px-3 text-sm font-medium text-black"
-                      : "h-9 rounded-full px-3 text-sm font-medium text-muted"
+                      ? 'h-9 rounded-full bg-lime px-3 text-sm font-medium text-black'
+                      : 'h-9 rounded-full px-3 text-sm font-medium text-muted'
                   }
                 >
                   {option}
                 </button>
               ))}
             </div>
-            <Button variant="surface" size="sm" className="h-10" onClick={addPlate}>
+            <Button
+              variant="surface"
+              size="sm"
+              className="h-10"
+              onClick={addPlate}
+            >
               <IconPlus size={16} />
               Add
             </Button>
@@ -229,23 +238,23 @@ export function SettingsView() {
         </p>
       </div>
     </AppShell>
-  );
+  )
 }
 
 function MuscleGroupsCard() {
-  const { data: groups } = useMuscleGroups();
-  const createGroup = useCreateMuscleGroup();
-  const deleteGroup = useDeleteMuscleGroup();
-  const [newGroup, setNewGroup] = useState("");
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { data: groups } = useMuscleGroups()
+  const createGroup = useCreateMuscleGroup()
+  const deleteGroup = useDeleteMuscleGroup()
+  const [newGroup, setNewGroup] = useState('')
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   function add() {
-    const name = newGroup.trim();
-    if (!name) return;
-    createGroup.mutate(name, { onSuccess: () => setNewGroup("") });
+    const name = newGroup.trim()
+    if (!name) return
+    createGroup.mutate(name, { onSuccess: () => setNewGroup('') })
   }
 
-  const pending = groups?.find((g) => g.id === deleteId);
+  const pending = groups?.find((g) => g.id === deleteId)
 
   return (
     <Card variant="surface" className="space-y-4 p-4">
@@ -281,7 +290,7 @@ function MuscleGroupsCard() {
         <Input
           value={newGroup}
           onChange={(e) => setNewGroup(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
+          onKeyDown={(e) => e.key === 'Enter' && add()}
           placeholder="New group, e.g. Abs"
           className="h-10 flex-1"
         />
@@ -304,13 +313,13 @@ function MuscleGroupsCard() {
         message="You can only delete a group that has no exercises in it."
         loading={deleteGroup.isPending}
         onConfirm={() => {
-          if (!deleteId) return;
+          if (!deleteId) return
           deleteGroup.mutate(deleteId, {
             onSuccess: () => setDeleteId(null),
             onError: () => setDeleteId(null),
-          });
+          })
         }}
       />
     </Card>
-  );
+  )
 }
