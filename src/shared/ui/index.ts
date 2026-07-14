@@ -1,3 +1,4 @@
+export { Avatar, DefaultAvatarGlyph } from "./avatar";
 export { Button } from "./button";
 export { Calendar } from "./calendar";
 export { Card } from "./card";

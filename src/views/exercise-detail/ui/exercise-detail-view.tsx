@@ -12,6 +12,7 @@ import { useProfile } from "@/entities/user";
 import { useExerciseHistory } from "@/entities/workout";
 import {
   ProgressChart,
+  RepsByWeightTable,
   exerciseSummary,
   progressSeries,
   repStatsByWeight,
@@ -19,11 +20,8 @@ import {
 } from "@/features/exercise-stats";
 import { MachineInfoButton } from "@/features/machine-info";
 import { PlateSheet } from "@/features/plate-calculator";
-import {
-  EQUIPMENT_OPTIONS,
-  equipmentLabel,
-  type Equipment,
-} from "@/shared/config/workout";
+import { EQUIPMENT_OPTIONS, type Equipment } from "@/shared/config/workout";
+import { useI18n } from "@/shared/i18n";
 import { formatDay } from "@/shared/lib/dates";
 import {
   kgToUnit,
@@ -52,6 +50,7 @@ import {
 
 export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
   const router = useRouter();
+  const { t } = useI18n();
   const { data: exercise, isLoading } = useExercise(exerciseId);
   const { data: groups } = useMuscleGroups();
   const { data: profile } = useProfile();
@@ -95,7 +94,7 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
 
   if (isLoading || !exercise) {
     return (
-      <AppShell title="Exercise" back>
+      <AppShell title={t("detail.title")} back>
         <PageLoader />
       </AppShell>
     );
@@ -108,7 +107,7 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
       action={
         <button
           type="button"
-          aria-label="Edit exercise"
+          aria-label={t("detail.editExercise")}
           onClick={() => setEditOpen(true)}
           className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-raised text-muted"
         >
@@ -119,9 +118,9 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
       <div className="space-y-5">
         <div className="flex flex-wrap items-center gap-2">
           <Tag tone="lime">{groupName}</Tag>
-          <Tag>{equipmentLabel(exercise.equipment)}</Tag>
+          <Tag>{t(`equipment.${exercise.equipment}`)}</Tag>
           {exercise.unit != null && exercise.unit !== profile?.unit && (
-            <Tag tone="pink">in {exercise.unit}</Tag>
+            <Tag tone="pink">{t("detail.inUnit", { unit: exercise.unit })}</Tag>
           )}
           {exercise.equipment === "machine" && (
             <MachineInfoButton
@@ -138,13 +137,13 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
           <div className="relative">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-sm font-medium text-white/80">
-                Current working weight
+                {t("detail.currentWorking")}
               </p>
               <div className="flex gap-2">
                 {exercise.equipment !== "crossover" && (
                   <button
                     type="button"
-                    aria-label="Plate breakdown"
+                    aria-label={t("set.plates")}
                     onClick={() => setPlatesOpen(true)}
                     disabled={exercise.working_weight_kg == null}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white disabled:opacity-40"
@@ -154,7 +153,7 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
                 )}
                 <button
                   type="button"
-                  aria-label="Edit working weight"
+                  aria-label={t("detail.editWorking")}
                   onClick={() => setWeightSheetOpen(true)}
                   className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white"
                 >
@@ -177,10 +176,10 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
 
         {/* Summary tiles */}
         <div className="grid grid-cols-2 gap-3">
-          <StatTile label="Sessions" value={summary.sessions} />
-          <StatTile label="Total sets" value={summary.totalSets} />
+          <StatTile label={t("detail.sessions")} value={summary.sessions} />
+          <StatTile label={t("detail.totalSets")} value={summary.totalSets} />
           <StatTile
-            label="Best weight"
+            label={t("detail.bestWeight")}
             value={
               summary.bestWeightKg != null
                 ? roundWeight(kgToUnit(summary.bestWeightKg, unit))
@@ -189,7 +188,7 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
             suffix={summary.bestWeightKg != null ? unit : undefined}
           />
           <StatTile
-            label="Est. 1RM"
+            label={t("detail.est1rm")}
             value={
               summary.estOneRepMaxKg != null
                 ? roundWeight(kgToUnit(summary.estOneRepMaxKg, unit))
@@ -203,7 +202,7 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
         {chartPoints.length > 1 && (
           <Card variant="indigo" className="p-5 text-white">
             <p className="mb-3 text-sm font-medium text-white/80">
-              Top set over time
+              {t("detail.topSet")}
             </p>
             <ProgressChart points={chartPoints} unit={unit} />
           </Card>
@@ -213,50 +212,18 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
         {repStats.length > 0 && (
           <Card variant="surface" className="p-4">
             <p className="mb-3 text-sm font-medium text-muted">
-              Reps by weight
+              {t("detail.repsByWeight")}
             </p>
-            <div className="mb-1 grid grid-cols-[1.2fr_0.7fr_0.7fr_0.7fr_0.7fr] px-1 text-[10px] font-medium tracking-wide text-faint uppercase">
-              <span>Weight</span>
-              <span className="text-center">Sets</span>
-              <span className="text-center">Avg</span>
-              <span className="text-center">Med</span>
-              <span className="text-center">Mode</span>
-            </div>
-            <div className="divide-y divide-line/50">
-              {repStats.map((row) => (
-                <div
-                  key={row.weightKg}
-                  className="grid grid-cols-[1.2fr_0.7fr_0.7fr_0.7fr_0.7fr] items-center px-1 py-2.5"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <DotValue
-                      value={roundWeight(kgToUnit(row.weightKg, unit))}
-                      className="text-lg"
-                    />
-                    {row.failureRate > 0 && (
-                      <IconFlame
-                        size={13}
-                        className="text-flame"
-                        opacity={0.4 + row.failureRate * 0.6}
-                      />
-                    )}
-                  </span>
-                  <span className="text-center font-dot text-muted">
-                    {row.setCount}
-                  </span>
-                  <span className="text-center font-dot">{row.avgReps}</span>
-                  <span className="text-center font-dot">{row.medianReps}</span>
-                  <span className="text-center font-dot">{row.modeReps}</span>
-                </div>
-              ))}
-            </div>
+            <RepsByWeightTable stats={repStats} unit={unit} />
           </Card>
         )}
 
         {/* Recent history */}
         {recent.length > 0 && (
           <Card variant="surface" className="p-4">
-            <p className="mb-3 text-sm font-medium text-muted">Recent</p>
+            <p className="mb-3 text-sm font-medium text-muted">
+              {t("detail.recent")}
+            </p>
             <div className="space-y-3">
               {recent.map((entry) => (
                 <div key={entry.date + entry.sets![0]?.workoutId}>
@@ -290,8 +257,7 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
 
         {(history?.length ?? 0) === 0 && (
           <p className="py-4 text-center text-sm text-muted">
-            No logged sets yet — stats will appear after the first workout with
-            this exercise.
+            {t("detail.noSets")}
           </p>
         )}
       </div>
@@ -359,6 +325,7 @@ function WorkingWeightSheet({
   currentKg: number | null;
   unit: "kg" | "lb";
 }) {
+  const { t } = useI18n();
   const update = useUpdateExercise();
   const [value, setValue] = useState(() =>
     currentKg != null ? String(roundWeight(kgToUnit(currentKg, unit))) : "",
@@ -381,13 +348,10 @@ function WorkingWeightSheet({
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title="Working weight">
+    <Sheet open={open} onClose={onClose} title={t("detail.workingWeight")}>
       <div className="space-y-4">
-        <p className="text-sm text-muted">
-          Your current target weight for this exercise. Bump it up when you
-          progress.
-        </p>
-        <Field label={`Weight, ${unit}`}>
+        <p className="text-sm text-muted">{t("detail.workingWeightHint")}</p>
+        <Field label={t("detail.weightUnit", { unit })}>
           <Input
             value={value}
             onChange={(e) => setValue(e.target.value.replace(/[^\d.,]/g, ""))}
@@ -404,7 +368,7 @@ function WorkingWeightSheet({
           onClick={save}
           loading={update.isPending}
         >
-          Save
+          {t("common.save")}
         </Button>
       </div>
     </Sheet>
@@ -429,6 +393,7 @@ function EditExerciseSheet({
   };
   onDeleted: () => void;
 }) {
+  const { t } = useI18n();
   const { data: groups } = useMuscleGroups();
   const { data: profile } = useProfile();
   const update = useUpdateExercise();
@@ -447,7 +412,7 @@ function EditExerciseSheet({
   const [error, setError] = useState<string | null>(null);
 
   function save() {
-    if (!name.trim()) return setError("Name can't be empty");
+    if (!name.trim()) return setError(t("detail.nameEmpty"));
     update.mutate(
       {
         id: exercise.id,
@@ -469,12 +434,12 @@ function EditExerciseSheet({
 
   return (
     <>
-      <Sheet open={open} onClose={onClose} title="Edit exercise">
+      <Sheet open={open} onClose={onClose} title={t("detail.editExercise")}>
         <div className="space-y-4">
-          <Field label="Name">
+          <Field label={t("picker.name")}>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Field label="Muscle group">
+          <Field label={t("picker.muscleGroup")}>
             <div className="flex flex-wrap gap-2">
               {groups?.map((group) => (
                 <Chip
@@ -487,7 +452,7 @@ function EditExerciseSheet({
               ))}
             </div>
           </Field>
-          <Field label="Equipment">
+          <Field label={t("picker.equipment")}>
             <div className="flex flex-wrap gap-2">
               {EQUIPMENT_OPTIONS.map((option) => (
                 <Chip
@@ -495,27 +460,29 @@ function EditExerciseSheet({
                   selected={equipment === option.value}
                   onClick={() => setEquipment(option.value)}
                 >
-                  {option.label}
+                  {t(`equipment.${option.value}`)}
                 </Chip>
               ))}
             </div>
           </Field>
           {equipment === "machine" && (
-            <Field label="Machine setup">
+            <Field label={t("detail.machineSetup")}>
               <TextArea
                 value={machineSettings}
                 onChange={(e) => setMachineSettings(e.target.value)}
-                placeholder="Seat height 4, back pad 2…"
+                placeholder={t("picker.machineSetupPlaceholder")}
               />
             </Field>
           )}
-          <Field label="Weight unit for this exercise">
+          <Field label={t("picker.unitForExercise")}>
             <div className="flex flex-wrap gap-2">
               {(
                 [
                   {
                     value: "default",
-                    label: `Default (${profile?.unit ?? "kg"})`,
+                    label: t("picker.unitDefault", {
+                      unit: profile?.unit ?? "kg",
+                    }),
                   },
                   { value: "kg", label: "kg" },
                   { value: "lb", label: "lb" },
@@ -539,14 +506,14 @@ function EditExerciseSheet({
             onClick={save}
             loading={update.isPending}
           >
-            Save changes
+            {t("common.saveChanges")}
           </Button>
           <Button
             variant="danger"
             className="w-full"
             onClick={() => setConfirmDelete(true)}
           >
-            Delete exercise
+            {t("detail.deleteExercise")}
           </Button>
         </div>
       </Sheet>
@@ -554,8 +521,8 @@ function EditExerciseSheet({
       <ConfirmSheet
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
-        title="Delete exercise?"
-        message="This also removes it from every logged workout. There is no undo."
+        title={t("detail.deleteTitle")}
+        message={t("detail.deleteMessage")}
         loading={remove.isPending}
         onConfirm={() =>
           remove.mutate(exercise.id, {

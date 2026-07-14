@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { useExercises, type Exercise } from "@/entities/exercise";
 import { useMuscleGroups } from "@/entities/muscle-group";
 import { useProfile } from "@/entities/user";
-import { equipmentLabel } from "@/shared/config/workout";
+import { useI18n } from "@/shared/i18n";
 import { formatWeight } from "@/shared/lib/weight";
 import { AppShell } from "@/widgets/app-shell";
 import {
@@ -19,6 +19,7 @@ import {
 } from "@/shared/ui";
 
 export function ExercisesView() {
+  const { t } = useI18n();
   const { data: groups, isLoading: groupsLoading } = useMuscleGroups();
   const { data: exercises, isLoading } = useExercises();
   const { data: profile } = useProfile();
@@ -47,16 +48,16 @@ export function ExercisesView() {
   }, [groups, filtered, groupFilter]);
 
   return (
-    <AppShell title="Exercises">
+    <AppShell title={t("exercises.title")}>
       <div className="mb-4 space-y-3">
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search exercises…"
+          placeholder={t("picker.search")}
         />
         <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
           <Chip selected={groupFilter === null} onClick={() => setGroupFilter(null)}>
-            All
+            {t("common.all")}
           </Chip>
           {groups?.map((group) => (
             <Chip
@@ -76,8 +77,8 @@ export function ExercisesView() {
         <PageLoader />
       ) : visibleGroups.length === 0 ? (
         <EmptyState
-          title="No exercises yet"
-          hint="Exercises are created while logging a workout — or will show up here after your first one."
+          title={t("exercises.emptyTitle")}
+          hint={t("exercises.emptyHint")}
         />
       ) : (
         <div className="space-y-6">
@@ -107,6 +108,7 @@ function ExerciseRow({
   exercise: Exercise;
   unit: "kg" | "lb";
 }) {
+  const { t } = useI18n();
   const exerciseUnit = exercise.unit ?? unit;
   return (
     <Link
@@ -115,10 +117,12 @@ function ExerciseRow({
     >
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{exercise.name}</p>
-        <Tag className="mt-1">{equipmentLabel(exercise.equipment)}</Tag>
+        <Tag className="mt-1">{t(`equipment.${exercise.equipment}`)}</Tag>
       </div>
       <div className="shrink-0 text-right">
-        <p className="text-[10px] tracking-wide text-faint uppercase">Working</p>
+        <p className="text-[10px] tracking-wide text-faint uppercase">
+          {t("exercises.working")}
+        </p>
         <DotValue
           value={
             exercise.working_weight_kg != null

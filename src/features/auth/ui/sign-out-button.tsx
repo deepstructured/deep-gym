@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useI18n } from "@/shared/i18n";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
 import { Button, IconLogout } from "@/shared/ui";
 
 export function SignOutButton() {
   const router = useRouter();
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
@@ -28,7 +30,7 @@ export function SignOutButton() {
       loading={loading}
     >
       {!loading && <IconLogout size={19} />}
-      Sign out
+      {t("settings.signOut")}
     </Button>
   );
 }

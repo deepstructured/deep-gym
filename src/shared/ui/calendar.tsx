@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  addDays,
   addMonths,
   eachDayOfInterval,
   endOfMonth,
@@ -14,7 +15,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import { useState } from "react";
-import { toISODate } from "@/shared/lib/dates";
+import { formatMonthYear, getDateLocale, toISODate } from "@/shared/lib/dates";
 import { cn } from "@/shared/lib/cn";
 import { IconChevronLeft, IconChevronRight } from "./icons";
 
@@ -31,8 +32,6 @@ interface CalendarProps {
   className?: string;
 }
 
-const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-
 /** Month-grid date picker. Week starts Monday. */
 export function Calendar({
   value,
@@ -47,10 +46,16 @@ export function Calendar({
     startOfMonth(selected ?? new Date()),
   );
 
+  const gridStart = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
   const days = eachDayOfInterval({
-    start: startOfWeek(startOfMonth(month), { weekStartsOn: 1 }),
+    start: gridStart,
     end: endOfWeek(endOfMonth(month), { weekStartsOn: 1 }),
   });
+
+  const weekdays = eachDayOfInterval({
+    start: gridStart,
+    end: addDays(gridStart, 6),
+  }).map((day) => format(day, "EEEEEE", { locale: getDateLocale() }));
 
   return (
     <div className={cn("select-none", className)}>
@@ -63,7 +68,7 @@ export function Calendar({
         >
           <IconChevronLeft size={16} />
         </button>
-        <span className="font-semibold">{format(month, "MMMM yyyy")}</span>
+        <span className="font-semibold">{formatMonthYear(month)}</span>
         <button
           type="button"
           aria-label="Next month"
@@ -75,8 +80,8 @@ export function Calendar({
       </div>
 
       <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[11px] font-medium tracking-wide text-faint uppercase">
-        {WEEKDAYS.map((label) => (
-          <span key={label}>{label}</span>
+        {weekdays.map((label, index) => (
+          <span key={index}>{label}</span>
         ))}
       </div>
 

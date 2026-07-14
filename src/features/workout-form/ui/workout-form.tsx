@@ -7,6 +7,7 @@ import { CompareButton } from "@/features/exercise-compare";
 import { MachineInfoButton } from "@/features/machine-info";
 import { PlateSheet, type PlateContext } from "@/features/plate-calculator";
 import { BASE_WORKOUT_TYPES } from "@/shared/config/workout";
+import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import { unitToKg, type Unit } from "@/shared/lib/weight";
 import {
@@ -31,15 +32,24 @@ import {
   type DraftSet,
   type WorkoutDraft,
 } from "../model/draft";
+import { CopyLastWorkout } from "./copy-last-workout";
 import { ExercisePicker } from "./exercise-picker";
 
 interface WorkoutFormProps {
   value: WorkoutDraft;
   onChange: (draft: WorkoutDraft) => void;
   unit: Unit;
+  /** Offer to copy the exercises of the last workout of the selected type. */
+  enableCopyLast?: boolean;
 }
 
-export function WorkoutForm({ value, onChange, unit }: WorkoutFormProps) {
+export function WorkoutForm({
+  value,
+  onChange,
+  unit,
+  enableCopyLast,
+}: WorkoutFormProps) {
+  const { t } = useI18n();
   const { data: groups } = useMuscleGroups();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [plateContext, setPlateContext] = useState<PlateContext | null>(null);
@@ -90,7 +100,7 @@ export function WorkoutForm({ value, onChange, unit }: WorkoutFormProps) {
   return (
     <div className="space-y-5">
       {/* Type */}
-      <Field label="Workout type">
+      <Field label={t("workout.type")}>
         <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
           {typeOptions.map((type) => (
             <Chip
@@ -105,7 +115,7 @@ export function WorkoutForm({ value, onChange, unit }: WorkoutFormProps) {
       </Field>
 
       {/* Date */}
-      <Field label="Date">
+      <Field label={t("workout.date")}>
         <Input
           type="date"
           value={value.date}
@@ -115,16 +125,16 @@ export function WorkoutForm({ value, onChange, unit }: WorkoutFormProps) {
 
       {/* Workout notes */}
       {value.showNotes ? (
-        <Field label="Workout note">
+        <Field label={t("workout.note")}>
           <div className="relative">
             <TextArea
               value={value.notes}
               onChange={(e) => patch({ notes: e.target.value })}
-              placeholder="Felt tired today, short on sleep…"
+              placeholder={t("workout.notePlaceholder")}
             />
             <button
               type="button"
-              aria-label="Remove note"
+              aria-label={t("workout.removeNote")}
               className="absolute top-2 right-2 text-faint"
               onClick={() => patch({ notes: "", showNotes: false })}
             >
@@ -139,7 +149,7 @@ export function WorkoutForm({ value, onChange, unit }: WorkoutFormProps) {
           className="flex items-center gap-2 text-sm font-medium text-muted"
         >
           <IconNote size={16} />
-          Add workout note
+          {t("workout.addNote")}
         </button>
       )}
 
@@ -150,6 +160,7 @@ export function WorkoutForm({ value, onChange, unit }: WorkoutFormProps) {
             key={exercise.key}
             index={index}
             exercise={exercise}
+            workoutDate={value.date}
             unit={unit}
             onPatch={(partial) => patchExercise(exercise.key, partial)}
             onPatchSet={(setKey, partial) =>
@@ -167,13 +178,23 @@ export function WorkoutForm({ value, onChange, unit }: WorkoutFormProps) {
         ))}
       </div>
 
+      {enableCopyLast && value.exercises.length === 0 && (
+        <CopyLastWorkout
+          type={value.type}
+          unit={unit}
+          onCopy={(exercises) =>
+            patch({ exercises: [...value.exercises, ...exercises] })
+          }
+        />
+      )}
+
       <button
         type="button"
         onClick={() => setPickerOpen(true)}
         className="flex h-14 w-full items-center justify-center gap-2 rounded-card border border-dashed border-line bg-surface/50 font-medium text-lime active:bg-surface"
       >
         <IconPlus size={20} />
-        Add exercise
+        {t("workout.addExercise")}
       </button>
 
       <ExercisePicker
@@ -202,6 +223,8 @@ export function WorkoutForm({ value, onChange, unit }: WorkoutFormProps) {
 interface ExerciseEditorProps {
   index: number;
   exercise: DraftExercise;
+  /** The draft workout's date — compare offers only sessions before it. */
+  workoutDate: string;
   unit: Unit;
   onPatch: (partial: Partial<DraftExercise>) => void;
   onPatchSet: (setKey: string, partial: Partial<DraftSet>) => void;
@@ -212,12 +235,14 @@ interface ExerciseEditorProps {
 function ExerciseEditor({
   index,
   exercise,
+  workoutDate,
   unit,
   onPatch,
   onPatchSet,
   onRemove,
   onShowPlates,
 }: ExerciseEditorProps) {
+  const { t } = useI18n();
   return (
     <Card variant="surface" className="p-4">
       <div className="mb-3 flex items-center gap-2">
@@ -240,10 +265,11 @@ function ExerciseEditor({
           exerciseName={exercise.name}
           unit={exercise.unit ?? unit}
           currentSets={exercise.sets}
+          currentDate={workoutDate}
         />
         <button
           type="button"
-          aria-label="Exercise note"
+          aria-label={t("exercise.note")}
           onClick={() => onPatch({ showNotes: !exercise.showNotes })}
           className={cn(
             "flex h-8 w-8 items-center justify-center rounded-full border border-line bg-raised",
@@ -254,7 +280,7 @@ function ExerciseEditor({
         </button>
         <button
           type="button"
-          aria-label="Remove exercise"
+          aria-label={t("exercise.remove")}
           onClick={onRemove}
           className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-raised text-muted"
         >
@@ -266,10 +292,10 @@ function ExerciseEditor({
       <div className="mb-1 grid grid-cols-[1.6rem_1fr_1fr_2.4rem_1.8rem] items-center gap-2 px-1 text-[11px] font-medium tracking-wide text-faint uppercase">
         <span>#</span>
         <span className={exercise.unit !== unit ? "text-lime/80" : undefined}>
-          Weight, {exercise.unit ?? unit}
+          {t("set.weight", { unit: exercise.unit ?? unit })}
         </span>
-        <span>Reps</span>
-        <span className="text-center">Fail</span>
+        <span>{t("set.reps")}</span>
+        <span className="text-center">{t("set.fail")}</span>
         <span />
       </div>
 
@@ -301,7 +327,7 @@ function ExerciseEditor({
               {exercise.equipment !== "crossover" && (
                 <button
                   type="button"
-                  aria-label="Plate breakdown"
+                  aria-label={t("set.plates")}
                   onClick={() => onShowPlates(set.weight, exercise)}
                   className="absolute top-1/2 right-2 -translate-y-1/2 text-faint active:text-lime"
                 >
@@ -326,7 +352,7 @@ function ExerciseEditor({
               type="button"
               role="switch"
               aria-checked={set.toFailure}
-              aria-label="To failure"
+              aria-label={t("set.toFailure")}
               onClick={() => onPatchSet(set.key, { toFailure: !set.toFailure })}
               className={cn(
                 "mx-auto flex h-9 w-9 items-center justify-center rounded-full border transition-colors",
@@ -340,7 +366,7 @@ function ExerciseEditor({
 
             <button
               type="button"
-              aria-label="Remove set"
+              aria-label={t("set.removeSet")}
               onClick={() =>
                 onPatch({
                   sets: exercise.sets.filter((s) => s.key !== set.key),
@@ -366,14 +392,14 @@ function ExerciseEditor({
         }
       >
         <IconPlus size={16} />
-        Add set
+        {t("set.addSet")}
       </Button>
 
       {exercise.showNotes && (
         <TextArea
           value={exercise.notes}
           onChange={(e) => onPatch({ notes: e.target.value })}
-          placeholder="Note for this exercise…"
+          placeholder={t("exercise.notePlaceholder")}
           rows={2}
           className="mt-2"
         />

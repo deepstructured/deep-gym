@@ -15,11 +15,17 @@ import {
   workoutToDraft,
   type WorkoutDraft,
 } from "@/features/workout-form";
+import { ShareWorkoutButton } from "@/features/workout-share";
+
+// Sticker sharing is parked until a future update — flip on to test locally.
+const ENABLE_WORKOUT_SHARE = false;
+import { useI18n } from "@/shared/i18n";
 import { AppShell } from "@/widgets/app-shell";
 import { Button, ConfirmSheet, ErrorNote, PageLoader } from "@/shared/ui";
 
 export function WorkoutEditView({ workoutId }: { workoutId: string }) {
   const router = useRouter();
+  const { t } = useI18n();
   const { data: profile } = useProfile();
   const { data: workout, isLoading, error: loadError } = useWorkout(workoutId);
   const { data: groups } = useMuscleGroups();
@@ -73,7 +79,7 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
 
   return (
     <AppShell
-      title="Edit workout"
+      title={t("workout.edit")}
       back
       action={
         <Button
@@ -83,13 +89,13 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
           disabled={!canSave}
           loading={updateWorkout.isPending}
         >
-          Save
+          {t("common.save")}
         </Button>
       }
     >
       {isLoading || !draft ? (
         loadError ? (
-          <ErrorNote message="Workout not found" />
+          <ErrorNote message={t("workout.notFound")} />
         ) : (
           <PageLoader />
         )
@@ -105,8 +111,11 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
             disabled={!canSave}
             loading={updateWorkout.isPending}
           >
-            Save changes
+            {t("common.saveChanges")}
           </Button>
+          {ENABLE_WORKOUT_SHARE && workout && (
+            <ShareWorkoutButton workout={workout} unit={unit} />
+          )}
           <Button
             variant="danger"
             size="lg"
@@ -115,7 +124,7 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
             disabled={updateWorkout.isPending}
             loading={deleteWorkout.isPending}
           >
-            Delete workout
+            {t("workout.delete")}
           </Button>
         </div>
       )}
@@ -123,8 +132,8 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
       <ConfirmSheet
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
-        title="Delete workout?"
-        message="This removes the workout with all its sets. There is no undo."
+        title={t("workout.deleteTitle")}
+        message={t("workout.deleteMessage")}
         loading={deleteWorkout.isPending}
         onConfirm={remove}
       />

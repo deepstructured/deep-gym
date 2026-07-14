@@ -5,7 +5,14 @@ import {
   useExerciseHistory,
   type ExerciseSetRecord,
 } from "@/entities/workout";
-import { formatDayFull, todayISO } from "@/shared/lib/dates";
+import { subDays } from "date-fns";
+import { useI18n } from "@/shared/i18n";
+import {
+  formatDayFull,
+  fromISODate,
+  toISODate,
+  todayISO,
+} from "@/shared/lib/dates";
 import { cn } from "@/shared/lib/cn";
 import { kgToUnit, roundWeight, type Unit } from "@/shared/lib/weight";
 import {
@@ -32,6 +39,10 @@ interface CompareButtonProps {
   unit: Unit;
   /** Sets entered in the current draft, for the side-by-side reference. */
   currentSets: CompareCurrentSet[];
+  /** The draft workout's date (ISO). Only sessions strictly before it are
+   *  offered for comparison — so editing a past workout compares it against
+   *  its own past, not against itself or later sessions. */
+  currentDate: string;
 }
 
 /**
@@ -39,12 +50,13 @@ interface CompareButtonProps {
  * for this exercise on a past day, picked from a calendar of prior sessions.
  */
 export function CompareButton(props: CompareButtonProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   return (
     <>
       <button
         type="button"
-        aria-label="Compare with past result"
+        aria-label={t("compare.aria")}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -66,14 +78,18 @@ function CompareSheet({
   exerciseName,
   unit,
   currentSets,
+  currentDate,
   onClose,
 }: CompareButtonProps & { onClose: () => void }) {
+  const { t } = useI18n();
   const { data: history, isLoading } = useExerciseHistory(exerciseId);
 
-  /** date (ISO) → sets logged that day, sorted by set order. */
+  /** date (ISO) → sets logged that day, sorted by set order.
+   *  Only days before the draft's date qualify as "past". */
   const sessions = useMemo(() => {
     const byDate = new Map<string, ExerciseSetRecord[]>();
     for (const record of history ?? []) {
+      if (record.workoutDate >= currentDate) continue;
       const list = byDate.get(record.workoutDate) ?? [];
       list.push(record);
       byDate.set(record.workoutDate, list);
@@ -82,7 +98,7 @@ function CompareSheet({
       list.sort((a, b) => a.position - b.position);
     }
     return byDate;
-  }, [history]);
+  }, [history, currentDate]);
 
   const markedDates = useMemo(() => new Set(sessions.keys()), [sessions]);
   const latestDate = useMemo(
@@ -103,7 +119,7 @@ function CompareSheet({
   );
 
   return (
-    <Sheet open onClose={onClose} title="Compare">
+    <Sheet open onClose={onClose} title={t("compare.title")}>
       <p className="mb-4 text-sm text-muted">{exerciseName}</p>
 
       {isLoading ? (
@@ -112,16 +128,18 @@ function CompareSheet({
         </div>
       ) : markedDates.size === 0 ? (
         <EmptyState
-          title="No past sessions yet"
-          hint="Once you log this exercise, you'll be able to compare against previous days here."
+          title={t("compare.emptyTitle")}
+          hint={t("compare.emptyHint")}
         />
       ) : (
         <div className="space-y-4">
-          {/* This session, for reference */}
+          {/* This session, for reference — a past workout shows its date */}
           {filledCurrent.length > 0 && (
             <div>
               <p className="mb-1.5 text-[11px] font-medium tracking-wide text-faint uppercase">
-                This session
+                {currentDate === todayISO()
+                  ? t("compare.thisSession")
+                  : formatDayFull(currentDate)}
               </p>
               <SetChips
                 sets={filledCurrent.map((s) => ({
@@ -141,7 +159,7 @@ function CompareSheet({
           >
             <IconCalendar size={18} className="text-lime" />
             <span className="flex-1 font-medium">
-              {activeDate ? formatDayFull(activeDate) : "Pick a day"}
+              {activeDate ? formatDayFull(activeDate) : t("compare.pickDay")}
             </span>
             <IconChevronDown
               size={18}
@@ -156,7 +174,7 @@ function CompareSheet({
             <Calendar
               value={activeDate}
               markedDates={markedDates}
-              maxDate={todayISO()}
+              maxDate={toISODate(subDays(fromISODate(currentDate), 1))}
               onChange={(iso) => {
                 setSelected(iso);
                 setShowCalendar(false);
@@ -168,7 +186,7 @@ function CompareSheet({
           {/* Selected day's sets */}
           <div>
             <p className="mb-1.5 text-[11px] font-medium tracking-wide text-faint uppercase">
-              {activeDate ? formatDayFull(activeDate) : "Selected day"}
+              {activeDate ? formatDayFull(activeDate) : t("compare.selectedDay")}
             </p>
             {selectedSets && selectedSets.length > 0 ? (
               <>
@@ -190,7 +208,7 @@ function CompareSheet({
               </>
             ) : (
               <p className="rounded-tile border border-dashed border-line bg-surface/50 px-4 py-5 text-center text-sm text-muted">
-                No sets logged for this exercise on this day.
+                {t("compare.noSets")}
               </p>
             )}
           </div>

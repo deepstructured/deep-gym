@@ -18,8 +18,16 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { useProfile } from '@/entities/user'
 import { WorkoutCard, useWorkouts, type Workout } from '@/entities/workout'
+import { useI18n } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
-import { formatDayFull, fromISODate, toISODate } from '@/shared/lib/dates'
+import {
+  formatDayFull,
+  formatMonthYear,
+  formatShort,
+  fromISODate,
+  getDateLocale,
+  toISODate,
+} from '@/shared/lib/dates'
 import { AppShell } from '@/widgets/app-shell'
 import {
   EmptyState,
@@ -33,6 +41,7 @@ type Mode = 'day' | 'week' | 'month'
 
 export function HistoryView() {
   const router = useRouter()
+  const { t } = useI18n()
   const { data: profile } = useProfile()
   const [mode, setMode] = useState<Mode>('day')
   const [cursor, setCursor] = useState<Date>(() => new Date())
@@ -64,8 +73,8 @@ export function HistoryView() {
     mode === 'day'
       ? formatDayFull(toISODate(cursor))
       : mode === 'week'
-        ? `${format(range.from, 'MMM d')} – ${format(range.to, 'MMM d')}`
-        : format(cursor, 'MMMM yyyy')
+        ? `${formatShort(toISODate(range.from))} – ${formatShort(toISODate(range.to))}`
+        : formatMonthYear(cursor)
 
   function workoutActions(workout: Workout) {
     return {
@@ -74,15 +83,15 @@ export function HistoryView() {
   }
 
   return (
-    <AppShell title="History">
+    <AppShell title={t('history.title')}>
       <Segmented
         className="mb-4"
         value={mode}
         onChange={setMode}
         options={[
-          { value: 'day', label: 'Day' },
-          { value: 'week', label: 'Week' },
-          { value: 'month', label: 'Month' },
+          { value: 'day', label: t('history.day') },
+          { value: 'week', label: t('history.week') },
+          { value: 'month', label: t('history.month') },
         ]}
       />
 
@@ -90,7 +99,7 @@ export function HistoryView() {
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
-          aria-label="Previous"
+          aria-label={t('history.previous')}
           onClick={() => shift(-1)}
           className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-raised text-muted"
         >
@@ -105,7 +114,7 @@ export function HistoryView() {
         </button>
         <button
           type="button"
-          aria-label="Next"
+          aria-label={t('history.next')}
           onClick={() => shift(1)}
           className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-raised text-muted"
         >
@@ -180,7 +189,7 @@ function WeekStrip({
             )}
           >
             <span className="text-[10px] font-medium text-faint uppercase">
-              {format(day, 'EEEEE')}
+              {format(day, 'EEEEE', { locale: getDateLocale() })}
             </span>
             <span
               className={cn(
@@ -216,11 +225,16 @@ function MonthGrid({
   const gridEnd = endOfWeek(endOfMonth(cursor), { weekStartsOn: 1 })
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
 
+  const weekdayLetters = eachDayOfInterval({
+    start: gridStart,
+    end: addDays(gridStart, 6),
+  }).map((day) => format(day, 'EEEEE', { locale: getDateLocale() }))
+
   return (
     <div className="mb-5">
       <div className="mb-1 grid grid-cols-7 text-center text-[10px] font-medium text-faint uppercase">
-        {['M', 'T', 'W', 'T2', 'F', 'S', 'S2'].map((d) => (
-          <span key={d}>{d.replace('2', '')}</span>
+        {weekdayLetters.map((letter, index) => (
+          <span key={index}>{letter}</span>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">
@@ -276,6 +290,7 @@ function WorkoutList({
   unit: 'kg' | 'lb'
   actions: (workout: Workout) => { onEdit: () => void }
 }) {
+  const { t } = useI18n()
   const visible =
     mode === 'day'
       ? workouts.filter((w) => isSameDay(fromISODate(w.date), cursor))
@@ -284,12 +299,8 @@ function WorkoutList({
   if (visible.length === 0) {
     return (
       <EmptyState
-        title="No workouts here"
-        hint={
-          mode === 'day'
-            ? 'Rest day — or time to change that.'
-            : 'Nothing logged in this period yet.'
-        }
+        title={t('history.emptyTitle')}
+        hint={mode === 'day' ? t('history.emptyDay') : t('history.emptyPeriod')}
       />
     )
   }

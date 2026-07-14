@@ -1,13 +1,21 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   useCreateMuscleGroup,
   useDeleteMuscleGroup,
   useMuscleGroups,
 } from '@/entities/muscle-group'
 import { useProfile, useUpdateProfile } from '@/entities/user'
+import {
+  PRESET_AVATARS,
+  useRemoveAvatar,
+  useSetPresetAvatar,
+  useUploadAvatar,
+} from '@/features/avatar'
 import { SignOutButton } from '@/features/auth'
+import { LANGUAGE_OPTIONS, useI18n, type Lang } from '@/shared/i18n'
+import { cn } from '@/shared/lib/cn'
 import {
   kgToUnit,
   parseWeight,
@@ -17,9 +25,11 @@ import {
 } from '@/shared/lib/weight'
 import { AppShell } from '@/widgets/app-shell'
 import {
+  Avatar,
   Button,
   Card,
   ConfirmSheet,
+  ErrorNote,
   Field,
   IconClose,
   IconPlus,
@@ -30,6 +40,7 @@ import {
 } from '@/shared/ui'
 
 export function SettingsView() {
+  const { t, lang, setLang } = useI18n()
   const { data: profile, isLoading } = useProfile()
   const updateProfile = useUpdateProfile()
 
@@ -51,7 +62,7 @@ export function SettingsView() {
 
   if (isLoading || !profile) {
     return (
-      <AppShell title="Settings">
+      <AppShell title={t('settings.title')}>
         <PageLoader />
       </AppShell>
     )
@@ -86,6 +97,11 @@ export function SettingsView() {
     }
   }
 
+  function changeLanguage(next: Lang) {
+    setLang(next)
+    updateProfile.mutate({ language: next })
+  }
+
   function addPlate() {
     const parsed = parseWeight(newPlate)
     if (parsed == null) return
@@ -115,17 +131,23 @@ export function SettingsView() {
   }
 
   return (
-    <AppShell title="Settings">
+    <AppShell title={t('settings.title')}>
       <div className="space-y-5">
         {/* Profile */}
         <Card variant="surface" className="space-y-4 p-4">
-          <p className="text-sm font-semibold">Profile</p>
-          <Field label="Display name">
+          <p className="text-sm font-semibold">{t('settings.profile')}</p>
+
+          <AvatarEditor
+            avatarUrl={profile.avatar_url}
+            displayName={profile.display_name}
+          />
+
+          <Field label={t('settings.displayName')}>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={saveName}
-              placeholder="Your name"
+              placeholder={t('settings.yourName')}
             />
           </Field>
           {profile.telegram_username && (
@@ -135,15 +157,25 @@ export function SettingsView() {
           )}
         </Card>
 
+        {/* Language */}
+        <Card variant="surface" className="space-y-3 p-4">
+          <p className="text-sm font-semibold">{t('settings.language')}</p>
+          <Segmented
+            value={lang}
+            onChange={changeLanguage}
+            options={LANGUAGE_OPTIONS}
+          />
+        </Card>
+
         {/* Units */}
         <Card variant="surface" className="space-y-3 p-4">
-          <p className="text-sm font-semibold">Weight unit</p>
+          <p className="text-sm font-semibold">{t('settings.weightUnit')}</p>
           <Segmented
             value={unit}
             onChange={(next) => updateProfile.mutate({ unit: next })}
             options={[
-              { value: 'kg', label: 'Kilograms' },
-              { value: 'lb', label: 'Pounds' },
+              { value: 'kg', label: t('settings.kilograms') },
+              { value: 'lb', label: t('settings.pounds') },
             ]}
           />
         </Card>
@@ -151,13 +183,13 @@ export function SettingsView() {
         {/* Plates */}
         <Card variant="surface" className="space-y-4 p-4">
           <div>
-            <p className="text-sm font-semibold">Plate calculator</p>
+            <p className="text-sm font-semibold">{t('settings.plateCalc')}</p>
             <p className="mt-0.5 text-xs text-muted">
-              Plates available in your gym — used for the weight breakdown.
+              {t('settings.plateCalcHint')}
             </p>
           </div>
 
-          <Field label={`Bar weight, ${unit}`}>
+          <Field label={t('settings.barWeight', { unit })}>
             <Input
               value={barWeight}
               onChange={(e) =>
@@ -179,7 +211,9 @@ export function SettingsView() {
                 <span className="text-xs text-muted">{plate.unit}</span>
                 <button
                   type="button"
-                  aria-label={`Remove ${plate.value} ${plate.unit} plate`}
+                  aria-label={t('settings.removePlate', {
+                    plate: `${plate.value} ${plate.unit}`,
+                  })}
                   onClick={() => removePlate(plate)}
                   className="text-faint active:text-flame"
                 >
@@ -197,7 +231,7 @@ export function SettingsView() {
               }
               onKeyDown={(e) => e.key === 'Enter' && addPlate()}
               inputMode="decimal"
-              placeholder="Plate weight"
+              placeholder={t('settings.plateWeight')}
               className="h-10 flex-1"
             />
             <div className="flex rounded-full border border-line bg-surface p-0.5 items-center">
@@ -223,7 +257,7 @@ export function SettingsView() {
               onClick={addPlate}
             >
               <IconPlus size={16} />
-              Add
+              {t('common.add')}
             </Button>
           </div>
         </Card>
@@ -234,14 +268,116 @@ export function SettingsView() {
         <SignOutButton />
 
         <p className="pb-2 text-center text-xs text-faint">
-          DeepGym · install it: Share → Add to Home Screen
+          {t('settings.install')}
         </p>
       </div>
     </AppShell>
   )
 }
 
+function AvatarEditor({
+  avatarUrl,
+  displayName,
+}: {
+  avatarUrl: string | null
+  displayName: string | null
+}) {
+  const { t } = useI18n()
+  const upload = useUploadAvatar()
+  const removeAvatar = useRemoveAvatar()
+  const setPreset = useSetPresetAvatar()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-picking the same file
+    if (!file) return
+    setError(null)
+    upload.mutate(file, {
+      onError: (err) => setError((err as Error).message),
+    })
+  }
+
+  const busy =
+    upload.isPending || removeAvatar.isPending || setPreset.isPending
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-4">
+        <Avatar src={avatarUrl} size={72} alt={displayName ?? ''} />
+        <div className="flex min-w-0 flex-col items-start gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onFileChange}
+          />
+          <Button
+            variant="surface"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            loading={upload.isPending}
+            disabled={busy}
+          >
+            {t('settings.uploadPhoto')}
+          </Button>
+          {avatarUrl != null && (
+            <button
+              type="button"
+              className="text-xs text-muted disabled:opacity-50"
+              disabled={busy}
+              onClick={() => {
+                setError(null)
+                removeAvatar.mutate(undefined, {
+                  onError: (err) => setError((err as Error).message),
+                })
+              }}
+            >
+              {t('settings.useDefault')}
+            </button>
+          )}
+          <p className="text-xs text-faint">{t('settings.avatarHint')}</p>
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-xs font-medium text-muted">
+          {t('settings.chooseAvatar')}
+        </p>
+        <div className="grid grid-cols-5 gap-3">
+          {PRESET_AVATARS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              aria-label={preset.id}
+              disabled={busy}
+              onClick={() => {
+                setError(null)
+                setPreset.mutate(preset.url, {
+                  onError: (err) => setError((err as Error).message),
+                })
+              }}
+              className={cn(
+                'justify-self-center rounded-full transition-opacity disabled:opacity-60',
+                avatarUrl === preset.url &&
+                  'ring-2 ring-lime ring-offset-2 ring-offset-surface',
+              )}
+            >
+              <Avatar src={preset.url} size={48} alt={preset.id} />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {error && <ErrorNote message={error} />}
+    </div>
+  )
+}
+
 function MuscleGroupsCard() {
+  const { t } = useI18n()
   const { data: groups } = useMuscleGroups()
   const createGroup = useCreateMuscleGroup()
   const deleteGroup = useDeleteMuscleGroup()
@@ -259,9 +395,9 @@ function MuscleGroupsCard() {
   return (
     <Card variant="surface" className="space-y-4 p-4">
       <div>
-        <p className="text-sm font-semibold">Muscle groups</p>
+        <p className="text-sm font-semibold">{t('settings.muscleGroups')}</p>
         <p className="mt-0.5 text-xs text-muted">
-          Default groups are built in; you can add your own.
+          {t('settings.muscleGroupsHint')}
         </p>
       </div>
 
@@ -275,7 +411,7 @@ function MuscleGroupsCard() {
             {group.user_id != null && (
               <button
                 type="button"
-                aria-label={`Delete ${group.name}`}
+                aria-label={t('settings.deleteGroup', { name: group.name })}
                 onClick={() => setDeleteId(group.id)}
                 className="text-faint active:text-flame"
               >
@@ -291,7 +427,7 @@ function MuscleGroupsCard() {
           value={newGroup}
           onChange={(e) => setNewGroup(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && add()}
-          placeholder="New group, e.g. Abs"
+          placeholder={t('settings.newGroup')}
           className="h-10 flex-1"
         />
         <Button
@@ -302,15 +438,15 @@ function MuscleGroupsCard() {
           loading={createGroup.isPending}
         >
           <IconPlus size={16} />
-          Add
+          {t('common.add')}
         </Button>
       </div>
 
       <ConfirmSheet
         open={deleteId != null}
         onClose={() => setDeleteId(null)}
-        title={`Delete “${pending?.name}”?`}
-        message="You can only delete a group that has no exercises in it."
+        title={t('settings.deleteGroup', { name: pending?.name ?? '' })}
+        message={t('settings.deleteGroupMessage')}
         loading={deleteGroup.isPending}
         onConfirm={() => {
           if (!deleteId) return

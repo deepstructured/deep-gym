@@ -40,6 +40,27 @@ export function useWorkouts(from: string, to: string) {
   });
 }
 
+/** The user's most recent workout of a given type (for "copy last workout"). */
+export function useLastWorkoutOfType(type: string) {
+  return useQuery({
+    queryKey: ["workouts", "last-of-type", type],
+    queryFn: async (): Promise<Workout | null> => {
+      const supabase = getSupabaseBrowser();
+      const { data, error } = await supabase
+        .from("workouts")
+        .select(WORKOUT_SELECT)
+        .eq("type", type)
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      const workout = (data as Workout[])[0];
+      return workout ? sortNested(workout) : null;
+    },
+    enabled: Boolean(type),
+  });
+}
+
 export function useWorkout(id: string) {
   return useQuery({
     queryKey: ["workout", id],

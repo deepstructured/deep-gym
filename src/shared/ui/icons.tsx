@@ -190,6 +190,16 @@ export function IconLogout(props: IconProps) {
   );
 }
 
+export function IconShare(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 15V3" />
+      <path d="M8 7l4-4 4 4" />
+      <path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+    </svg>
+  );
+}
+
 export function IconTelegram({ size = 20, ...props }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" {...props}>

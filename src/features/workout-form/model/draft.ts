@@ -43,8 +43,16 @@ export interface WorkoutDraft {
   exercises: DraftExercise[];
 }
 
+/** Local list key. crypto.randomUUID needs a secure context (HTTPS or
+ *  localhost) — opening the dev server over LAN http:// on a phone doesn't
+ *  have it, so fall back to getRandomValues, which works everywhere. */
 function key(): string {
-  return crypto.randomUUID();
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
 }
 
 export function newSet(prev?: DraftSet): DraftSet {

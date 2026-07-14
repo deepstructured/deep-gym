@@ -7,9 +7,11 @@ import {
   TelegramOtpForm,
 } from "@/features/auth";
 import { isSupabaseConfigured } from "@/shared/config/env";
+import { useI18n } from "@/shared/i18n";
 import { Card, ErrorNote, IconTelegram, Segmented } from "@/shared/ui";
 
 function LoginContent() {
+  const { t } = useI18n();
   const searchParams = useSearchParams();
   const [method, setMethod] = useState<"google" | "telegram">("google");
   const oauthFailed = searchParams.get("error") === "oauth";
@@ -24,12 +26,12 @@ function LoginContent() {
               DeepGym
             </p>
             <p className="relative mt-2 text-center text-[13px] text-white/70">
-              Track the progress.
+              {t("login.tagline")}
             </p>
           </Card>
         </div>
-        <h1 className="text-2xl font-semibold">Welcome back</h1>
-        <p className="mt-1 text-sm text-muted">Sign in to start training</p>
+        <h1 className="text-2xl font-semibold">{t("login.welcome")}</h1>
+        <p className="mt-1 text-sm text-muted">{t("login.signInToStart")}</p>
       </div>
 
       {!isSupabaseConfigured && (
@@ -40,7 +42,7 @@ function LoginContent() {
 
       {oauthFailed && (
         <div className="mb-5">
-          <ErrorNote message="Google sign-in failed. Try again." />
+          <ErrorNote message={t("login.googleFailed")} />
         </div>
       )}
 
@@ -63,7 +65,7 @@ function LoginContent() {
       {method === "telegram" && (
         <div className="mt-8 flex items-center justify-center gap-2 text-xs text-faint">
           <IconTelegram size={14} />
-          One-time codes are sent by the DeepGym bot
+          {t("login.botNote")}
         </div>
       )}
     </main>

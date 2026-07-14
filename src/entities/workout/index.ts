@@ -7,6 +7,7 @@ export type {
 export {
   useWorkouts,
   useWorkout,
+  useLastWorkoutOfType,
   useCreateWorkout,
   useUpdateWorkout,
   useDeleteWorkout,

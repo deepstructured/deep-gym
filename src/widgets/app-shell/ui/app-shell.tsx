@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import { IconChevronLeft } from "@/shared/ui";
 import { BottomNav } from "./bottom-nav";
@@ -24,16 +25,17 @@ export function AppShell({
   className,
 }: AppShellProps) {
   const router = useRouter();
+  const { t } = useI18n();
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pt-4 pb-32">
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pt-8 pb-32">
       {(title || back || action) && (
         <header className="sticky top-0 z-30 -mx-5 mb-4 flex items-center gap-3 bg-bg/85 px-5 py-3 backdrop-blur-xl">
           {back && (
             <button
               type="button"
               onClick={() => router.back()}
-              aria-label="Back"
+              aria-label={t("common.back")}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-raised text-text"
             >
               <IconChevronLeft size={20} />

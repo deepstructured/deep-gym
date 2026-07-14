@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useProfile } from "@/entities/user";
 import type { Equipment } from "@/shared/config/workout";
+import { useI18n } from "@/shared/i18n";
 import {
   buildPlateSpecs,
   calcPlateVariants,
@@ -34,6 +35,7 @@ interface PlateSheetProps {
 }
 
 export function PlateSheet({ context, onClose }: PlateSheetProps) {
+  const { t } = useI18n();
   const { data: profile } = useProfile();
 
   const equipment = context?.equipment ?? "machine";
@@ -75,10 +77,10 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
       onClose={onClose}
       title={
         isDumbbell
-          ? "Dumbbells"
+          ? t("plates.dumbbells")
           : isBarbell
-            ? "Load the bar"
-            : "Load the plates"
+            ? t("plates.loadBar")
+            : t("plates.loadPlates")
       }
     >
       {open && (
@@ -87,13 +89,13 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
             <div className="dots-bg pointer-events-none absolute inset-0 opacity-25" />
             <DotValue
               value={roundWeight(kgToUnit(weightKg, unit))}
-              suffix={isDumbbell ? `${unit} each` : unit}
+              suffix={isDumbbell ? t("plates.each", { unit }) : unit}
               className="relative text-5xl text-white"
               suffixClassName="text-white/70"
             />
             {isBarbell && !barCoversAll && (
               <p className="relative mt-2 text-xs text-white/60">
-                includes the {formatWeight(barKg, unit)} bar
+                {t("plates.includesBar", { bar: formatWeight(barKg, unit) })}
               </p>
             )}
           </div>
@@ -104,27 +106,29 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
                 <span className="flex items-center gap-3">
                   <DumbbellGlyph />
                   <span className="font-medium">
-                    {formatWeight(weightKg, unit)} dumbbell
+                    {t("plates.dumbbell", {
+                      weight: formatWeight(weightKg, unit),
+                    })}
                   </span>
                 </span>
                 <DotValue value="x2" className="text-xl text-lime" />
               </div>
               <p className="pt-1 text-center text-sm text-muted">
-                One in each hand ·{" "}
+                {t("plates.oneEachHand")} ·{" "}
                 <span className="font-dot">
                   {roundWeight(kgToUnit(weightKg * 2, unit))}
                 </span>{" "}
-                {unit} total load
+                {t("plates.totalLoad", { unit })}
               </p>
             </div>
           ) : barCoversAll ? (
             <p className="text-center text-sm text-muted">
-              The bar alone covers this weight — no plates needed.
+              {t("plates.barCovers")}
             </p>
           ) : variants.length > 0 ? (
             <div className="space-y-2">
               <p className="text-[13px] font-medium text-muted">
-                Ways to assemble it
+                {t("plates.ways")}
               </p>
               {variants.map((variant, index) => (
                 <div
@@ -141,7 +145,7 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
                     ))}
                     {index === 0 && (
                       <Tag tone="lime" className="ml-auto">
-                        fewest plates
+                        {t("plates.fewest")}
                       </Tag>
                     )}
                   </div>
@@ -150,7 +154,7 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
                     <p className="mt-1.5 text-xs text-faint">
                       {isBarbell && (
                         <>
-                          per side:{" "}
+                          {t("plates.perSide")}{" "}
                           {variant.counts
                             .map(
                               (c) =>
@@ -162,7 +166,8 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
                       {Math.abs(variant.assembledKg - weightKg) > 0.05 && (
                         <>
                           {isBarbell && " · "}≈{" "}
-                          {formatWeight(variant.assembledKg, unit)} total
+                          {formatWeight(variant.assembledKg, unit)}{" "}
+                          {t("plates.total")}
                         </>
                       )}
                     </p>
@@ -173,7 +178,7 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
           ) : greedy && greedy.counts.length > 0 ? (
             <div className="space-y-2">
               <p className="text-[13px] font-medium text-muted">
-                Closest match
+                {t("plates.closest")}
               </p>
               <div className="rounded-tile border border-line bg-surface px-4 py-3">
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -183,17 +188,19 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
                 </div>
               </div>
               <p className="pt-1 text-center text-sm text-muted">
-                {formatWeight(greedy.remainderKg, unit)} is missing —{" "}
+                {t("plates.missing", {
+                  weight: formatWeight(greedy.remainderKg, unit),
+                })}{" "}
                 <Link href="/settings" className="text-lime" onClick={onClose}>
-                  edit your plates
+                  {t("plates.editPlates")}
                 </Link>
               </p>
             </div>
           ) : (
             <p className="text-center text-sm text-muted">
-              No plates configured —{" "}
+              {t("plates.none")}{" "}
               <Link href="/settings" className="text-lime" onClick={onClose}>
-                add them in Settings
+                {t("plates.addInSettings")}
               </Link>
               .
             </p>

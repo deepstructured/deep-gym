@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useUpdateExercise } from "@/entities/exercise";
+import { useExercises, useUpdateExercise } from "@/entities/exercise";
+import { useI18n } from "@/shared/i18n";
 import { Button, IconInfo, Sheet, TextArea } from "@/shared/ui";
 
 interface MachineInfoButtonProps {
@@ -22,14 +23,23 @@ export function MachineInfoButton({
   machineSettings,
   onGradient,
 }: MachineInfoButtonProps) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(machineSettings ?? "");
   const update = useUpdateExercise();
 
+  // The prop can be a stale snapshot (the workout draft copies the exercise
+  // when it's added) — prefer the live value from the exercises cache so a
+  // setup saved here is visible the next time the sheet opens.
+  const { data: exercises } = useExercises();
+  const live = exercises?.find((e) => e.id === exerciseId);
+  const currentSettings = live ? live.machine_settings : machineSettings;
+
+  const [text, setText] = useState(currentSettings ?? "");
+
   useEffect(() => {
-    setText(machineSettings ?? "");
-  }, [machineSettings]);
+    setText(currentSettings ?? "");
+  }, [currentSettings]);
 
   function save() {
     update.mutate(
@@ -42,7 +52,7 @@ export function MachineInfoButton({
     <>
       <button
         type="button"
-        aria-label="Machine setup"
+        aria-label={t("machine.title")}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -57,7 +67,11 @@ export function MachineInfoButton({
         <IconInfo size={17} />
       </button>
 
-      <Sheet open={open} onClose={() => setOpen(false)} title="Machine setup">
+      <Sheet
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t("machine.title")}
+      >
         <p className="mb-3 text-sm text-muted">{exerciseName}</p>
         {editing ? (
           <div className="space-y-4">
@@ -65,7 +79,7 @@ export function MachineInfoButton({
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={5}
-              placeholder="Seat height 4, back pad 2, handles at chest level…"
+              placeholder={t("machine.placeholder")}
               autoFocus
             />
             <div className="flex gap-3">
@@ -74,10 +88,10 @@ export function MachineInfoButton({
                 className="flex-1"
                 onClick={() => {
                   setEditing(false);
-                  setText(machineSettings ?? "");
+                  setText(currentSettings ?? "");
                 }}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 variant="lime"
@@ -85,18 +99,15 @@ export function MachineInfoButton({
                 onClick={save}
                 loading={update.isPending}
               >
-                Save
+                {t("common.save")}
               </Button>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
             <div className="rounded-tile border border-line bg-raised px-4 py-4 whitespace-pre-wrap text-[15px] leading-relaxed">
-              {machineSettings || (
-                <span className="text-faint">
-                  No setup notes yet. Add seat position, pad height and other
-                  adjustments so you never have to remember them.
-                </span>
+              {currentSettings || (
+                <span className="text-faint">{t("machine.empty")}</span>
               )}
             </div>
             <Button
@@ -104,7 +115,7 @@ export function MachineInfoButton({
               className="w-full"
               onClick={() => setEditing(true)}
             >
-              {machineSettings ? "Edit setup" : "Add setup"}
+              {currentSettings ? t("machine.edit") : t("machine.add")}
             </Button>
           </div>
         )}

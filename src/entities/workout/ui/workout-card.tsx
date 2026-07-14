@@ -1,6 +1,6 @@
 'use client'
 
-import { equipmentLabel } from '@/shared/config/workout'
+import { useI18n } from '@/shared/i18n'
 import { formatDay } from '@/shared/lib/dates'
 import { formatWeight, type Unit } from '@/shared/lib/weight'
 import {
@@ -19,6 +19,7 @@ interface WorkoutCardProps {
   workout: Workout
   unit: Unit
   showDate?: boolean
+  className?: string
   onEdit?: () => void
   onDelete?: () => void
 }
@@ -27,22 +28,29 @@ export function WorkoutCard({
   workout,
   unit,
   showDate,
+  className,
   onEdit,
   onDelete,
 }: WorkoutCardProps) {
+  const { t, tn } = useI18n()
   const totalSets = workout.workout_exercises.reduce(
     (sum, we) => sum + we.sets.length,
     0,
   )
 
   return (
-    <Card onClick={onEdit} variant="surface" className={clsx('p-4', s.card)}>
+    <Card
+      onClick={onEdit}
+      variant="surface"
+      className={clsx('p-4', s.card, className)}
+    >
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-bold text-lime">{workout.type}</p>
           <p className="mt-0.5 text-xs text-muted">
             {showDate && <>{formatDay(workout.date)} · </>}
-            {workout.workout_exercises.length} exercises · {totalSets} sets
+            {tn('count.exercises', workout.workout_exercises.length)} ·{' '}
+            {tn('count.sets', totalSets)}
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
@@ -90,7 +98,7 @@ export function WorkoutCard({
                 </p>
                 {we.exercise && (
                   <Tag className="shrink-0">
-                    {equipmentLabel(we.exercise.equipment)}
+                    {t(`equipment.${we.exercise.equipment}`)}
                   </Tag>
                 )}
               </div>

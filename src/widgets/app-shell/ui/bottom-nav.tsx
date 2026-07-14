@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useI18n, type MessageKey } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import {
   IconDumbbell,
@@ -11,23 +12,30 @@ import {
   IconSettings,
 } from "@/shared/ui";
 
-const tabs = [
-  { href: "/", label: "Home", icon: IconHome },
-  { href: "/history", label: "History", icon: IconHistory },
-  { href: "/workouts/new", label: "Add", icon: IconPlus, primary: true },
-  { href: "/exercises", label: "Exercises", icon: IconDumbbell },
-  { href: "/settings", label: "Settings", icon: IconSettings },
+const tabs: {
+  href: string;
+  labelKey: MessageKey;
+  icon: typeof IconHome;
+  primary?: boolean;
+}[] = [
+  { href: "/", labelKey: "nav.home", icon: IconHome },
+  { href: "/history", labelKey: "nav.history", icon: IconHistory },
+  { href: "/workouts/new", labelKey: "nav.add", icon: IconPlus, primary: true },
+  { href: "/exercises", labelKey: "nav.exercises", icon: IconDumbbell },
+  { href: "/settings", labelKey: "nav.settings", icon: IconSettings },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line/60 bg-bg/85 backdrop-blur-xl safe-bottom">
       <div className="mx-auto flex max-w-md items-center justify-around px-3 py-2">
-        {tabs.map(({ href, label, icon: Icon, primary }) => {
+        {tabs.map(({ href, labelKey, icon: Icon, primary }) => {
           const active =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
+          const label = t(labelKey);
 
           if (primary) {
             return (

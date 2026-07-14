@@ -9,11 +9,13 @@ import {
   draftToInput,
   useNewWorkoutDraft,
 } from "@/features/workout-form";
+import { useI18n } from "@/shared/i18n";
 import { AppShell } from "@/widgets/app-shell";
 import { Button, ErrorNote, PageLoader } from "@/shared/ui";
 
 export function WorkoutNewView() {
   const router = useRouter();
+  const { t } = useI18n();
   const { data: profile } = useProfile();
   const { draft, setDraft, reset } = useNewWorkoutDraft();
   const createWorkout = useCreateWorkout();
@@ -23,6 +25,18 @@ export function WorkoutNewView() {
   // hydration mismatch with a stored draft.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // ?type=Upper (e.g. from the next-workout widget) preselects the type.
+  // Read via window.location instead of useSearchParams to skip the
+  // Suspense boundary Next requires for the latter.
+  useEffect(() => {
+    if (!mounted) return;
+    const type = new URLSearchParams(window.location.search).get("type");
+    if (type && type !== useNewWorkoutDraft.getState().draft.type) {
+      const { draft: current, setDraft: apply } = useNewWorkoutDraft.getState();
+      apply({ ...current, type });
+    }
+  }, [mounted]);
 
   const unit = profile?.unit ?? "kg";
   const canSave = draft.exercises.length > 0 && !createWorkout.isPending;
@@ -40,7 +54,7 @@ export function WorkoutNewView() {
 
   return (
     <AppShell
-      title="New workout"
+      title={t("workout.new")}
       back
       action={
         <Button
@@ -50,7 +64,7 @@ export function WorkoutNewView() {
           disabled={!canSave}
           loading={createWorkout.isPending}
         >
-          Save
+          {t("common.save")}
         </Button>
       }
     >
@@ -58,7 +72,12 @@ export function WorkoutNewView() {
         <PageLoader />
       ) : (
         <div className="space-y-5">
-          <WorkoutForm value={draft} onChange={setDraft} unit={unit} />
+          <WorkoutForm
+            value={draft}
+            onChange={setDraft}
+            unit={unit}
+            enableCopyLast
+          />
 
           {error && <ErrorNote message={error} />}
 
@@ -70,7 +89,7 @@ export function WorkoutNewView() {
               onClick={save}
               loading={createWorkout.isPending}
             >
-              Save workout
+              {t("workout.save")}
             </Button>
           )}
 
@@ -80,7 +99,7 @@ export function WorkoutNewView() {
               className="w-full pb-2 text-center text-sm text-faint"
               onClick={reset}
             >
-              Discard draft
+              {t("workout.discard")}
             </button>
           )}
         </div>

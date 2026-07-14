@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import { IconClose } from "./icons";
 
@@ -15,6 +16,7 @@ interface SheetProps {
 
 /** Bottom sheet modal. */
 export function Sheet({ open, onClose, title, children, className }: SheetProps) {
+  const { t } = useI18n();
   useEffect(() => {
     if (!open) return;
     const original = document.body.style.overflow;
@@ -46,7 +48,7 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t("common.close")}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-raised text-muted"
             >
               <IconClose size={18} />
@@ -76,9 +78,10 @@ export function ConfirmSheet({
   onConfirm,
   title,
   message,
-  confirmLabel = "Delete",
+  confirmLabel,
   loading,
 }: ConfirmSheetProps) {
+  const { t } = useI18n();
   return (
     <Sheet open={open} onClose={onClose} title={title}>
       {message && <p className="mb-5 text-[15px] text-muted">{message}</p>}
@@ -88,7 +91,7 @@ export function ConfirmSheet({
           onClick={onClose}
           className="h-12 flex-1 rounded-full border border-line bg-raised font-medium"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         <button
           type="button"
@@ -96,7 +99,7 @@ export function ConfirmSheet({
           disabled={loading}
           className="h-12 flex-1 rounded-full bg-flame font-semibold text-white disabled:opacity-50"
         >
-          {confirmLabel}
+          {confirmLabel ?? t("common.delete")}
         </button>
       </div>
     </Sheet>

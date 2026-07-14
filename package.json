@@ -1,6 +1,6 @@
 {
   "name": "deepgym",
-  "version": "0.1.0",
+  "version": "1.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "avatars": "node scripts/generate-avatars.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

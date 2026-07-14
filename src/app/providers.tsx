@@ -1,7 +1,30 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useProfile } from "@/entities/user";
+import { I18nProvider, isLang, useI18n } from "@/shared/i18n";
+
+/** Applies the language stored in the user's profile once it loads
+ *  (and whenever it changes, e.g. edited from another device). */
+function ProfileLanguageSync() {
+  const { data: profile } = useProfile();
+  const { lang, setLang } = useI18n();
+
+  // ref, not dep: reacting to `lang` here would revert an in-flight
+  // local switch before the profile refetches.
+  const langRef = useRef(lang);
+  langRef.current = lang;
+
+  const profileLang = profile?.language;
+  useEffect(() => {
+    if (isLang(profileLang) && profileLang !== langRef.current) {
+      setLang(profileLang);
+    }
+  }, [profileLang, setLang]);
+
+  return null;
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -43,6 +66,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <I18nProvider>
+        <ProfileLanguageSync />
+        {children}
+      </I18nProvider>
+    </QueryClientProvider>
   );
 }

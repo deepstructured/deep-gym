@@ -7,11 +7,8 @@ import {
   type Exercise,
 } from "@/entities/exercise";
 import { useMuscleGroups } from "@/entities/muscle-group";
-import {
-  EQUIPMENT_OPTIONS,
-  equipmentLabel,
-  type Equipment,
-} from "@/shared/config/workout";
+import { EQUIPMENT_OPTIONS, type Equipment } from "@/shared/config/workout";
+import { useI18n } from "@/shared/i18n";
 import { parseWeight, unitToKg, type Unit } from "@/shared/lib/weight";
 import {
   Button,
@@ -39,6 +36,7 @@ export function ExercisePicker({
   onPick,
   unit,
 }: ExercisePickerProps) {
+  const { t } = useI18n();
   const { data: groups } = useMuscleGroups();
   const { data: exercises, isLoading } = useExercises();
   const createExercise = useCreateExercise();
@@ -82,8 +80,8 @@ export function ExercisePicker({
   function handleCreate() {
     const trimmed = name.trim();
     const gid = groupId ?? groupFilter ?? groups?.[0]?.id;
-    if (!trimmed) return setFormError("Name the exercise");
-    if (!gid) return setFormError("Pick a muscle group");
+    if (!trimmed) return setFormError(t("picker.errName"));
+    if (!gid) return setFormError(t("picker.errGroup"));
 
     const weight = parseWeight(workingWeight);
     createExercise.mutate(
@@ -116,21 +114,21 @@ export function ExercisePicker({
         resetCreateForm();
         onClose();
       }}
-      title={creating ? "New exercise" : "Add exercise"}
+      title={creating ? t("picker.newTitle") : t("picker.title")}
       className="min-h-[70dvh]"
     >
       {creating ? (
         <div className="space-y-4">
-          <Field label="Name">
+          <Field label={t("picker.name")}>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Chest Press"
+              placeholder={t("picker.namePlaceholder")}
               autoFocus
             />
           </Field>
 
-          <Field label="Muscle group">
+          <Field label={t("picker.muscleGroup")}>
             <div className="flex flex-wrap gap-2">
               {groups?.map((group) => (
                 <Chip
@@ -144,7 +142,7 @@ export function ExercisePicker({
             </div>
           </Field>
 
-          <Field label="Equipment">
+          <Field label={t("picker.equipment")}>
             <div className="flex flex-wrap gap-2">
               {EQUIPMENT_OPTIONS.map((option) => (
                 <Chip
@@ -152,27 +150,27 @@ export function ExercisePicker({
                   selected={equipment === option.value}
                   onClick={() => setEquipment(option.value)}
                 >
-                  {option.label}
+                  {t(`equipment.${option.value}`)}
                 </Chip>
               ))}
             </div>
           </Field>
 
           {equipment === "machine" && (
-            <Field label="Machine setup (optional)">
+            <Field label={t("picker.machineSetupOptional")}>
               <TextArea
                 value={machineSettings}
                 onChange={(e) => setMachineSettings(e.target.value)}
-                placeholder="Seat height 4, back pad 2…"
+                placeholder={t("picker.machineSetupPlaceholder")}
               />
             </Field>
           )}
 
-          <Field label="Weight unit for this exercise">
+          <Field label={t("picker.unitForExercise")}>
             <div className="flex flex-wrap gap-2">
               {(
                 [
-                  { value: "default", label: `Default (${unit})` },
+                  { value: "default", label: t("picker.unitDefault", { unit }) },
                   { value: "kg", label: "kg" },
                   { value: "lb", label: "lb" },
                 ] as const
@@ -188,7 +186,7 @@ export function ExercisePicker({
             </div>
           </Field>
 
-          <Field label={`Working weight, ${effectiveUnit} (optional)`}>
+          <Field label={t("picker.workingWeight", { unit: effectiveUnit })}>
             <Input
               value={workingWeight}
               onChange={(e) =>
@@ -203,7 +201,7 @@ export function ExercisePicker({
 
           <div className="flex gap-3 pt-1">
             <Button variant="surface" className="flex-1" onClick={resetCreateForm}>
-              Back
+              {t("common.back")}
             </Button>
             <Button
               variant="lime"
@@ -211,7 +209,7 @@ export function ExercisePicker({
               onClick={handleCreate}
               loading={createExercise.isPending}
             >
-              Create &amp; add
+              {t("picker.createAdd")}
             </Button>
           </div>
         </div>
@@ -220,12 +218,12 @@ export function ExercisePicker({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search exercises…"
+            placeholder={t("picker.search")}
           />
 
           <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
             <Chip selected={groupFilter === null} onClick={() => setGroupFilter(null)}>
-              All
+              {t("common.all")}
             </Chip>
             {groups?.map((group) => (
               <Chip
@@ -255,7 +253,7 @@ export function ExercisePicker({
                     <span className="block font-medium">{exercise.name}</span>
                     <span className="text-xs text-muted">
                       {groupName(exercise.muscle_group_id)} ·{" "}
-                      {equipmentLabel(exercise.equipment)}
+                      {t(`equipment.${exercise.equipment}`)}
                     </span>
                   </span>
                   <IconPlus size={18} className="shrink-0 text-lime" />
@@ -263,7 +261,9 @@ export function ExercisePicker({
               ))}
               {filtered.length === 0 && (
                 <p className="py-6 text-center text-sm text-muted">
-                  Nothing found{search && ` for “${search}”`}.
+                  {search.trim()
+                    ? t("picker.emptyFor", { query: search.trim() })
+                    : t("picker.empty")}
                 </p>
               )}
             </div>
@@ -278,7 +278,7 @@ export function ExercisePicker({
             }}
           >
             <IconPlus size={18} />
-            Create new exercise
+            {t("picker.createNew")}
           </Button>
         </div>
       )}

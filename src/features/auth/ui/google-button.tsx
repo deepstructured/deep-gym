@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useI18n } from "@/shared/i18n";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
 import { Button, IconGoogle } from "@/shared/ui";
 
 export function GoogleSignInButton() {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(false);
 
   async function signIn() {
@@ -28,7 +30,7 @@ export function GoogleSignInButton() {
       loading={loading}
     >
       {!loading && <IconGoogle size={20} />}
-      Continue with Google
+      {t("login.continueGoogle")}
     </Button>
   );
 }

@@ -1,3 +1,4 @@
+import { differenceInCalendarDays } from "date-fns";
 import type { ExerciseSetRecord } from "@/entities/workout";
 import { kgToUnit, roundWeight, type Unit } from "@/shared/lib/weight";
 
@@ -116,4 +117,98 @@ export function seriesToUnit(series: ProgressPoint[], unit: Unit) {
     date: point.date,
     value: roundWeight(kgToUnit(point.valueKg, unit)),
   }));
+}
+
+/** What the progress chart plots per session. */
+export type ProgressMetric = "topSet" | "oneRm" | "volume" | "reps";
+
+/** Per-session series for a metric. Values are kg for weight metrics and
+ *  plain counts for "reps" — the caller converts units where relevant. */
+export function metricSeries(
+  records: ExerciseSetRecord[],
+  metric: ProgressMetric,
+): ProgressPoint[] {
+  const byDate = new Map<string, number>();
+  for (const record of records) {
+    const date = record.workoutDate;
+    switch (metric) {
+      case "topSet": {
+        if (record.weight_kg == null) break;
+        const current = byDate.get(date);
+        if (current == null || record.weight_kg > current) {
+          byDate.set(date, record.weight_kg);
+        }
+        break;
+      }
+      case "oneRm": {
+        if (record.weight_kg == null || record.reps == null || record.reps <= 0)
+          break;
+        const est = record.weight_kg * (1 + record.reps / 30); // Epley
+        const current = byDate.get(date);
+        if (current == null || est > current) byDate.set(date, est);
+        break;
+      }
+      case "volume": {
+        if (record.weight_kg == null || record.reps == null) break;
+        byDate.set(
+          date,
+          (byDate.get(date) ?? 0) + record.weight_kg * record.reps,
+        );
+        break;
+      }
+      case "reps": {
+        if (record.reps == null) break;
+        byDate.set(date, (byDate.get(date) ?? 0) + record.reps);
+        break;
+      }
+    }
+  }
+  return [...byDate.entries()]
+    .map(([date, valueKg]) => ({ date, valueKg }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export interface ExtendedSummary extends ExerciseSummary {
+  /** Sum of weight × reps over the period, kg. */
+  totalVolumeKg: number;
+  /** Share of sets marked "to failure", 0..1. */
+  failureRate: number;
+  /** Average sessions per week over the active span; null with no sessions. */
+  perWeek: number | null;
+  firstDate: string | null;
+}
+
+export function extendedSummary(records: ExerciseSetRecord[]): ExtendedSummary {
+  const base = exerciseSummary(records);
+  const dates = [...new Set(records.map((r) => r.workoutDate))].sort();
+  const firstDate = dates[0] ?? null;
+
+  let totalVolumeKg = 0;
+  let failures = 0;
+  for (const record of records) {
+    if (record.weight_kg != null && record.reps != null) {
+      totalVolumeKg += record.weight_kg * record.reps;
+    }
+    if (record.to_failure) failures += 1;
+  }
+
+  let perWeek: number | null = null;
+  if (firstDate && base.lastDate) {
+    const spanDays = Math.max(
+      7,
+      differenceInCalendarDays(
+        new Date(base.lastDate),
+        new Date(firstDate),
+      ) + 1,
+    );
+    perWeek = Math.round((base.sessions / (spanDays / 7)) * 10) / 10;
+  }
+
+  return {
+    ...base,
+    totalVolumeKg,
+    failureRate: records.length ? failures / records.length : 0,
+    perWeek,
+    firstDate,
+  };
 }

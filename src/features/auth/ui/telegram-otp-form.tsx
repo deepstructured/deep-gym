@@ -3,23 +3,25 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { TELEGRAM_BOT_USERNAME } from "@/shared/config/env";
+import { useI18n } from "@/shared/i18n";
 import { Button, ErrorNote, Field, IconTelegram, Input } from "@/shared/ui";
 
 type Step = "username" | "code";
 
-async function post(url: string, body: unknown) {
+async function post(url: string, body: unknown, fallbackError: string) {
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Something went wrong");
+  if (!res.ok) throw new Error(data.error ?? fallbackError);
   return data;
 }
 
 export function TelegramOtpForm() {
   const router = useRouter();
+  const { t } = useI18n();
   const [step, setStep] = useState<Step>("username");
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
@@ -30,7 +32,11 @@ export function TelegramOtpForm() {
     setLoading(true);
     setError(null);
     try {
-      await post("/api/auth/telegram/request", { username });
+      await post(
+        "/api/auth/telegram/request",
+        { username },
+        t("common.error"),
+      );
       setStep("code");
     } catch (e) {
       setError((e as Error).message);
@@ -43,7 +49,11 @@ export function TelegramOtpForm() {
     setLoading(true);
     setError(null);
     try {
-      await post("/api/auth/telegram/verify", { username, code });
+      await post(
+        "/api/auth/telegram/verify",
+        { username, code },
+        t("common.error"),
+      );
       router.push("/");
       router.refresh();
     } catch (e) {
@@ -56,7 +66,7 @@ export function TelegramOtpForm() {
     <div className="space-y-4">
       {step === "username" ? (
         <>
-          <Field label="Telegram username">
+          <Field label={t("login.telegramUsername")}>
             <Input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -68,7 +78,7 @@ export function TelegramOtpForm() {
           </Field>
           {TELEGRAM_BOT_USERNAME && (
             <p className="text-[13px] leading-relaxed text-muted">
-              First time here? Open{" "}
+              {t("login.firstTime")}{" "}
               <a
                 href={`https://t.me/${TELEGRAM_BOT_USERNAME}`}
                 target="_blank"
@@ -76,9 +86,7 @@ export function TelegramOtpForm() {
                 className="font-medium text-lime"
               >
                 @{TELEGRAM_BOT_USERNAME}
-              </a>{" "}
-              in Telegram and press <b>Start</b> — then come back and enter
-              your username.
+              </a>
             </p>
           )}
           {error && <ErrorNote message={error} />}
@@ -91,12 +99,16 @@ export function TelegramOtpForm() {
             disabled={!username.trim()}
           >
             {!loading && <IconTelegram size={19} />}
-            Send code
+            {t("login.sendCode")}
           </Button>
         </>
       ) : (
         <>
-          <Field label={`Code sent to @${username.replace(/^@/, "")}`}>
+          <Field
+            label={t("login.codeSent", {
+              username: username.replace(/^@/, ""),
+            })}
+          >
             <Input
               value={code}
               onChange={(e) =>
@@ -120,7 +132,7 @@ export function TelegramOtpForm() {
             loading={loading}
             disabled={code.length !== 6}
           >
-            Sign in
+            {t("login.signIn")}
           </Button>
           <button
             type="button"
@@ -131,7 +143,7 @@ export function TelegramOtpForm() {
               setError(null);
             }}
           >
-            Use a different username
+            {t("login.differentUsername")}
           </button>
         </>
       )}
