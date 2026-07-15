@@ -8,7 +8,13 @@ import {
 } from "@/features/auth";
 import { isSupabaseConfigured } from "@/shared/config/env";
 import { useI18n } from "@/shared/i18n";
-import { Card, ErrorNote, IconTelegram, Segmented } from "@/shared/ui";
+import {
+  BrandMark,
+  Card,
+  ErrorNote,
+  IconTelegram,
+  Segmented,
+} from "@/shared/ui";
 
 function LoginContent() {
   const { t } = useI18n();
@@ -20,12 +26,13 @@ function LoginContent() {
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center px-5 py-10">
       <div className="mb-10 text-center">
         <div className="mb-6 flex justify-center">
-          <Card variant="pink" className="w-full max-w-70 py-9">
-            <div className="dots-bg pointer-events-none absolute inset-0 opacity-30" />
-            <p className="relative text-center font-dot text-4xl tracking-tight text-white">
+          <Card variant="indigo" className="w-full max-w-72 px-6 py-8">
+            <div className="dots-bg pointer-events-none absolute inset-0 opacity-[0.08]" />
+            <BrandMark width={112} className="relative mx-auto" />
+            <p className="relative mt-5 text-center text-base font-semibold tracking-[0.16em] text-white uppercase">
               DeepGym
             </p>
-            <p className="relative mt-2 text-center text-[13px] text-white/70">
+            <p className="relative mt-1.5 text-center text-[13px] text-white/60">
               {t("login.tagline")}
             </p>
           </Card>

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useProfile } from "@/entities/user";
 import { I18nProvider, isLang, useI18n } from "@/shared/i18n";
+import { ProductExperience } from "@/widgets/product-experience";
 
 /** Applies the language stored in the user's profile once it loads
  *  (and whenever it changes, e.g. edited from another device). */
@@ -69,7 +70,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
         <ProfileLanguageSync />
-        {children}
+        <ProductExperience>{children}</ProductExperience>
       </I18nProvider>
     </QueryClientProvider>
   );

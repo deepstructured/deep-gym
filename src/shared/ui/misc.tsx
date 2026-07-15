@@ -58,7 +58,10 @@ export function PageLoader() {
 
 export function ErrorNote({ message }: { message: string }) {
   return (
-    <div className="rounded-2xl border border-flame/30 bg-flame/10 px-4 py-3 text-sm text-[#ff8f73]">
+    <div
+      role="alert"
+      className="rounded-2xl border border-flame/30 bg-flame/10 px-4 py-3 text-sm text-[#ff8f73]"
+    >
       {message}
     </div>
   );

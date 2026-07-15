@@ -1,15 +1,17 @@
 {
   "name": "deepgym",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "icons": "node scripts/generate-icons.mjs",
-    "avatars": "node scripts/generate-avatars.mjs"
+    "icons:check": "node scripts/generate-icons.mjs --check",
+    "avatars:legacy": "node scripts/generate-avatars.mjs",
+    "verify": "npm run typecheck && npm run icons:check",
+    "precommit": "npm run verify && git diff --check"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -21,7 +23,6 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "sass": "^1.101.0",
-    "scss": "^0.2.4",
     "zustand": "^5.0.4"
   },
   "devDependencies": {

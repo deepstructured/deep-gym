@@ -1,23 +1,32 @@
 "use client";
 
 import clsx from "clsx";
-import { differenceInCalendarWeeks, subDays } from "date-fns";
+import { addDays, differenceInCalendarWeeks, subDays } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { useProfile } from "@/entities/user";
-import { WorkoutCard, useWorkouts } from "@/entities/workout";
+import {
+  WorkoutCard,
+  useWorkoutCount,
+  useWorkouts,
+} from "@/entities/workout";
 import { ProgressExplorer } from "@/features/exercise-stats";
+import { FirstWorkoutGuideCard } from "@/features/first-workout";
 import { NextWorkoutCard } from "@/features/next-workout";
 import { useI18n } from "@/shared/i18n";
 import { formatDayFull, toISODate, todayISO } from "@/shared/lib/dates";
 import { AppShell } from "@/widgets/app-shell";
 import {
   Avatar,
+  BrandMark,
   Card,
   DotValue,
   EmptyState,
   IconChevronRight,
+  IconDumbbell,
+  IconFlame,
+  IconHistory,
   IconPlus,
 } from "@/shared/ui";
 
@@ -48,6 +57,7 @@ export function HomeView() {
   const from = toISODate(subDays(new Date(), 180));
   const to = todayISO();
   const { data: workouts } = useWorkouts(from, to);
+  const { data: workoutCount } = useWorkoutCount();
 
   const unit = profile?.unit ?? "kg";
 
@@ -58,12 +68,19 @@ export function HomeView() {
       (new Date().getDay() + 6) % 7, // days since Monday
     );
     const weekFrom = toISODate(thisWeekStart);
+    const thisWeekDates = new Set(
+      list.filter((w) => w.date >= weekFrom).map((w) => w.date),
+    );
     return {
       thisWeek: list.filter((w) => w.date >= weekFrom).length,
+      weekDays: Array.from({ length: 7 }, (_, index) =>
+        thisWeekDates.has(toISODate(addDays(thisWeekStart, index))),
+      ),
+      currentWeekday: (new Date().getDay() + 6) % 7,
       streak: weekStreak(list.map((w) => w.date)),
-      total: list.length,
+      total: workoutCount ?? 0,
     };
-  }, [workouts]);
+  }, [workoutCount, workouts]);
 
   const recent = (workouts ?? []).slice(0, 3);
   const firstName = profile?.display_name?.split(" ")[0] ?? t("home.athlete");
@@ -95,7 +112,10 @@ export function HomeView() {
     <AppShell>
       <header className="mb-6 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm text-muted">{formatDayFull(todayISO())}</p>
+          <div className="mb-1 flex items-center gap-2">
+            <BrandMark width={22} />
+            <p className="text-sm text-muted">{formatDayFull(todayISO())}</p>
+          </div>
           <h1 className="truncate text-2xl font-semibold">
             {t("home.greeting", { name: firstName })}
           </h1>
@@ -115,7 +135,10 @@ export function HomeView() {
 
       <div className="space-y-5">
         {/* Main CTA */}
-        <Link href="/workouts/new" className="block">
+        <Link
+          href={workoutCount === 0 ? "/workouts/new?first=1" : "/workouts/new"}
+          className="block"
+        >
           <Card variant="pink" className="p-6">
             <div className="dots-bg pointer-events-none absolute inset-0 opacity-25" />
             <div className="relative flex items-center justify-between">
@@ -134,35 +157,86 @@ export function HomeView() {
           </Card>
         </Link>
 
+        {workoutCount === 0 && <FirstWorkoutGuideCard />}
+
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-3">
-          <Card variant="surface" className="rounded-tile p-4">
-            <p className="mb-2 text-[11px] font-medium tracking-wide text-faint uppercase">
-              {t("home.week")}
-            </p>
-            <DotValue value={stats.thisWeek} className="text-3xl text-lime" />
+        <div className="grid grid-cols-[1.08fr_1fr] grid-rows-2 gap-3">
+          <Card
+            variant="surface"
+            className="stat-well row-span-2 flex min-h-48 flex-col rounded-tile p-4"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="max-w-24 text-[10px] leading-[1.35] font-semibold tracking-[0.11em] text-muted uppercase">
+                {t("home.workoutsThisWeek")}
+              </p>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-lime/20 bg-lime/10 text-lime">
+                <IconDumbbell size={16} />
+              </span>
+            </div>
+            <DotValue
+              value={stats.thisWeek}
+              className="mt-5 text-[48px] text-lime"
+            />
+            <div
+              aria-hidden="true"
+              className="mt-auto grid grid-cols-7 items-end gap-1 pt-5"
+            >
+              {stats.weekDays.map((hasWorkout, index) => (
+                <span
+                  key={index}
+                  className={clsx(
+                    "mx-auto w-1 rounded-full transition-all",
+                    hasWorkout
+                      ? "h-4 bg-lime shadow-[0_0_12px_rgba(215,246,81,0.45)]"
+                      : "h-1.5 bg-white/12",
+                    index === stats.currentWeekday &&
+                      !hasWorkout &&
+                      "bg-white/30",
+                  )}
+                />
+              ))}
+            </div>
           </Card>
-          <Card variant="indigo" className="rounded-tile p-4">
-            <p className="mb-2 text-[11px] font-medium tracking-wide text-white/60 uppercase">
-              {t("home.streak")}
-            </p>
+          <Card
+            variant="indigo"
+            className="flex min-h-22 flex-col rounded-tile p-4"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[10px] leading-[1.35] font-semibold tracking-[0.11em] text-white/60 uppercase">
+                {t("home.weekStreak")}
+              </p>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/8 text-white/80">
+                <IconFlame size={14} />
+              </span>
+            </div>
             <DotValue
               value={stats.streak}
               suffix={t("home.wk")}
-              className="text-3xl text-white"
-              suffixClassName="text-white/60"
+              className="mt-auto text-[30px] text-white"
+              suffixClassName="text-white/55"
             />
           </Card>
-          <Card variant="surface" className="rounded-tile p-4">
-            <p className="mb-2 text-[11px] font-medium tracking-wide text-faint uppercase">
-              {t("home.total")}
-            </p>
-            <DotValue value={stats.total} className="text-3xl" />
+          <Card
+            variant="surface"
+            className="stat-well flex min-h-22 flex-col rounded-tile p-4"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-[10px] leading-[1.35] font-semibold tracking-[0.11em] text-muted uppercase">
+                {t("home.totalWorkouts")}
+              </p>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/8 bg-white/5 text-white/55">
+                <IconHistory size={14} />
+              </span>
+            </div>
+            <DotValue value={stats.total} className="mt-auto text-[30px]" />
           </Card>
         </div>
 
-        {/* Next workout — appears once a weekly rhythm is detected */}
-        <NextWorkoutCard workouts={workouts} />
+        {/* Next workout — driven by the user's explicit training week */}
+        <NextWorkoutCard
+          schedule={profile?.training_schedule}
+          workouts={workouts}
+        />
 
         {/* Recent workouts */}
         <div>

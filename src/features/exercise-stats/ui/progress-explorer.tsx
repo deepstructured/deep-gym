@@ -137,6 +137,7 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
           (points[points.length - 1].value - points[0].value) * 100,
         ) / 100
       : 0;
+  const currentPoint = points.at(-1);
 
   const metricLabels: Record<ProgressMetric, string> = {
     topSet: t("stats.weight"),
@@ -158,7 +159,14 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
         </Link>
       </div>
 
-      <Card variant="surface" className="space-y-4 p-4">
+      <Card
+        variant="surface"
+        className="space-y-4 border-white/[0.045] p-4"
+        style={{
+          background:
+            "radial-gradient(125% 55% at 50% 108%, rgba(24, 39, 136, 0.13), transparent 72%), var(--color-surface)",
+        }}
+      >
         <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
           {groupsWithData.map((group) => (
             <Chip
@@ -189,32 +197,52 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
         </div>
 
         {/* Metric switcher + chart */}
-        <div>
-          <div className="mb-2 flex items-start justify-between gap-2">
-            <div className="flex flex-wrap gap-1">
-              {METRICS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setMetric(option)}
-                  className={
-                    metric === option
-                      ? "h-7 shrink-0 rounded-full bg-lime px-3 text-xs font-medium text-black"
-                      : "h-7 shrink-0 rounded-full border border-line bg-raised px-3 text-xs font-medium text-muted"
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-1">
+            {METRICS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setMetric(option)}
+                className={
+                  metric === option
+                    ? "h-7 shrink-0 rounded-full bg-white px-3 text-xs font-medium text-black shadow-[0_4px_18px_-8px_rgba(255,255,255,0.8)]"
+                    : "h-7 shrink-0 rounded-full border border-white/[0.05] bg-white/[0.035] px-3 text-xs font-medium text-muted"
+                }
+              >
+                {metricLabels[option]}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-end justify-between gap-3 px-1">
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium tracking-[0.12em] text-faint uppercase">
+                {metricLabels[metric]}
+              </p>
+              <div className="mt-1 flex items-end">
+                <DotValue
+                  value={currentPoint?.value ?? "—"}
+                  suffix={
+                    currentPoint && isWeightMetric ? exerciseUnit : undefined
                   }
-                >
-                  {metricLabels[option]}
-                </button>
-              ))}
+                  className="text-4xl text-white"
+                  suffixClassName="text-white/40"
+                />
+              </div>
             </div>
             {delta !== 0 && (
-              <Tag tone={delta > 0 ? "lime" : undefined} className="shrink-0">
+              <Tag
+                tone={delta > 0 ? "lime" : undefined}
+                className="mb-1 shrink-0"
+              >
                 {delta > 0 ? "+" : ""}
                 {delta}
                 {isWeightMetric ? ` ${exerciseUnit}` : ""}
               </Tag>
             )}
           </div>
+
           <ProgressChart
             points={points}
             unit={isWeightMetric ? exerciseUnit : ""}
@@ -290,7 +318,7 @@ function MiniStat({
   suffix?: string;
 }) {
   return (
-    <div className="rounded-tile border border-line/60 bg-raised/50 px-3 py-2.5">
+    <div className="rounded-tile bg-white/[0.035] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
       <p className="mb-1 text-[10px] font-medium tracking-wide text-faint uppercase">
         {label}
       </p>

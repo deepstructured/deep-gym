@@ -13,10 +13,12 @@
   --color-muted: #98989f;
   --color-faint: #5c5c64;
 
-  --color-pink: #f56785;
-  --color-purple: #622585;
+  --color-pink: #f567b5;
+  --color-purple: #622595;
   --color-indigo: #182788;
   --color-indigo-bright: #4054d6;
+  --color-cherry: #d34f3d;
+  --color-cherry-bright: #ff624d;
   --color-flame: #e04b2e;
   --color-lime: #d7f651;
 
@@ -49,11 +51,26 @@
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    background-color: var(--color-bg);
+    background:
+      radial-gradient(
+        90% 38rem at 50% -18rem,
+        rgba(24, 39, 136, 0.18),
+        transparent 68%
+      ),
+      var(--color-bg);
+    background-attachment: fixed;
     color: var(--color-text);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     overscroll-behavior-y: none;
+  }
+  ::selection {
+    background: rgba(215, 246, 81, 0.24);
+    color: var(--color-text);
+  }
+  :focus-visible {
+    outline: 2px solid rgba(215, 246, 81, 0.85);
+    outline-offset: 3px;
   }
   input,
   textarea,
@@ -75,27 +92,70 @@
 }
 
 @layer components {
-  /* Gradient card fills — matched to the Airofit-style reference */
+  /* Reverse-field card fills — dark wells with a coloured perimeter. */
   .grad-pink {
     background:
       radial-gradient(
-        130% 95% at 50% -10%,
-        #ff8ba4 0%,
-        #f56785 28%,
-        #a93b86 58%,
-        #622585 80%,
-        #2c1042 100%
-      );
+        112% 178% at 2% -58%,
+        rgba(255, 151, 216, 0.94) 0%,
+        rgba(245, 103, 181, 0.68) 27%,
+        rgba(114, 39, 135, 0.38) 53%,
+        transparent 78%
+      ),
+      radial-gradient(
+        125% 185% at 56% -102%,
+        rgba(151, 48, 150, 0.64) 0%,
+        rgba(84, 29, 116, 0.4) 42%,
+        transparent 72%
+      ),
+      radial-gradient(
+        92% 124% at 106% 112%,
+        rgba(67, 24, 91, 0.58),
+        transparent 66%
+      ),
+      linear-gradient(148deg, #42133f 0%, #27102f 54%, #150b22 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 193, 228, 0.11),
+      inset 0 -22px 38px rgba(17, 5, 17, 0.3);
   }
   .grad-indigo {
     background:
       radial-gradient(
-        135% 110% at 50% -15%,
-        #5468e6 0%,
-        #2e3fb8 35%,
-        #182788 62%,
-        #0a1040 100%
+        108% 172% at 4% -72%,
+        rgba(92, 112, 229, 0.9) 0%,
+        rgba(50, 67, 183, 0.62) 34%,
+        rgba(24, 39, 136, 0.24) 59%,
+        transparent 79%
+      ),
+      radial-gradient(
+        92% 128% at 104% 112%,
+        rgba(31, 49, 157, 0.46),
+        transparent 68%
+      ),
+      linear-gradient(145deg, #172263 0%, #0b133f 58%, #070b28 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(132, 151, 255, 0.1),
+      inset 0 -20px 34px rgba(3, 5, 22, 0.3);
+  }
+  .grad-cherry {
+    background:
+      radial-gradient(
+        88% 72% at 50% 34%,
+        rgba(10, 7, 7, 0.99) 0%,
+        rgba(27, 11, 9, 0.96) 52%,
+        rgba(70, 22, 16, 0.28) 76%,
+        transparent 100%
+      ),
+      radial-gradient(
+        126% 94% at 50% 119%,
+        #ff654f 0%,
+        #d65343 37%,
+        #72281e 66%,
+        #170c0b 100%
       );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      inset 0 -1px 0 rgba(255, 117, 91, 0.68);
   }
   .grad-flame {
     background:
@@ -108,10 +168,22 @@
       );
   }
   .glow-pink {
-    box-shadow: 0 16px 70px -14px rgba(245, 103, 133, 0.5);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 193, 228, 0.11),
+      inset 0 -22px 38px rgba(17, 5, 17, 0.3),
+      0 20px 68px -28px rgba(245, 103, 181, 0.5);
   }
   .glow-indigo {
-    box-shadow: 0 16px 70px -14px rgba(64, 84, 214, 0.45);
+    box-shadow:
+      inset 0 0 0 1px rgba(132, 151, 255, 0.1),
+      inset 0 -20px 34px rgba(3, 5, 22, 0.3),
+      0 20px 68px -28px rgba(64, 84, 214, 0.48);
+  }
+  .glow-cherry {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      inset 0 -1px 0 rgba(255, 117, 91, 0.68),
+      0 20px 64px -24px rgba(211, 79, 61, 0.58);
   }
   .glow-flame {
     box-shadow: 0 16px 70px -14px rgba(224, 75, 46, 0.45);
@@ -124,6 +196,37 @@
       transparent 1.4px
     );
     background-size: 13px 13px;
+  }
+
+  .surface-well {
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 46%),
+      var(--color-surface);
+    border: 1px solid rgba(255, 255, 255, 0.055);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      0 16px 44px -34px rgba(0, 0, 0, 0.92);
+  }
+
+  /* Compact dashboard metrics use a softer, curved black well. */
+  .stat-well {
+    background:
+      radial-gradient(
+        92% 82% at -8% -12%,
+        rgba(255, 255, 255, 0.075),
+        transparent 64%
+      ),
+      radial-gradient(
+        112% 52% at 50% 118%,
+        rgba(104, 108, 127, 0.2),
+        transparent 72%
+      ),
+      linear-gradient(145deg, #121215 0%, #0c0c0f 62%, #111116 100%);
+    border-color: rgba(255, 255, 255, 0.085);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.025),
+      0 18px 42px -34px rgba(0, 0, 0, 0.96);
   }
 
   .no-scrollbar {

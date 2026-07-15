@@ -1,46 +1,5 @@
 import { cn } from "@/shared/lib/cn";
 
-/** Default avatar pictogram, 20×20 pixel grid: an athlete raising a
- *  dumbbell with one arm — matches the app's dot-matrix aesthetic. */
-const PIXEL_ROWS = [
-  "............##...##.",
-  "............#######.",
-  ".....###....#######.",
-  "....#####...####.##.",
-  "....#####....##.....",
-  "....#####...##......",
-  ".....###...##.......",
-  "...........##.......",
-  "..........##........",
-  "...########.........",
-  "..#########.........",
-  "..#########.........",
-  "..#########.........",
-  "..#########.........",
-  "..##.######.........",
-  "..##.######.........",
-  "..##.######.........",
-  "..##.######.........",
-  "..##.######.........",
-  "..##.######.........",
-];
-
-/** Horizontal pixel runs → one <rect> per run. */
-const PIXEL_RUNS: { x: number; y: number; w: number }[] = PIXEL_ROWS.flatMap(
-  (row, y) => {
-    const runs: { x: number; y: number; w: number }[] = [];
-    let start = -1;
-    for (let x = 0; x <= row.length; x++) {
-      if (row[x] === "#" && start === -1) start = x;
-      if (row[x] !== "#" && start !== -1) {
-        runs.push({ x: start, y, w: x - start });
-        start = -1;
-      }
-    }
-    return runs;
-  },
-);
-
 export function DefaultAvatarGlyph({
   size = 24,
   className,
@@ -49,30 +8,21 @@ export function DefaultAvatarGlyph({
   className?: string;
 }) {
   return (
-    <svg
-      viewBox="0 0 20 20"
+    // eslint-disable-next-line @next/next/no-img-element -- tiny local preset
+    <img
+      src="/avatars/deepgym-pixel-portal.webp"
+      alt=""
       width={size}
       height={size}
-      className={className}
-      shapeRendering="crispEdges"
-      aria-hidden
-    >
-      {PIXEL_RUNS.map((run, i) => (
-        <rect
-          key={i}
-          x={run.x}
-          y={run.y}
-          width={run.w}
-          height={1}
-          fill="currentColor"
-        />
-      ))}
-    </svg>
+      aria-hidden="true"
+      draggable={false}
+      className={cn("block rounded-full object-cover", className)}
+    />
   );
 }
 
 interface AvatarProps {
-  /** Custom avatar URL; null/undefined renders the default pictogram. */
+  /** Custom avatar URL; null/undefined renders the generated default preset. */
   src?: string | null;
   size?: number;
   alt?: string;
@@ -102,11 +52,11 @@ export function Avatar({ src, size = 40, alt = "", className }: AvatarProps) {
       role="img"
       aria-label={alt || undefined}
       className={cn(
-        "flex shrink-0 items-end justify-center overflow-hidden rounded-full bg-lime text-black",
+        "flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-[#0a0a0c]",
         className,
       )}
     >
-      <DefaultAvatarGlyph size={size * 0.72} />
+      <DefaultAvatarGlyph size={size} />
     </span>
   );
 }

@@ -5,6 +5,7 @@ export type {
   WorkoutInput,
 } from "./model/types";
 export {
+  useWorkoutCount,
   useWorkouts,
   useWorkout,
   useLastWorkoutOfType,

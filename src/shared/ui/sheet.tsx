@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
@@ -17,24 +17,82 @@ interface SheetProps {
 /** Bottom sheet modal. */
 export function Sheet({ open, onClose, title, children, className }: SheetProps) {
   const { t } = useI18n();
+  const titleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!open) return;
+
     const original = document.body.style.overflow;
+    const previousFocus = document.activeElement as HTMLElement | null;
     document.body.style.overflow = "hidden";
+
+    const panel = panelRef.current;
+    const focusableSelector = [
+      "button:not([disabled])",
+      "a[href]",
+      "input:not([disabled])",
+      "select:not([disabled])",
+      "textarea:not([disabled])",
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(",");
+    const frame = requestAnimationFrame(() => {
+      const first = panel?.querySelector<HTMLElement>(focusableSelector);
+      (first ?? panel)?.focus();
+    });
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !panel) return;
+
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(focusableSelector),
+      ).filter((element) => element.offsetParent !== null);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
     return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = original;
+      previousFocus?.focus();
     };
-  }, [open]);
+  }, [onClose, open]);
 
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <div
+        aria-hidden="true"
         className="absolute inset-0 animate-fade-in bg-black/70 backdrop-blur-sm"
         onClick={onClose}
       />
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        tabIndex={-1}
         className={cn(
           "relative z-10 w-full max-w-md animate-sheet-up rounded-t-[2rem] border-t border-line/60 bg-surface",
           "max-h-[88dvh] overflow-y-auto px-5 pt-3 pb-8 safe-bottom",
@@ -42,14 +100,16 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
         )}
       >
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-line" />
-        {(title != null) && (
+        {title != null && (
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">{title}</h2>
+            <h2 id={titleId} className="text-lg font-semibold">
+              {title}
+            </h2>
             <button
               type="button"
               onClick={onClose}
               aria-label={t("common.close")}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-raised text-muted"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-raised text-muted"
             >
               <IconClose size={18} />
             </button>

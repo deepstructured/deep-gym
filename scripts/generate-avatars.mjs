@@ -1,5 +1,9 @@
 /**
- * Regenerates the preset profile avatars in public/avatars/*.svg.
+ * Regenerates legacy profile avatars in public/avatars/*.svg.
+ *
+ * These files are no longer offered by the picker, but must remain available
+ * because existing profiles may still store their public URLs. Current picker
+ * presets are the checked-in DeepGym WebP assets and are not generated here.
  *
  * Each avatar is a 24×24 pixel-art sprite (OKX-style: flat bold background,
  * chunky pixels, checkerboard dithering for shading) clipped to a circle.
@@ -9,7 +13,7 @@
  *   '#'  primary color        '%'  primary, 50% checkerboard
  *   '+'  secondary color      '~'  secondary, 50% checkerboard
  *
- * Usage: node scripts/generate-avatars.mjs
+ * Usage: npm run avatars:legacy
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

@@ -7,7 +7,7 @@ import { useI18n } from "@/shared/i18n";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
 import { Button, IconLogout } from "@/shared/ui";
 
-export function SignOutButton() {
+export function SignOutButton({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
   const { t } = useI18n();
   const queryClient = useQueryClient();
@@ -23,9 +23,9 @@ export function SignOutButton() {
 
   return (
     <Button
-      variant="danger"
-      size="lg"
-      className="w-full"
+      variant={compact ? "ghost" : "danger"}
+      size={compact ? "sm" : "lg"}
+      className={compact ? "text-faint" : "w-full"}
       onClick={signOut}
       loading={loading}
     >

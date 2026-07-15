@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import {
   useCreateMuscleGroup,
@@ -8,12 +9,15 @@ import {
 } from '@/entities/muscle-group'
 import { useProfile, useUpdateProfile } from '@/entities/user'
 import {
-  PRESET_AVATARS,
+  AvatarPresetGrid,
   useRemoveAvatar,
   useSetPresetAvatar,
   useUploadAvatar,
 } from '@/features/avatar'
 import { SignOutButton } from '@/features/auth'
+import { TrainingWeekCard } from '@/features/training-schedule'
+import { WhatsNewSheet } from '@/features/whats-new'
+import { CURRENT_RELEASE } from '@/shared/config/releases'
 import { LANGUAGE_OPTIONS, useI18n, type Lang } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
 import {
@@ -31,7 +35,11 @@ import {
   ConfirmSheet,
   ErrorNote,
   Field,
+  IconChevronDown,
+  IconChevronRight,
   IconClose,
+  IconHistory,
+  IconInfo,
   IconPlus,
   Input,
   PageLoader,
@@ -48,6 +56,7 @@ export function SettingsView() {
   const [barWeight, setBarWeight] = useState('')
   const [newPlate, setNewPlate] = useState('')
   const [newPlateUnit, setNewPlateUnit] = useState<Unit>('kg')
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false)
 
   const unit: Unit = profile?.unit ?? 'kg'
 
@@ -157,28 +166,35 @@ export function SettingsView() {
           )}
         </Card>
 
-        {/* Language */}
-        <Card variant="surface" className="space-y-3 p-4">
-          <p className="text-sm font-semibold">{t('settings.language')}</p>
-          <Segmented
-            value={lang}
-            onChange={changeLanguage}
-            options={LANGUAGE_OPTIONS}
-          />
+        {/* Language & units */}
+        <Card variant="surface" className="space-y-4 p-4">
+          <div>
+            <p className="mb-2 text-sm font-semibold">
+              {t('settings.language')}
+            </p>
+            <Segmented
+              value={lang}
+              onChange={changeLanguage}
+              options={LANGUAGE_OPTIONS}
+            />
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-semibold">
+              {t('settings.weightUnit')}
+            </p>
+            <Segmented
+              value={unit}
+              onChange={(next) => updateProfile.mutate({ unit: next })}
+              options={[
+                { value: 'kg', label: t('settings.kilograms') },
+                { value: 'lb', label: t('settings.pounds') },
+              ]}
+            />
+          </div>
         </Card>
 
-        {/* Units */}
-        <Card variant="surface" className="space-y-3 p-4">
-          <p className="text-sm font-semibold">{t('settings.weightUnit')}</p>
-          <Segmented
-            value={unit}
-            onChange={(next) => updateProfile.mutate({ unit: next })}
-            options={[
-              { value: 'kg', label: t('settings.kilograms') },
-              { value: 'lb', label: t('settings.pounds') },
-            ]}
-          />
-        </Card>
+        {/* Explicit weekly workout schedule */}
+        <TrainingWeekCard value={profile.training_schedule} />
 
         {/* Plates */}
         <Card variant="surface" className="space-y-4 p-4">
@@ -265,13 +281,84 @@ export function SettingsView() {
         {/* Muscle groups */}
         <MuscleGroupsCard />
 
+        <HelpUpdatesCard onOpenWhatsNew={() => setWhatsNewOpen(true)} />
+
         <SignOutButton />
 
         <p className="pb-2 text-center text-xs text-faint">
           {t('settings.install')}
         </p>
       </div>
+
+      <WhatsNewSheet
+        open={whatsNewOpen}
+        onClose={() => setWhatsNewOpen(false)}
+      />
     </AppShell>
+  )
+}
+
+function HelpUpdatesCard({
+  onOpenWhatsNew,
+}: {
+  onOpenWhatsNew: () => void
+}) {
+  const { t } = useI18n()
+
+  const rowClassName =
+    'group flex min-h-[4.75rem] w-full items-center gap-3 px-4 py-3 text-left transition-[background-color,transform] active:scale-[0.99] active:bg-raised'
+
+  return (
+    <Card variant="surface" className="p-0">
+      <div className="flex items-center gap-2 px-4 pt-4 pb-3">
+        <span className="h-2 w-2 rounded-full bg-indigo-bright shadow-[0_0_12px_rgba(91,103,255,0.32)]" />
+        <p className="text-sm font-semibold">{t('settings.helpUpdates')}</p>
+      </div>
+
+      <div className="border-t border-line/70">
+        <Link href="/onboarding?replay=1" className={rowClassName}>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-lime/20 bg-lime/10 text-lime">
+            <IconInfo size={18} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">
+              {t('settings.appGuide')}
+            </span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+              {t('settings.appGuideHint')}
+            </span>
+          </span>
+          <IconChevronRight
+            size={18}
+            className="shrink-0 text-faint transition-transform group-active:translate-x-0.5"
+          />
+        </Link>
+
+        <button
+          type="button"
+          onClick={onOpenWhatsNew}
+          className={`${rowClassName} border-t border-line/70`}
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-indigo-bright/25 bg-indigo/25 text-[#aeb8ff]">
+            <IconHistory size={18} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">
+              {t('settings.whatsNew')}
+            </span>
+            <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+              {t('settings.whatsNewHint', {
+                version: CURRENT_RELEASE.label,
+              })}
+            </span>
+          </span>
+          <IconChevronRight
+            size={18}
+            className="shrink-0 text-faint transition-transform group-active:translate-x-0.5"
+          />
+        </button>
+      </div>
+    </Card>
   )
 }
 
@@ -288,6 +375,7 @@ function AvatarEditor({
   const setPreset = useSetPresetAvatar()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showPresets, setShowPresets] = useState(false)
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -343,32 +431,41 @@ function AvatarEditor({
       </div>
 
       <div>
-        <p className="mb-2 text-xs font-medium text-muted">
+        <button
+          type="button"
+          aria-expanded={showPresets}
+          onClick={() => setShowPresets((value) => !value)}
+          className="flex w-full items-center justify-between rounded-tile border border-line bg-raised px-4 py-2.5 text-sm font-medium"
+        >
           {t('settings.chooseAvatar')}
-        </p>
-        <div className="grid grid-cols-5 gap-3">
-          {PRESET_AVATARS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              aria-label={preset.id}
-              disabled={busy}
-              onClick={() => {
-                setError(null)
-                setPreset.mutate(preset.url, {
+          <IconChevronDown
+            size={16}
+            className={cn(
+              'text-faint transition-transform',
+              showPresets && 'rotate-180',
+            )}
+          />
+        </button>
+
+        {showPresets && (
+          <AvatarPresetGrid
+            value={avatarUrl}
+            disabled={busy}
+            className="mt-3"
+            onSelect={(url) => {
+              setError(null)
+              if (url === null) {
+                removeAvatar.mutate(undefined, {
                   onError: (err) => setError((err as Error).message),
                 })
-              }}
-              className={cn(
-                'justify-self-center rounded-full transition-opacity disabled:opacity-60',
-                avatarUrl === preset.url &&
-                  'ring-2 ring-lime ring-offset-2 ring-offset-surface',
-              )}
-            >
-              <Avatar src={preset.url} size={48} alt={preset.id} />
-            </button>
-          ))}
-        </div>
+              } else {
+                setPreset.mutate(url, {
+                  onError: (err) => setError((err as Error).message),
+                })
+              }
+            }}
+          />
+        )}
       </div>
 
       {error && <ErrorNote message={error} />}

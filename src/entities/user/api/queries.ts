@@ -39,6 +39,13 @@ export function useUpdateProfile() {
         .eq("id", user.id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile"] }),
+    onSuccess: (_data, patch) => {
+      // Update synchronously before refetching so version-gated UI does not
+      // reopen between a successful write and the fresh profile response.
+      queryClient.setQueryData<Profile | null>(["profile"], (profile) =>
+        profile ? { ...profile, ...patch } : profile,
+      );
+      return queryClient.invalidateQueries({ queryKey: ["profile"] });
+    },
   });
 }

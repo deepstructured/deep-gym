@@ -1,5 +1,6 @@
 export { Avatar, DefaultAvatarGlyph } from "./avatar";
 export { Button } from "./button";
+export { BrandMark } from "./brand-mark";
 export { Calendar } from "./calendar";
 export { Card } from "./card";
 export { Chip } from "./chip";

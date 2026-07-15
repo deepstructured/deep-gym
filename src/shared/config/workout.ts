@@ -18,3 +18,5 @@ export type Equipment = (typeof EQUIPMENT_OPTIONS)[number]["value"];
 
 export const DEFAULT_PLATES_KG = [30, 25, 20, 15, 10, 5, 2.5, 2, 1.25];
 export const DEFAULT_BAR_KG = 20;
+export const DEFAULT_PLATES_LB = [45, 35, 25, 10, 5, 2.5];
+export const DEFAULT_BAR_LB = 45;

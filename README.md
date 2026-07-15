@@ -24,15 +24,29 @@ clunky app with 12 taps to log one set. DeepGym is built around one idea:
 - ⚡ **Fast logging** — the first set is created automatically, the next one copies the last, your working weight is pre-filled.
 - 🧠 **Remembers what you can't** — machine seat heights, plate math, your numbers from three weeks ago.
 - 📈 **Shows real progress** — charts and stats per exercise, not just a diary.
+- ✨ **Starts configured** — a guided setup covers your language, profile, units, equipment and training week before the first workout.
 
 ---
 
 ## The tour
 
+### Set it up once
+
+New athletes — and existing accounts that still have no workouts — get a
+five-step guided setup. Choose your language and pixel avatar, confirm kg/lb,
+bar and plate defaults, then either build a fixed training week or explicitly
+choose a flexible schedule. The final step explains how logging, equipment
+memory, history and progress fit together.
+
+The guide can be opened again any time from **Settings → App guide**.
+Until the first session is saved, Home keeps a three-step checklist visible;
+the workout form adds one contextual tip, and History confirms the first
+successful log.
+
 ### Home — everything at a glance
 
-Your week, your streak, your recent sessions — and one big button to start
-training.
+Your week, your streak, your recent sessions — and the next workout from the
+training week you configure yourself in Settings.
 
 <img src="docs/screenshots/home.png" width="300" alt="Home screen" />
 
@@ -107,8 +121,9 @@ Open any exercise and see:
 
 ### History you can actually browse
 
-Day, week or month view. Calendar dots show training days; open any day to
-review, edit or delete a session.
+Day, week or month view. Solid calendar dots show completed workouts and
+hollow dots show upcoming sessions from your training week. Open any day to
+review, edit, delete or start the planned session.
 
 <p>
 <img src="docs/screenshots/history-week.png" width="300" alt="Week view" />
@@ -121,6 +136,13 @@ Google — one tap. Or Telegram: the DeepGym bot sends you a one-time code,
 no password to remember, ever.
 
 <img src="docs/screenshots/login.png" width="300" alt="Login" />
+
+### Stay current without reading a changelog
+
+After an update, DeepGym shows a single versioned **What's new** sheet on Home.
+Acknowledgement is saved to your profile, so the same release is not announced
+again on another visit or device. You can reopen the current release notes from
+Settings whenever you want.
 
 ---
 
@@ -137,6 +159,8 @@ no password to remember, ever.
 | Feature | Where |
 | --- | --- |
 | Start a workout | Home → **Start workout**, or the ➕ tab button |
+| Reopen the product guide | Settings → **App guide** |
+| See the current release notes | Settings → **What's new** |
 | Add a set / mark failure | **＋ Add set** / flame button on the set row |
 | Plate breakdown | ⊚ icon next to any weight |
 | Machine setup notes | ⓘ button on machine exercises |
@@ -144,6 +168,8 @@ no password to remember, ever.
 | kg ↔ lb (global) | Settings → Weight unit |
 | kg ↔ lb (one exercise) | Exercise page → ✏️ → Weight unit |
 | Your plates & bar | Settings → Plate calculator |
+| Plan training days | Settings → Training week |
+| Change avatar | Settings → Profile → Choose avatar |
 | Custom muscle groups | Settings → Muscle groups |
 | Notes | "Add workout note" or the 📝 icon on any exercise |
 

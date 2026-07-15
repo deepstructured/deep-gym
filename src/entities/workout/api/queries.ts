@@ -21,6 +21,22 @@ function sortNested(workout: Workout): Workout {
   return workout;
 }
 
+/** Exact number of workouts visible to the signed-in user through RLS. */
+export function useWorkoutCount(enabled = true) {
+  return useQuery({
+    queryKey: ["workouts", "count"],
+    queryFn: async (): Promise<number> => {
+      const supabase = getSupabaseBrowser();
+      const { count, error } = await supabase
+        .from("workouts")
+        .select("id", { count: "exact", head: true });
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled,
+  });
+}
+
 /** Workouts within [from, to] (ISO dates, inclusive), newest first. */
 export function useWorkouts(from: string, to: string) {
   return useQuery({

@@ -7,9 +7,22 @@ interface ToggleProps {
   onChange: (checked: boolean) => void;
   label?: string;
   className?: string;
+  tone?: "lime" | "cherry" | "indigo";
 }
 
-export function Toggle({ checked, onChange, label, className }: ToggleProps) {
+const checkedTones = {
+  lime: "bg-lime",
+  cherry: "bg-cherry",
+  indigo: "bg-indigo-bright",
+} as const;
+
+export function Toggle({
+  checked,
+  onChange,
+  label,
+  className,
+  tone = "lime",
+}: ToggleProps) {
   return (
     <button
       type="button"
@@ -19,7 +32,7 @@ export function Toggle({ checked, onChange, label, className }: ToggleProps) {
       onClick={() => onChange(!checked)}
       className={cn(
         "relative h-7 w-12 shrink-0 rounded-full transition-colors",
-        checked ? "bg-lime" : "bg-line",
+        checked ? checkedTones[tone] : "bg-line",
         className,
       )}
     >

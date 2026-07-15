@@ -5,6 +5,7 @@ import { useState } from "react";
 import { TELEGRAM_BOT_USERNAME } from "@/shared/config/env";
 import { useI18n } from "@/shared/i18n";
 import { Button, ErrorNote, Field, IconTelegram, Input } from "@/shared/ui";
+import { useTelegramBotLink } from "../model/use-telegram-bot-link";
 
 type Step = "username" | "code";
 
@@ -22,6 +23,7 @@ async function post(url: string, body: unknown, fallbackError: string) {
 export function TelegramOtpForm() {
   const router = useRouter();
   const { t } = useI18n();
+  const botLink = useTelegramBotLink();
   const [step, setStep] = useState<Step>("username");
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
@@ -80,7 +82,7 @@ export function TelegramOtpForm() {
             <p className="text-[13px] leading-relaxed text-muted">
               {t("login.firstTime")}{" "}
               <a
-                href={`https://t.me/${TELEGRAM_BOT_USERNAME}`}
+                href={botLink}
                 target="_blank"
                 rel="noreferrer"
                 className="font-medium text-lime"

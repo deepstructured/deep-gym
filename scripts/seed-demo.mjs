@@ -19,6 +19,8 @@ for (const line of readFileSync(join(root, ".env.local"), "utf8").split("\n")) {
 }
 
 const EMAIL = "demo@deepgym.app";
+const CURRENT_ONBOARDING_VERSION = 1;
+const CURRENT_RELEASE_SEQUENCE = 1;
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -43,6 +45,27 @@ async function getOrCreateUser() {
 
 const userId = await getOrCreateUser();
 console.log(`demo user: ${EMAIL} (${userId})`);
+
+// The demo account opts into the same Mon / Wed / Fri plan generated below.
+// Real profiles keep training_schedule = NULL until the user configures it.
+const { error: scheduleError } = await admin
+  .from("profiles")
+  .update({
+    training_schedule: [
+      "Upper",
+      null,
+      "Lower",
+      null,
+      "Split Chest",
+      null,
+      null,
+    ],
+    onboarding_version: CURRENT_ONBOARDING_VERSION,
+    onboarding_completed_at: new Date().toISOString(),
+    last_seen_release_version: CURRENT_RELEASE_SEQUENCE,
+  })
+  .eq("id", userId);
+if (scheduleError) throw scheduleError;
 
 // ── wipe previous demo data ──────────────────────────────────────────────
 await admin.from("workouts").delete().eq("user_id", userId);

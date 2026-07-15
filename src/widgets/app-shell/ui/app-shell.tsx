@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
-import { IconChevronLeft } from "@/shared/ui";
+import { BrandMark, IconChevronLeft } from "@/shared/ui";
 import { BottomNav } from "./bottom-nav";
 
 interface AppShellProps {
@@ -28,7 +28,7 @@ export function AppShell({
   const { t } = useI18n();
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pt-8 pb-32">
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pt-14 pb-32">
       {(title || back || action) && (
         <header className="sticky top-0 z-30 -mx-5 mb-4 flex items-center gap-3 bg-bg/85 px-5 py-3 backdrop-blur-xl">
           {back && (
@@ -41,6 +41,7 @@ export function AppShell({
               <IconChevronLeft size={20} />
             </button>
           )}
+          {!back && title && <BrandMark width={24} />}
           {title && (
             <h1 className="min-w-0 flex-1 truncate text-xl font-semibold">
               {title}

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCreateWorkout } from "@/entities/workout";
 import { useProfile } from "@/entities/user";
+import { FirstWorkoutFormTip } from "@/features/first-workout";
 import {
   WorkoutForm,
   draftToInput,
@@ -20,21 +21,31 @@ export function WorkoutNewView() {
   const { draft, setDraft, reset } = useNewWorkoutDraft();
   const createWorkout = useCreateWorkout();
   const [error, setError] = useState<string | null>(null);
+  const [isFirstWorkout, setIsFirstWorkout] = useState(false);
 
   // zustand/persist rehydrates on the client — render after mount to avoid
   // hydration mismatch with a stored draft.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // ?type=Upper (e.g. from the next-workout widget) preselects the type.
+  // Scheduled-workout cards preselect both the workout type and its date.
   // Read via window.location instead of useSearchParams to skip the
   // Suspense boundary Next requires for the latter.
   useEffect(() => {
     if (!mounted) return;
-    const type = new URLSearchParams(window.location.search).get("type");
-    if (type && type !== useNewWorkoutDraft.getState().draft.type) {
-      const { draft: current, setDraft: apply } = useNewWorkoutDraft.getState();
-      apply({ ...current, type });
+    const params = new URLSearchParams(window.location.search);
+    setIsFirstWorkout(params.get("first") === "1");
+    const type = params.get("type");
+    const date = params.get("date");
+    const scheduledDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+    const { draft: current, setDraft: apply } = useNewWorkoutDraft.getState();
+    const next = {
+      ...current,
+      type: type || current.type,
+      date: scheduledDate ?? current.date,
+    };
+    if (next.type !== current.type || next.date !== current.date) {
+      apply(next);
     }
   }, [mounted]);
 
@@ -46,7 +57,7 @@ export function WorkoutNewView() {
     createWorkout.mutate(draftToInput(draft, unit), {
       onSuccess: () => {
         reset();
-        router.push("/history");
+        router.push(isFirstWorkout ? "/history?first=1" : "/history");
       },
       onError: (e) => setError((e as Error).message),
     });
@@ -72,6 +83,8 @@ export function WorkoutNewView() {
         <PageLoader />
       ) : (
         <div className="space-y-5">
+          {isFirstWorkout && <FirstWorkoutFormTip />}
+
           <WorkoutForm
             value={draft}
             onChange={setDraft}

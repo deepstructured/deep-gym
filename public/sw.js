@@ -1,5 +1,5 @@
 /* DeepGym service worker — app-shell caching with offline fallback. */
-const VERSION = "deepgym-v1";
+const VERSION = "deepgym-v4";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline";
@@ -43,7 +43,7 @@ self.addEventListener("fetch", (event) => {
   if (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
-    /\.(?:woff2?|ttf|png|svg|ico)$/.test(url.pathname)
+    /\.(?:woff2?|ttf|png|webp|svg|ico)$/.test(url.pathname)
   ) {
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {

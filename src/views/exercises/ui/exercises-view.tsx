@@ -113,7 +113,7 @@ function ExerciseRow({
   return (
     <Link
       href={`/exercises/${exercise.id}`}
-      className="flex items-center gap-3 rounded-tile border border-line/60 bg-surface px-4 py-3.5 active:bg-raised"
+      className="surface-well flex items-center gap-3 rounded-tile px-4 py-3.5 transition-[background-color,transform] active:scale-[0.99] active:bg-raised"
     >
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{exercise.name}</p>

@@ -1,16 +1,17 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "@/shared/lib/cn";
 
-type CardVariant = "surface" | "pink" | "indigo" | "flame";
+type CardVariant = "surface" | "pink" | "indigo" | "cherry" | "flame";
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   variant?: CardVariant;
 }
 
 const variants: Record<CardVariant, string> = {
-  surface: "bg-surface border border-line/60",
+  surface: "surface-well",
   pink: "grad-pink glow-pink text-white",
   indigo: "grad-indigo glow-indigo text-white",
+  cherry: "grad-cherry glow-cherry text-white",
   flame: "grad-flame glow-flame text-white",
 };
 
