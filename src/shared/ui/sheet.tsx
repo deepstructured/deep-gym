@@ -19,6 +19,8 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
   const { t } = useI18n();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
@@ -44,7 +46,7 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab" || !panel) return;
@@ -76,7 +78,7 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
       document.body.style.overflow = original;
       previousFocus?.focus();
     };
-  }, [onClose, open]);
+  }, [open]);
 
   if (!open || typeof document === "undefined") return null;
 
