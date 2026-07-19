@@ -1,0 +1,79 @@
+@use "../../../shared/styles/palette" as *;
+
+/* The sheet should feel like a stable tall panel while filtering. */
+.sheet {
+  min-height: 70dvh;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Group filter row, bleeding to the sheet edges. */
+.filterRow {
+  margin: 0 -1.25rem;
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0 1.25rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: $radius-tile;
+  border: 1px solid $line;
+  background: $raised;
+  padding: 0.875rem 1rem;
+  text-align: left;
+
+  &:active {
+    background: rgba($line, 0.5);
+  }
+}
+
+.itemName {
+  display: block;
+  font-weight: 500;
+}
+
+.itemMeta {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: $muted;
+}
+
+.itemPlus {
+  flex-shrink: 0;
+  color: $lime;
+}
+
+.emptyNote {
+  padding: 1.5rem 0;
+  text-align: center;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: $muted;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+}

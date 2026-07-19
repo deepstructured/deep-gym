@@ -1,0 +1,71 @@
+// Design tokens for SCSS modules.
+// Source of truth for runtime theming stays in src/app/globals.css
+// (CSS custom properties); these SCSS values must mirror it — they exist
+// so modules can derive transparent tints with rgba($lime, 0.1) etc.
+
+$bg: #0a0a0c;
+$surface: #151518;
+$raised: #1e1e23;
+$line: #2a2a31;
+$text: #f5f5f7;
+$muted: #98989f;
+$faint: #5c5c64;
+
+$pink: #f567b5;
+$purple: #622595;
+$indigo: #182788;
+$indigo-bright: #4054d6;
+$cherry: #d34f3d;
+$cherry-bright: #ff624d;
+$flame: #e04b2e;
+$flame-text: #ff7a5c; // readable flame tint used for text/icons
+$lime: #d7f651;
+
+$radius-card: 1.75rem;
+$radius-tile: 1.25rem;
+
+$font-sans: var(--font-sans);
+$font-dot: var(--font-dot);
+
+// Standard interaction transition (matches the app's original timing).
+$ease: cubic-bezier(0.4, 0, 0.2, 1);
+$tr: 150ms $ease;
+
+// Round icon-in-a-circle button/badge used all over the app.
+@mixin icon-circle($size: 2rem) {
+  display: flex;
+  width: $size;
+  height: $size;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid $line;
+  background: $raised;
+}
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Dashed call-to-action card (copy last, add exercise, …).
+@mixin dashed-card {
+  border-radius: $radius-card;
+  border: 1px dashed $line;
+  background: rgba($surface, 0.5);
+
+  &:active {
+    background: $surface;
+  }
+}
+
+// Tiny uppercase label (column headers, section eyebrows).
+@mixin micro-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  color: $faint;
+}

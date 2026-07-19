@@ -56,6 +56,7 @@ import {
   PageLoader,
   Segmented,
 } from "@/shared/ui";
+import styles from "./onboarding-view.module.scss";
 
 const TOTAL_STEPS = 5;
 const SESSION_KEY_PREFIX = "deepgym-onboarding-v1:";
@@ -119,7 +120,7 @@ export function OnboardingView() {
     (alreadyComplete && !mode.replay && !mode.preview)
   ) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-bg">
+      <div className={styles.loader}>
         <PageLoader />
       </div>
     );
@@ -261,7 +262,7 @@ function OnboardingWizard({
 
   if (!draftReady) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-bg">
+      <div className={styles.loader}>
         <PageLoader />
       </div>
     );
@@ -382,13 +383,13 @@ function OnboardingWizard({
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-bg">
-      <header className="sticky top-0 z-30 border-b border-white/[0.035] bg-bg/88 px-5 pt-4 pb-3 backdrop-blur-xl">
-        <div className="flex items-center justify-between gap-3">
+    <div className={styles.wizard}>
+      <header className={styles.header}>
+        <div className={styles.headerRow}>
           <BrandMark width={28} />
           <p
             aria-live="polite"
-            className="text-xs font-semibold tracking-[0.12em] text-muted uppercase"
+            className={styles.progress}
           >
             {t("onboarding.progress", {
               current: step + 1,
@@ -400,29 +401,29 @@ function OnboardingWizard({
               type="button"
               onClick={exitReplay}
               aria-label={t("onboarding.exitGuide")}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-raised text-muted"
+              className={styles.exit}
             >
               <IconClose size={18} />
             </button>
           ) : (
-            <span className="h-11 w-11" aria-hidden="true" />
+            <span className={styles.exitPlaceholder} aria-hidden="true" />
           )}
         </div>
-        <div className="mt-3 grid grid-cols-5 gap-1.5" aria-hidden="true">
+        <div className={styles.progressBar} aria-hidden="true">
           {Array.from({ length: TOTAL_STEPS }, (_, index) => (
             <span
               key={index}
               className={cn(
-                "h-1 rounded-full transition-colors",
-                index <= step ? "bg-lime" : "bg-line",
+                styles.progressSegment,
+                index <= step && styles.progressSegmentDone,
               )}
             />
           ))}
         </div>
       </header>
 
-      <main className="flex-1 px-5 pt-7 pb-8">
-        <div key={step} className="animate-fade-in">
+      <main className={styles.main}>
+        <div key={step} className={styles.step}>
           {step === 0 && <WelcomeStep t={t} headingRef={stepHeadingRef} />}
           {step === 1 && (
             <ProfileStep
@@ -481,14 +482,14 @@ function OnboardingWizard({
         </div>
       </main>
 
-      <footer className="sticky bottom-0 z-20 border-t border-white/[0.045] bg-bg/92 px-5 pt-3 pb-[calc(0.9rem+env(safe-area-inset-bottom))] backdrop-blur-xl">
+      <footer className={styles.footer}>
         {step === 0 ? (
-          <div className="space-y-1">
+          <div className={styles.footerStack}>
             <Button
               type="button"
               variant="lime"
               size="lg"
-              className="w-full"
+              block
               onClick={continueFlow}
             >
               {t("onboarding.welcome.start")}
@@ -496,13 +497,13 @@ function OnboardingWizard({
             {!mode.replay && !mode.preview && <SignOutButton compact />}
           </div>
         ) : step < TOTAL_STEPS - 1 ? (
-          <div className="flex gap-3">
+          <div className={styles.footerRow}>
             <Button
               type="button"
               variant="surface"
               size="lg"
+              iconOnly
               aria-label={t("common.back")}
-              className="w-14 shrink-0 px-0"
               onClick={goBack}
             >
               <IconChevronLeft size={20} />
@@ -511,19 +512,19 @@ function OnboardingWizard({
               type="button"
               variant="lime"
               size="lg"
-              className="flex-1"
+              grow
               onClick={continueFlow}
             >
               {t("onboarding.continue")}
             </Button>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className={styles.footerFinal}>
             <Button
               type="button"
               variant="lime"
               size="lg"
-              className="w-full"
+              block
               loading={updateProfile.isPending}
               onClick={() =>
                 finish(mode.replay ? "/workouts/new" : "/workouts/new?first=1")
@@ -533,11 +534,11 @@ function OnboardingWizard({
                 ? t("onboarding.startWorkout")
                 : t("onboarding.startFirstWorkout")}
             </Button>
-            <div className="flex gap-2">
+            <div className={styles.footerRowTight}>
               <Button
                 type="button"
                 variant="ghost"
-                className="w-14 shrink-0 px-0"
+                iconOnly
                 aria-label={t("common.back")}
                 onClick={goBack}
               >
@@ -546,7 +547,7 @@ function OnboardingWizard({
               <Button
                 type="button"
                 variant="surface"
-                className="flex-1"
+                grow
                 loading={updateProfile.isPending}
                 onClick={() => finish(mode.next)}
               >
@@ -580,26 +581,24 @@ function WelcomeStep({ t, headingRef }: StepProps) {
   ] as const;
 
   return (
-    <div className="space-y-5">
-      <Card variant="pink" className="dots-bg min-h-72 p-6">
+    <div className={styles.stack}>
+      <Card variant="pink" className={cn(styles.welcomeCard, "dots-bg")}>
         <BrandMark width={42} />
-        <div className="mt-20">
-          <p className="text-[11px] font-semibold tracking-[0.16em] text-white/58 uppercase">
+        <div className={styles.welcomeContent}>
+          <p className={styles.eyebrowOnCard}>
             {t("onboarding.welcome.eyebrow")}
           </p>
           <h1
             ref={headingRef}
             tabIndex={-1}
-            className="mt-2 text-[2rem] leading-[1.05] font-semibold"
+            className={styles.welcomeTitle}
           >
             {t("onboarding.welcome.title")}
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-white/68">
-            {t("onboarding.welcome.body")}
-          </p>
+          <p className={styles.welcomeBody}>{t("onboarding.welcome.body")}</p>
         </div>
       </Card>
-      <div className="space-y-3">
+      <div className={styles.rows}>
         {features.map((feature, index) => (
           <FeatureRow
             key={feature.title}
@@ -641,7 +640,7 @@ function ProfileStep({
   onAvatarSelect: (value: string | null) => void;
 }) {
   return (
-    <div className="space-y-5">
+    <div className={styles.stack}>
       <StepHeader
         headingRef={headingRef}
         eyebrow={t("onboarding.profile.eyebrow")}
@@ -649,12 +648,12 @@ function ProfileStep({
         body={t("onboarding.profile.body")}
       />
 
-      <Card variant="surface" className="space-y-4 p-4">
-        <div className="flex items-center gap-3">
+      <Card variant="surface" className={styles.profileCard}>
+        <div className={styles.profileAvatarRow}>
           <Avatar src={avatarUrl} size={64} alt={name} />
           <div>
-            <p className="text-sm font-semibold">{t("settings.chooseAvatar")}</p>
-            <p className="mt-0.5 text-xs text-faint">
+            <p className={styles.profileAvatarTitle}>{t("settings.chooseAvatar")}</p>
+            <p className={styles.profileAvatarHint}>
               {t("onboarding.profile.avatarOptional")}
             </p>
           </div>
@@ -676,9 +675,7 @@ function ProfileStep({
       </Field>
 
       <div>
-        <p className="mb-2 text-[13px] font-medium text-muted">
-          {t("settings.language")}
-        </p>
+        <p className={styles.fieldLabel}>{t("settings.language")}</p>
         <Segmented
           value={language}
           onChange={onLanguageChange}
@@ -688,9 +685,7 @@ function ProfileStep({
       </div>
 
       <div>
-        <p className="mb-2 text-[13px] font-medium text-muted">
-          {t("settings.weightUnit")}
-        </p>
+        <p className={styles.fieldLabel}>{t("settings.weightUnit")}</p>
         <Segmented
           value={unit}
           onChange={onUnitChange}
@@ -719,7 +714,7 @@ function EquipmentStep({
   onBarWeightChange: (value: string) => void;
 }) {
   return (
-    <div className="space-y-5">
+    <div className={styles.stack}>
       <StepHeader
         headingRef={headingRef}
         eyebrow={t("onboarding.equipment.eyebrow")}
@@ -727,30 +722,28 @@ function EquipmentStep({
         body={t("onboarding.equipment.body")}
       />
 
-      <Card variant="indigo" className="dots-bg p-5">
-        <div className="flex items-start justify-between gap-4">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/8 text-white">
+      <Card variant="indigo" className="dots-bg">
+        <div className={styles.plateCardTop}>
+          <span className={styles.plateIcon}>
             <IconPlates size={21} />
           </span>
-          <span className="rounded-full border border-white/12 bg-black/15 px-3 py-1 text-xs font-semibold text-white/70 uppercase">
-            {unit}
-          </span>
+          <span className={styles.unitBadge}>{unit}</span>
         </div>
-        <p className="mt-8 text-lg font-semibold">
+        <p className={styles.plateTitle}>
           {unit === "kg"
             ? t("onboarding.equipment.standardKg")
             : t("onboarding.equipment.standardLb")}
         </p>
-        <p className="mt-1 text-sm text-white/62">
+        <p className={styles.plateCount}>
           {t("onboarding.equipment.plateCount", {
             count: plateValues.length,
           })}
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className={styles.plateList}>
           {plateValues.map((plate) => (
             <span
               key={plate}
-              className="rounded-full border border-white/12 bg-black/18 px-3 py-1.5 font-dot text-sm text-white/78"
+              className={styles.plateItem}
             >
               {plate}
             </span>
@@ -758,25 +751,21 @@ function EquipmentStep({
         </div>
       </Card>
 
-      <Card variant="surface" className="space-y-3 p-4">
+      <Card variant="surface" className={styles.barCard}>
         <Field label={t("settings.barWeight", { unit })}>
-          <div className="relative max-w-44">
+          <div className={styles.barInputWrap}>
             <Input
               value={barWeight}
               onChange={(event) =>
                 onBarWeightChange(event.target.value.replace(/[^\d.,]/g, ""))
               }
               inputMode="decimal"
-              className="pr-12 font-dot text-lg"
+              className={styles.barInput}
             />
-            <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-xs font-semibold text-muted uppercase">
-              {unit}
-            </span>
+            <span className={styles.barUnit}>{unit}</span>
           </div>
         </Field>
-        <p className="text-xs leading-relaxed text-muted">
-          {t("onboarding.equipment.adjustLater")}
-        </p>
+        <p className={styles.barHint}>{t("onboarding.equipment.adjustLater")}</p>
       </Card>
     </div>
   );
@@ -796,7 +785,7 @@ function ScheduleStep({
   onScheduleChange: (value: TrainingSchedule) => void;
 }) {
   return (
-    <div className="space-y-5">
+    <div className={styles.stack}>
       <StepHeader
         headingRef={headingRef}
         eyebrow={t("onboarding.schedule.eyebrow")}
@@ -804,7 +793,7 @@ function ScheduleStep({
         body={t("onboarding.schedule.body")}
       />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className={styles.modeGrid}>
         <ModeButton
           selected={mode === "fixed"}
           onClick={() => onModeChange("fixed")}
@@ -834,14 +823,14 @@ function ScheduleStep({
       )}
 
       {mode === "flexible" && (
-        <Card variant="indigo" className="dots-bg p-5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/8">
+        <Card variant="indigo" className="dots-bg">
+          <span className={styles.flexibleIcon}>
             <IconCheck size={19} />
           </span>
-          <p className="mt-8 text-lg font-semibold">
+          <p className={styles.flexibleTitle}>
             {t("onboarding.schedule.flexible")}
           </p>
-          <p className="mt-2 text-sm leading-relaxed text-white/65">
+          <p className={styles.flexibleHint}>
             {t("onboarding.schedule.flexibleHint")}
           </p>
         </Card>
@@ -880,29 +869,25 @@ function TourStep({
   ] as const;
 
   return (
-    <div className="space-y-5">
-      <Card variant="cherry" className="dots-bg p-5">
-        <div className="flex items-center justify-between gap-4">
+    <div className={styles.stack}>
+      <Card variant="cherry" className="dots-bg">
+        <div className={styles.tourTop}>
           <div>
-            <p className="text-[11px] font-semibold tracking-[0.15em] text-white/55 uppercase">
-              {t("onboarding.tour.eyebrow")}
-            </p>
+            <p className={styles.tourEyebrow}>{t("onboarding.tour.eyebrow")}</p>
             <h1
               ref={headingRef}
               tabIndex={-1}
-              className="mt-2 text-2xl leading-tight font-semibold"
+              className={styles.tourTitle}
             >
               {t("onboarding.tour.title")}
             </h1>
           </div>
           <Avatar src={avatarUrl} size={62} alt={name} />
         </div>
-        <p className="mt-5 text-sm leading-relaxed text-white/66">
-          {t("onboarding.tour.body")}
-        </p>
+        <p className={styles.tourBody}>{t("onboarding.tour.body")}</p>
       </Card>
 
-      <div className="space-y-3">
+      <div className={styles.rows}>
         {items.map((item, index) => (
           <FeatureRow
             key={item.title}
@@ -930,17 +915,15 @@ function StepHeader({
 }) {
   return (
     <div>
-      <p className="text-[11px] font-semibold tracking-[0.16em] text-lime uppercase">
-        {eyebrow}
-      </p>
+      <p className={styles.stepEyebrow}>{eyebrow}</p>
       <h1
         ref={headingRef}
         tabIndex={-1}
-        className="mt-2 text-[1.8rem] leading-[1.08] font-semibold"
+        className={styles.stepTitle}
       >
         {title}
       </h1>
-      <p className="mt-3 text-sm leading-relaxed text-muted">{body}</p>
+      <p className={styles.stepBody}>{body}</p>
     </div>
   );
 }
@@ -957,18 +940,18 @@ function FeatureRow({
   body: string;
 }) {
   return (
-    <div className="flex gap-3 rounded-card border border-line/70 bg-surface/78 p-4">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-lime/18 bg-lime/8 text-lime">
+    <div className={styles.feature}>
+      <span className={styles.featureIcon}>
         <Icon size={19} />
       </span>
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-dot text-xs text-faint">
+      <div className={styles.featureText}>
+        <div className={styles.featureTitleRow}>
+          <span className={styles.featureNumber}>
             {String(number).padStart(2, "0")}
           </span>
-          <p className="font-semibold">{title}</p>
+          <p className={styles.featureTitle}>{title}</p>
         </div>
-        <p className="mt-1 text-sm leading-relaxed text-muted">{body}</p>
+        <p className={styles.featureBody}>{body}</p>
       </div>
     </div>
   );
@@ -991,25 +974,18 @@ function ModeButton({
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        "relative flex min-h-32 flex-col items-start justify-between rounded-card border p-4 text-left transition-colors",
-        selected
-          ? "border-lime/40 bg-lime/[0.07] text-text"
-          : "border-line bg-surface/72 text-muted",
+        styles.modeButton,
+        selected && styles.modeButtonSelected,
       )}
     >
       <span
-        className={cn(
-          "flex h-10 w-10 items-center justify-center rounded-full border",
-          selected
-            ? "border-lime/25 bg-lime/12 text-lime"
-            : "border-line bg-raised text-faint",
-        )}
+        className={cn(styles.modeIcon, selected && styles.modeIconSelected)}
       >
         <Icon size={18} />
       </span>
-      <span className="mt-4 text-sm leading-tight font-semibold">{label}</span>
+      <span className={styles.modeLabel}>{label}</span>
       {selected && (
-        <span className="absolute top-3 right-3 flex h-6 w-6 items-center justify-center rounded-full bg-lime text-black">
+        <span className={styles.modeCheck}>
           <IconCheck size={14} />
         </span>
       )}

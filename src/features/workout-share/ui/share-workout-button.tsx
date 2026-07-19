@@ -6,6 +6,7 @@ import { useI18n } from "@/shared/i18n";
 import type { Unit } from "@/shared/lib/weight";
 import { Button, ErrorNote, IconShare, Sheet } from "@/shared/ui";
 import { renderWorkoutSticker } from "../model/render-sticker";
+import styles from "./share-workout-button.module.scss";
 
 interface ShareWorkoutButtonProps {
   workout: Workout;
@@ -79,7 +80,7 @@ export function ShareWorkoutButton({ workout, unit }: ShareWorkoutButtonProps) {
       <Button
         variant="surface"
         size="lg"
-        className="w-full"
+        block
         onClick={generate}
         loading={busy}
       >
@@ -95,21 +96,16 @@ export function ShareWorkoutButton({ workout, unit }: ShareWorkoutButtonProps) {
         title={t("share.workout")}
       >
         {image && (
-          <div className="space-y-4">
+          <div className={styles.body}>
             <img
               src={image.url}
               alt={t("share.workout")}
-              className="mx-auto max-h-[48vh] w-3/5"
+              className={styles.preview}
             />
-            <Button
-              variant="lime"
-              size="lg"
-              className="w-full"
-              onClick={share}
-            >
+            <Button variant="lime" size="lg" block onClick={share}>
               {t("share.share")}
             </Button>
-            <Button variant="surface" className="w-full" onClick={download}>
+            <Button variant="surface" block onClick={download}>
               {t("share.download")}
             </Button>
           </div>

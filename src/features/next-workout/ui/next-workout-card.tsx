@@ -6,11 +6,13 @@ import { useMemo } from "react";
 import type { TrainingSchedule } from "@/entities/user";
 import { useI18n } from "@/shared/i18n";
 import { fromISODate, getDateLocale } from "@/shared/lib/dates";
+import { cn } from "@/shared/lib/cn";
 import { Card, DotValue, IconCalendar, IconChevronRight } from "@/shared/ui";
 import {
   nextScheduledWorkout,
   type ScheduledWorkout,
 } from "../model/predict";
+import styles from "./next-workout-card.module.scss";
 
 interface ScheduledWorkoutCardProps {
   prediction: ScheduledWorkout;
@@ -47,83 +49,66 @@ export function ScheduledWorkoutCard({
   return (
     <Link
       href={`/workouts/new?type=${encodeURIComponent(prediction.type)}&date=${prediction.date}`}
-      className="group block rounded-card"
+      className={styles.link}
     >
-      <Card
-        variant="cherry"
-        className="min-h-44 p-5 transition-[filter,transform] duration-200 group-active:scale-[0.99] group-active:brightness-95"
-      >
-        <div className="dots-bg pointer-events-none absolute inset-0 opacity-[0.08]" />
+      <Card variant="cherry" className={styles.card}>
+        <div className={cn(styles.dots, "dots-bg")} />
 
-        <div className="relative">
-          <div className="flex items-start gap-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/85 ring-1 ring-white/10">
+        <div className={styles.inner}>
+          <div className={styles.topRow}>
+            <span className={styles.calendarBadge}>
               <IconCalendar size={17} />
             </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[10px] font-semibold tracking-[0.14em] text-white/55 uppercase">
+            <span className={styles.topText}>
+              <span className={styles.label}>
                 {label ?? t("home.nextWorkout")}
               </span>
-              <span
-                className={
-                  isToday
-                    ? "mt-0.5 block text-sm font-medium text-lime"
-                    : "mt-0.5 block text-sm font-medium text-white/[0.78]"
-                }
-              >
+              <span className={cn(styles.when, isToday && styles.whenToday)}>
                 {when}
               </span>
             </span>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#170c0b] shadow-[0_8px_24px_-12px_rgba(255,255,255,0.8)]">
+            <span className={styles.arrow}>
               <IconChevronRight size={18} />
             </span>
           </div>
 
-          <div className="mt-5 flex items-end justify-between gap-4">
-            <span className="flex items-end gap-2">
+          <div className={styles.dateRow}>
+            <span className={styles.dateGroup}>
               <DotValue
                 value={format(workoutDate, "d")}
-                className="text-[46px] text-white"
+                className={styles.dayNumber}
               />
-              <span className="pb-1.5 text-[13px] font-medium text-white/55 uppercase">
+              <span className={styles.monthLabel}>
                 {format(workoutDate, "MMM", { locale: getDateLocale() })}
               </span>
             </span>
-            <span className="min-w-0 pb-1 text-right">
-              <span className="block text-[10px] tracking-[0.12em] text-white/[0.48] uppercase">
+            <span className={styles.typeGroup}>
+              <span className={styles.weekdayLabel}>
                 {format(workoutDate, "EEEE", {
                   locale: getDateLocale(),
                 })}
               </span>
-              <span className="mt-0.5 block max-w-44 truncate text-lg font-semibold text-white">
+              <span className={styles.typeName}>
                 {prediction.type}
               </span>
             </span>
           </div>
 
-          <div className="mt-4 grid grid-cols-7 gap-2 border-t border-white/10 pt-3">
+          <div className={styles.weekRow}>
             {weekDays.map((day) => {
               const active = isSameDay(day, workoutDate);
               return (
-                <span
-                  key={day.toISOString()}
-                  className="flex flex-col items-center gap-1.5"
-                >
+                <span key={day.toISOString()} className={styles.weekDay}>
                   <span
-                    className={
-                      active
-                        ? "text-[9px] font-semibold text-white"
-                        : "text-[9px] font-medium text-white/[0.48]"
-                    }
+                    className={cn(
+                      styles.weekDayLetter,
+                      active && styles.weekDayLetterActive,
+                    )}
                   >
                     {format(day, "EEEEE", { locale: getDateLocale() })}
                   </span>
                   <span
-                    className={
-                      active
-                        ? "h-1.5 w-4 rounded-full bg-lime shadow-[0_0_12px_rgba(215,246,81,0.65)]"
-                        : "h-1.5 w-1.5 rounded-full bg-white/[0.26]"
-                    }
+                    className={cn(styles.weekDot, active && styles.weekDotActive)}
                   />
                 </span>
               );

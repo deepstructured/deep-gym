@@ -76,6 +76,12 @@ const en = {
   "workout.removeNote": "Remove note",
   "workout.addExercise": "Add exercise",
   "workout.copyLast": "Copy last “{type}” workout",
+  "workout.copyFromCalendar": "Copy from another day",
+  "workout.copyPickerTitle": "Copy a workout",
+  "workout.copyPickerHint":
+    "Days with a dot have logged workouts — pick one to copy it.",
+  "workout.copyPickerEmptyDay": "No workouts on this day.",
+  "workout.copyThis": "Copy “{type}” workout",
   "workout.save": "Save workout",
   "workout.discard": "Discard draft",
   "workout.delete": "Delete workout",
@@ -347,18 +353,18 @@ const en = {
   // release notes
   "whatsNew.title": "What's new",
   "whatsNew.version": "Version {version}",
-  "whatsNew.releaseTitle": "A sharper DeepGym, built around your week.",
+  "whatsNew.releaseTitle": "Your draft now follows you.",
   "whatsNew.releaseBody":
-    "The new release makes the dashboard clearer and brings your training plan into the product.",
-  "whatsNew.dashboard.title": "Clearer dashboard stats",
-  "whatsNew.dashboard.body":
-    "Weekly activity, streak and total workouts now explain exactly what they measure.",
-  "whatsNew.schedule.title": "Training week & next workout",
-  "whatsNew.schedule.body":
-    "Plan your usual days and get a real next-workout prompt on Home and History.",
-  "whatsNew.avatars.title": "Pixel avatars & Night Reverse",
-  "whatsNew.avatars.body":
-    "Ten new halftone avatars, the production logo system and a dotted favicon are now live.",
+    "This release syncs the workout you're filling in across your devices and makes copying past sessions precise.",
+  "whatsNew.draftSync.title": "Cloud-synced drafts",
+  "whatsNew.draftSync.body":
+    "Start logging on your laptop, finish on your phone — the unsaved draft now lives in your account.",
+  "whatsNew.copyLast.title": "Smarter “copy last”",
+  "whatsNew.copyLast.body":
+    "Repeat one workout type several times a week? The suggestion now matches the weekday — a Sunday draft offers last Sunday's session.",
+  "whatsNew.copyPicker.title": "Copy any past workout",
+  "whatsNew.copyPicker.body":
+    "Open the calendar in the new-workout form and copy the exact session you want.",
   "whatsNew.gotIt": "Got it",
   "whatsNew.saveError":
     "We couldn't save that you've seen this update. Try again.",
@@ -472,6 +478,12 @@ const ru: Record<MessageKey, string> = {
   "workout.removeNote": "Убрать заметку",
   "workout.addExercise": "Добавить упражнение",
   "workout.copyLast": "Скопировать прошлую «{type}»",
+  "workout.copyFromCalendar": "Скопировать из другого дня",
+  "workout.copyPickerTitle": "Скопировать тренировку",
+  "workout.copyPickerHint":
+    "Дни с точкой — записанные тренировки. Выберите день, чтобы скопировать.",
+  "workout.copyPickerEmptyDay": "В этот день тренировок нет.",
+  "workout.copyThis": "Скопировать «{type}»",
   "workout.save": "Сохранить тренировку",
   "workout.discard": "Удалить черновик",
   "workout.delete": "Удалить тренировку",
@@ -733,20 +745,18 @@ const ru: Record<MessageKey, string> = {
 
   "whatsNew.title": "Что нового",
   "whatsNew.version": "Версия {version}",
-  "whatsNew.releaseTitle":
-    "Более точный DeepGym, построенный вокруг вашей недели.",
+  "whatsNew.releaseTitle": "Черновик теперь всегда с вами.",
   "whatsNew.releaseBody":
-    "Обновление делает главную понятнее и добавляет тренировочный план прямо в продукт.",
-  "whatsNew.dashboard.title": "Понятная статистика на главной",
-  "whatsNew.dashboard.body":
-    "Активность недели, серия и общее число тренировок теперь ясно объясняют свои значения.",
-  "whatsNew.schedule.title":
-    "Тренировочная неделя и следующая тренировка",
-  "whatsNew.schedule.body":
-    "Укажите обычные дни и получайте настоящую подсказку на Главной и в Истории.",
-  "whatsNew.avatars.title": "Pixel-аватары и Night Reverse",
-  "whatsNew.avatars.body":
-    "Десять новых halftone-аватаров, production-логотип и dotted-фавикон уже в приложении.",
+    "Обновление синхронизирует заполняемую тренировку между устройствами и делает копирование прошлых сессий точнее.",
+  "whatsNew.draftSync.title": "Черновик в облаке",
+  "whatsNew.draftSync.body":
+    "Начните заполнять на ноутбуке, закончите с телефона — несохранённый черновик привязан к аккаунту.",
+  "whatsNew.copyLast.title": "Умнее «скопировать прошлую»",
+  "whatsNew.copyLast.body":
+    "Тренируете один тип несколько раз в неделю? Подсказка теперь учитывает день недели: в воскресенье — прошлое воскресенье.",
+  "whatsNew.copyPicker.title": "Копия любой тренировки",
+  "whatsNew.copyPicker.body":
+    "Откройте календарь в форме новой тренировки и скопируйте именно ту сессию, которая нужна.",
   "whatsNew.gotIt": "Понятно",
   "whatsNew.saveError":
     "Не удалось сохранить отметку о просмотре обновления. Попробуйте ещё раз.",
@@ -853,6 +863,12 @@ const uk: Record<MessageKey, string> = {
   "workout.removeNote": "Прибрати нотатку",
   "workout.addExercise": "Додати вправу",
   "workout.copyLast": "Скопіювати минуле «{type}»",
+  "workout.copyFromCalendar": "Скопіювати з іншого дня",
+  "workout.copyPickerTitle": "Скопіювати тренування",
+  "workout.copyPickerHint":
+    "Дні з крапкою — записані тренування. Оберіть день, щоб скопіювати.",
+  "workout.copyPickerEmptyDay": "Цього дня тренувань немає.",
+  "workout.copyThis": "Скопіювати «{type}»",
   "workout.save": "Зберегти тренування",
   "workout.discard": "Видалити чернетку",
   "workout.delete": "Видалити тренування",
@@ -1115,20 +1131,18 @@ const uk: Record<MessageKey, string> = {
 
   "whatsNew.title": "Що нового",
   "whatsNew.version": "Версія {version}",
-  "whatsNew.releaseTitle":
-    "Точніший DeepGym, побудований навколо вашого тижня.",
+  "whatsNew.releaseTitle": "Чернетка тепер завжди з вами.",
   "whatsNew.releaseBody":
-    "Оновлення робить головну зрозумілішою та додає тренувальний план прямо в продукт.",
-  "whatsNew.dashboard.title": "Зрозуміла статистика на головній",
-  "whatsNew.dashboard.body":
-    "Активність тижня, серія та загальна кількість тренувань тепер чітко пояснюють свої значення.",
-  "whatsNew.schedule.title":
-    "Тренувальний тиждень і наступне тренування",
-  "whatsNew.schedule.body":
-    "Вкажіть звичайні дні й отримуйте справжню підказку на Головній та в Історії.",
-  "whatsNew.avatars.title": "Pixel-аватари та Night Reverse",
-  "whatsNew.avatars.body":
-    "Десять нових halftone-аватарів, production-логотип і dotted-фавікон уже в застосунку.",
+    "Оновлення синхронізує тренування, що заповнюється, між пристроями й робить копіювання минулих сесій точнішим.",
+  "whatsNew.draftSync.title": "Чернетка в хмарі",
+  "whatsNew.draftSync.body":
+    "Почніть заповнювати на ноутбуці, закінчіть із телефона — незбережена чернетка прив'язана до акаунта.",
+  "whatsNew.copyLast.title": "Розумніше «скопіювати минуле»",
+  "whatsNew.copyLast.body":
+    "Тренуєте один тип кілька разів на тиждень? Підказка тепер враховує день тижня: у неділю — минула неділя.",
+  "whatsNew.copyPicker.title": "Копія будь-якого тренування",
+  "whatsNew.copyPicker.body":
+    "Відкрийте календар у формі нового тренування та скопіюйте саме ту сесію, яка потрібна.",
   "whatsNew.gotIt": "Зрозуміло",
   "whatsNew.saveError":
     "Не вдалося зберегти позначку про перегляд оновлення. Спробуйте ще раз.",

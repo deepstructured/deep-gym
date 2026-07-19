@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { fromISODate } from "@/shared/lib/dates";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
 import type { Workout, WorkoutInput } from "../model/types";
 
@@ -56,25 +57,103 @@ export function useWorkouts(from: string, to: string) {
   });
 }
 
-/** The user's most recent workout of a given type (for "copy last workout"). */
-export function useLastWorkoutOfType(type: string) {
+/** The user's most recent workout of a given type (for "copy last workout").
+ *
+ *  With `preferWeekdayOf` (an ISO date), a workout of that type on the same
+ *  weekday beats a merely newer one: someone running Full Body on Wed/Fri/Sun
+ *  gets last Sunday's session offered on a Sunday, not Friday's. Falls back
+ *  to the newest of the type when that weekday has no history. */
+export function useLastWorkoutOfType(
+  type: string,
+  preferWeekdayOf?: string | null,
+) {
   return useQuery({
-    queryKey: ["workouts", "last-of-type", type],
+    queryKey: ["workouts", "last-of-type", type, preferWeekdayOf ?? null],
     queryFn: async (): Promise<Workout | null> => {
       const supabase = getSupabaseBrowser();
-      const { data, error } = await supabase
+
+      let query = supabase
         .from("workouts")
         .select(WORKOUT_SELECT)
         .eq("type", type)
         .order("date", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(1);
+        .order("created_at", { ascending: false });
+
+      if (preferWeekdayOf) {
+        // Dates first (cheap), then one full fetch of the chosen workout.
+        const { data: recent, error: datesError } = await supabase
+          .from("workouts")
+          .select("id, date")
+          .eq("type", type)
+          .order("date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(60);
+        if (datesError) throw datesError;
+        const rows = recent as { id: string; date: string }[];
+        const weekday = fromISODate(preferWeekdayOf).getDay();
+        const match = rows.find(
+          (row) => fromISODate(row.date).getDay() === weekday,
+        );
+        const targetId = (match ?? rows[0])?.id;
+        if (!targetId) return null;
+        query = query.eq("id", targetId);
+      }
+
+      const { data, error } = await query.limit(1);
       if (error) throw error;
       const workout = (data as Workout[])[0];
       return workout ? sortNested(workout) : null;
     },
     enabled: Boolean(type),
   });
+}
+
+/** Lightweight summary of every logged workout, newest first — enough to
+ *  mark calendar days and label a picked session without nested rows. */
+export interface WorkoutSummary {
+  id: string;
+  date: string;
+  type: string;
+  exerciseCount: number;
+}
+
+export function useWorkoutSummaries() {
+  return useQuery({
+    queryKey: ["workouts", "summaries"],
+    queryFn: async (): Promise<WorkoutSummary[]> => {
+      const supabase = getSupabaseBrowser();
+      const { data, error } = await supabase
+        .from("workouts")
+        .select("id, date, type, workout_exercises(count)")
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      type Row = {
+        id: string;
+        date: string;
+        type: string;
+        workout_exercises: { count: number }[];
+      };
+      return (data as Row[]).map((row) => ({
+        id: row.id,
+        date: row.date,
+        type: row.type,
+        exerciseCount: row.workout_exercises[0]?.count ?? 0,
+      }));
+    },
+  });
+}
+
+/** One full workout fetched imperatively (e.g. after a calendar pick). */
+export async function getWorkout(id: string): Promise<Workout> {
+  const supabase = getSupabaseBrowser();
+  const { data, error } = await supabase
+    .from("workouts")
+    .select(WORKOUT_SELECT)
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+  return sortNested(data as Workout);
 }
 
 export function useWorkout(id: string) {

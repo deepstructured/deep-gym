@@ -7,6 +7,7 @@ import { useMuscleGroups } from "@/entities/muscle-group";
 import type { ExerciseSetRecord, Workout } from "@/entities/workout";
 import { useI18n } from "@/shared/i18n";
 import { kgToUnit, roundWeight, type Unit } from "@/shared/lib/weight";
+import { cn } from "@/shared/lib/cn";
 import { Card, Chip, DotValue, IconChevronRight, Tag } from "@/shared/ui";
 import {
   extendedSummary,
@@ -16,6 +17,7 @@ import {
 } from "../model/stats";
 import { ProgressChart } from "./progress-chart";
 import { RepsByWeightTable } from "./reps-by-weight-table";
+import styles from "./progress-explorer.module.scss";
 
 interface ProgressExplorerProps {
   workouts: Workout[] | undefined;
@@ -148,31 +150,24 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-[15px] font-semibold">{t("home.progress")}</h2>
+      <div className={styles.headerRow}>
+        <h2 className={styles.heading}>{t("home.progress")}</h2>
         <Link
           href={`/exercises/${activeExercise.id}`}
-          className="flex items-center gap-0.5 text-sm text-muted"
+          className={styles.detailsLink}
         >
           {t("home.details")}
           <IconChevronRight size={15} />
         </Link>
       </div>
 
-      <Card
-        variant="surface"
-        className="space-y-4 border-white/[0.045] p-4"
-        style={{
-          background:
-            "radial-gradient(125% 55% at 50% 108%, rgba(24, 39, 136, 0.13), transparent 72%), var(--color-surface)",
-        }}
-      >
-        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+      <Card variant="surface" className={styles.card}>
+        <div className={cn(styles.chipRow, "no-scrollbar")}>
           {groupsWithData.map((group) => (
             <Chip
               key={group.id}
               selected={group.id === activeGroupId}
-              className="h-8 px-3.5 text-[13px]"
+              className={styles.smallChip}
               onClick={() => {
                 setGroupChoice(group.id);
                 setExerciseChoice(null);
@@ -183,12 +178,12 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
           ))}
         </div>
 
-        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+        <div className={cn(styles.chipRow, "no-scrollbar")}>
           {groupExercises.map((exercise) => (
             <Chip
               key={exercise.id}
               selected={exercise.id === activeExercise.id}
-              className="h-8 px-3.5 text-[13px]"
+              className={styles.smallChip}
               onClick={() => setExerciseChoice(exercise.id)}
             >
               {exercise.name}
@@ -197,44 +192,43 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
         </div>
 
         {/* Metric switcher + chart */}
-        <div className="space-y-3">
-          <div className="flex flex-wrap gap-1">
+        <div className={styles.metricSection}>
+          <div className={styles.metricButtons}>
             {METRICS.map((option) => (
               <button
                 key={option}
                 type="button"
                 onClick={() => setMetric(option)}
-                className={
-                  metric === option
-                    ? "h-7 shrink-0 rounded-full bg-white px-3 text-xs font-medium text-black shadow-[0_4px_18px_-8px_rgba(255,255,255,0.8)]"
-                    : "h-7 shrink-0 rounded-full border border-white/[0.05] bg-white/[0.035] px-3 text-xs font-medium text-muted"
-                }
+                className={cn(
+                  styles.metricButton,
+                  metric === option && styles.metricButtonActive,
+                )}
               >
                 {metricLabels[option]}
               </button>
             ))}
           </div>
 
-          <div className="flex items-end justify-between gap-3 px-1">
-            <div className="min-w-0">
-              <p className="text-[10px] font-medium tracking-[0.12em] text-faint uppercase">
+          <div className={styles.valueRow}>
+            <div className={styles.valueText}>
+              <p className={styles.valueLabel}>
                 {metricLabels[metric]}
               </p>
-              <div className="mt-1 flex items-end">
+              <div className={styles.valueDisplay}>
                 <DotValue
                   value={currentPoint?.value ?? "—"}
                   suffix={
                     currentPoint && isWeightMetric ? exerciseUnit : undefined
                   }
-                  className="text-4xl text-white"
-                  suffixClassName="text-white/40"
+                  className={styles.valueNumber}
+                  suffixClassName={styles.valueSuffix}
                 />
               </div>
             </div>
             {delta !== 0 && (
               <Tag
                 tone={delta > 0 ? "lime" : undefined}
-                className="mb-1 shrink-0"
+                className={styles.deltaTag}
               >
                 {delta > 0 ? "+" : ""}
                 {delta}
@@ -250,7 +244,7 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
         </div>
 
         {/* Summary tiles */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className={styles.statGrid}>
           <MiniStat
             label={t("detail.bestWeight")}
             value={
@@ -293,9 +287,7 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
         {/* Reps by weight */}
         {repStats.length > 0 && (
           <div>
-            <p className="mb-2 text-[13px] font-medium text-muted">
-              {t("detail.repsByWeight")}
-            </p>
+            <p className={styles.repsLabel}>{t("detail.repsByWeight")}</p>
             <RepsByWeightTable
               stats={repStats}
               unit={exerciseUnit}
@@ -318,11 +310,9 @@ function MiniStat({
   suffix?: string;
 }) {
   return (
-    <div className="rounded-tile bg-white/[0.035] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]">
-      <p className="mb-1 text-[10px] font-medium tracking-wide text-faint uppercase">
-        {label}
-      </p>
-      <DotValue value={value} suffix={suffix} className="text-xl" />
+    <div className={styles.miniStat}>
+      <p className={styles.miniStatLabel}>{label}</p>
+      <DotValue value={value} suffix={suffix} className={styles.miniStatValue} />
     </div>
   );
 }

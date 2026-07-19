@@ -25,7 +25,7 @@ export function GoogleSignInButton() {
     <Button
       variant="surface"
       size="lg"
-      className="w-full"
+      block
       onClick={signIn}
       loading={loading}
     >

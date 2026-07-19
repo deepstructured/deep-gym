@@ -1,0 +1,182 @@
+@use "../../../shared/styles/palette" as *;
+
+.link {
+  display: block;
+  border-radius: $radius-card;
+}
+
+/* Doubled so min-height/padding/transition extend the Card base cleanly. */
+.card.card {
+  min-height: 11rem;
+  padding: 1.25rem;
+  transition:
+    filter 0.2s $ease,
+    transform 0.2s $ease;
+
+  .link:active & {
+    transform: scale(0.99);
+    filter: brightness(0.95);
+  }
+}
+
+.dots {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.08;
+}
+
+.inner {
+  position: relative;
+}
+
+.topRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.calendarBadge {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(#fff, 0.1);
+  color: rgba(#fff, 0.85);
+  box-shadow: 0 0 0 1px rgba(#fff, 0.1);
+}
+
+.topText {
+  min-width: 0;
+  flex: 1;
+}
+
+.label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(#fff, 0.55);
+}
+
+.when {
+  margin-top: 0.125rem;
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: rgba(#fff, 0.78);
+}
+
+.whenToday {
+  color: $lime;
+}
+
+.arrow {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #fff;
+  color: #170c0b;
+  box-shadow: 0 8px 24px -12px rgba(255, 255, 255, 0.8);
+}
+
+.dateRow {
+  margin-top: 1.25rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dateGroup {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.dayNumber {
+  font-size: 46px;
+  color: #fff;
+}
+
+.monthLabel {
+  padding-bottom: 0.375rem;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: rgba(#fff, 0.55);
+}
+
+.typeGroup {
+  min-width: 0;
+  padding-bottom: 0.25rem;
+  text-align: right;
+}
+
+.weekdayLabel {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(#fff, 0.48);
+}
+
+.typeName {
+  @include truncate;
+  margin-top: 0.125rem;
+  display: block;
+  max-width: 11rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.weekRow {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.5rem;
+  border-top: 1px solid rgba(#fff, 0.1);
+  padding-top: 0.75rem;
+}
+
+.weekDay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.weekDayLetter {
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(#fff, 0.48);
+}
+
+.weekDayLetterActive {
+  font-weight: 600;
+  color: #fff;
+}
+
+.weekDot {
+  height: 0.375rem;
+  width: 0.375rem;
+  border-radius: 9999px;
+  background: rgba(#fff, 0.26);
+}
+
+.weekDotActive {
+  width: 1rem;
+  background: $lime;
+  box-shadow: 0 0 12px rgba($lime, 0.65);
+}

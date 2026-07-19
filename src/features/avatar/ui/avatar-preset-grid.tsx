@@ -4,6 +4,7 @@ import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import { Avatar } from "@/shared/ui";
 import { PRESET_AVATARS } from "../model/presets";
+import styles from "./avatar-preset-grid.module.scss";
 
 interface AvatarPresetGridProps {
   value: string | null;
@@ -24,7 +25,7 @@ export function AvatarPresetGrid({
   const { t } = useI18n();
 
   return (
-    <div className={cn("grid grid-cols-5 gap-x-3 gap-y-4", className)}>
+    <div className={cn(styles.grid, className)}>
       {PRESET_AVATARS.map((preset) => {
         const selected = value === preset.url;
         return (
@@ -35,11 +36,7 @@ export function AvatarPresetGrid({
             aria-pressed={selected}
             disabled={disabled}
             onClick={() => onSelect(preset.url)}
-            className={cn(
-              "justify-self-center rounded-full transition-[opacity,transform] active:scale-95 disabled:opacity-60",
-              selected &&
-                "ring-2 ring-lime ring-offset-2 ring-offset-surface",
-            )}
+            className={cn(styles.preset, selected && styles.selected)}
           >
             <Avatar src={preset.url} size={size} alt="" />
           </button>

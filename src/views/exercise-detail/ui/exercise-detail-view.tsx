@@ -47,6 +47,8 @@ import {
   Tag,
   TextArea,
 } from "@/shared/ui";
+import { cn } from "@/shared/lib/cn";
+import styles from "./exercise-detail-view.module.scss";
 
 export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
   const router = useRouter();
@@ -109,14 +111,14 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
           type="button"
           aria-label={t("detail.editExercise")}
           onClick={() => setEditOpen(true)}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-raised text-muted"
+          className={styles.editButton}
         >
           <IconEdit size={17} />
         </button>
       }
     >
-      <div className="space-y-5">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className={styles.stack}>
+        <div className={styles.tags}>
           <Tag tone="lime">{groupName}</Tag>
           <Tag>{t(`equipment.${exercise.equipment}`)}</Tag>
           {exercise.unit != null && exercise.unit !== profile?.unit && (
@@ -132,21 +134,21 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
         </div>
 
         {/* Working weight */}
-        <Card variant="pink" className="p-6">
-          <div className="dots-bg pointer-events-none absolute inset-0 opacity-25" />
-          <div className="relative">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm font-medium text-white/80">
+        <Card variant="pink" className={styles.workingCard}>
+          <div className={cn(styles.workingDots, "dots-bg")} />
+          <div className={styles.workingInner}>
+            <div className={styles.workingHead}>
+              <p className={styles.workingLabel}>
                 {t("detail.currentWorking")}
               </p>
-              <div className="flex gap-2">
+              <div className={styles.workingActions}>
                 {exercise.equipment !== "crossover" && (
                   <button
                     type="button"
                     aria-label={t("set.plates")}
                     onClick={() => setPlatesOpen(true)}
                     disabled={exercise.working_weight_kg == null}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white disabled:opacity-40"
+                    className={styles.workingAction}
                   >
                     <IconPlates size={17} />
                   </button>
@@ -155,7 +157,7 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
                   type="button"
                   aria-label={t("detail.editWorking")}
                   onClick={() => setWeightSheetOpen(true)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white"
+                  className={styles.workingAction}
                 >
                   <IconEdit size={15} />
                 </button>
@@ -168,14 +170,14 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
                   : "—"
               }
               suffix={unit}
-              className="text-6xl text-white"
-              suffixClassName="text-lg text-white/70"
+              className={styles.workingValue}
+              suffixClassName={styles.workingSuffix}
             />
           </div>
         </Card>
 
         {/* Summary tiles */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className={styles.statGrid}>
           <StatTile label={t("detail.sessions")} value={summary.sessions} />
           <StatTile label={t("detail.totalSets")} value={summary.totalSets} />
           <StatTile
@@ -200,51 +202,43 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
 
         {/* Progress */}
         {chartPoints.length > 1 && (
-          <Card variant="indigo" className="p-5 text-white">
-            <p className="mb-3 text-sm font-medium text-white/80">
-              {t("detail.topSet")}
-            </p>
+          <Card variant="indigo" className={styles.chartCard}>
+            <p className={styles.cardLabelOnGradient}>{t("detail.topSet")}</p>
             <ProgressChart points={chartPoints} unit={unit} />
           </Card>
         )}
 
         {/* Reps by weight */}
         {repStats.length > 0 && (
-          <Card variant="surface" className="p-4">
-            <p className="mb-3 text-sm font-medium text-muted">
-              {t("detail.repsByWeight")}
-            </p>
+          <Card variant="surface" className={styles.tableCard}>
+            <p className={styles.cardLabel}>{t("detail.repsByWeight")}</p>
             <RepsByWeightTable stats={repStats} unit={unit} />
           </Card>
         )}
 
         {/* Recent history */}
         {recent.length > 0 && (
-          <Card variant="surface" className="p-4">
-            <p className="mb-3 text-sm font-medium text-muted">
-              {t("detail.recent")}
-            </p>
-            <div className="space-y-3">
+          <Card variant="surface" className={styles.tableCard}>
+            <p className={styles.cardLabel}>{t("detail.recent")}</p>
+            <div className={styles.recentList}>
               {recent.map((entry) => (
                 <div key={entry.date + entry.sets![0]?.workoutId}>
-                  <p className="mb-1 text-xs text-faint">
-                    {formatDay(entry.date)}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <p className={styles.recentDate}>{formatDay(entry.date)}</p>
+                  <div className={styles.recentSets}>
                     {entry.sets!.map((set, i) => (
                       <span
                         key={i}
-                        className="inline-flex items-center gap-1 rounded-full border border-line bg-raised px-2.5 py-1 text-xs"
+                        className={styles.setChip}
                       >
-                        <span className="font-dot">
+                        <span className={styles.setValue}>
                           {set.weight_kg != null
                             ? roundWeight(kgToUnit(set.weight_kg, unit))
                             : "—"}
                         </span>
-                        <span className="text-faint">×</span>
-                        <span className="font-dot">{set.reps ?? "—"}</span>
+                        <span className={styles.setX}>×</span>
+                        <span className={styles.setValue}>{set.reps ?? "—"}</span>
                         {set.to_failure && (
-                          <IconFlame size={12} className="text-flame" />
+                          <IconFlame size={12} className={styles.setFlame} />
                         )}
                       </span>
                     ))}
@@ -256,9 +250,7 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
         )}
 
         {(history?.length ?? 0) === 0 && (
-          <p className="py-4 text-center text-sm text-muted">
-            {t("detail.noSets")}
-          </p>
+          <p className={styles.noSets}>{t("detail.noSets")}</p>
         )}
       </div>
 
@@ -303,11 +295,9 @@ function StatTile({
   suffix?: string;
 }) {
   return (
-    <div className="rounded-tile border border-line/60 bg-surface px-4 py-3.5">
-      <p className="mb-1.5 text-[11px] font-medium tracking-wide text-faint uppercase">
-        {label}
-      </p>
-      <DotValue value={value} suffix={suffix} className="text-2xl" />
+    <div className={styles.statTile}>
+      <p className={styles.statTileLabel}>{label}</p>
+      <DotValue value={value} suffix={suffix} className={styles.statTileValue} />
     </div>
   );
 }
@@ -349,8 +339,8 @@ function WorkingWeightSheet({
 
   return (
     <Sheet open={open} onClose={onClose} title={t("detail.workingWeight")}>
-      <div className="space-y-4">
-        <p className="text-sm text-muted">{t("detail.workingWeightHint")}</p>
+      <div className={styles.sheetStack}>
+        <p className={styles.sheetHint}>{t("detail.workingWeightHint")}</p>
         <Field label={t("detail.weightUnit", { unit })}>
           <Input
             value={value}
@@ -358,13 +348,13 @@ function WorkingWeightSheet({
             inputMode="decimal"
             placeholder="60"
             autoFocus
-            className="text-center font-dot text-2xl"
+            className={styles.weightInput}
           />
         </Field>
         <Button
           variant="lime"
           size="lg"
-          className="w-full"
+          block
           onClick={save}
           loading={update.isPending}
         >
@@ -435,12 +425,12 @@ function EditExerciseSheet({
   return (
     <>
       <Sheet open={open} onClose={onClose} title={t("detail.editExercise")}>
-        <div className="space-y-4">
+        <div className={styles.sheetStack}>
           <Field label={t("picker.name")}>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
           <Field label={t("picker.muscleGroup")}>
-            <div className="flex flex-wrap gap-2">
+            <div className={styles.chips}>
               {groups?.map((group) => (
                 <Chip
                   key={group.id}
@@ -453,7 +443,7 @@ function EditExerciseSheet({
             </div>
           </Field>
           <Field label={t("picker.equipment")}>
-            <div className="flex flex-wrap gap-2">
+            <div className={styles.chips}>
               {EQUIPMENT_OPTIONS.map((option) => (
                 <Chip
                   key={option.value}
@@ -475,7 +465,7 @@ function EditExerciseSheet({
             </Field>
           )}
           <Field label={t("picker.unitForExercise")}>
-            <div className="flex flex-wrap gap-2">
+            <div className={styles.chips}>
               {(
                 [
                   {
@@ -502,7 +492,7 @@ function EditExerciseSheet({
           <Button
             variant="lime"
             size="lg"
-            className="w-full"
+            block
             onClick={save}
             loading={update.isPending}
           >
@@ -510,7 +500,7 @@ function EditExerciseSheet({
           </Button>
           <Button
             variant="danger"
-            className="w-full"
+            block
             onClick={() => setConfirmDelete(true)}
           >
             {t("detail.deleteExercise")}

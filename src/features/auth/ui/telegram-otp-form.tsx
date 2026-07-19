@@ -6,6 +6,7 @@ import { TELEGRAM_BOT_USERNAME } from "@/shared/config/env";
 import { useI18n } from "@/shared/i18n";
 import { Button, ErrorNote, Field, IconTelegram, Input } from "@/shared/ui";
 import { useTelegramBotLink } from "../model/use-telegram-bot-link";
+import styles from "./telegram-otp-form.module.scss";
 
 type Step = "username" | "code";
 
@@ -65,7 +66,7 @@ export function TelegramOtpForm() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className={styles.form}>
       {step === "username" ? (
         <>
           <Field label={t("login.telegramUsername")}>
@@ -79,13 +80,13 @@ export function TelegramOtpForm() {
             />
           </Field>
           {TELEGRAM_BOT_USERNAME && (
-            <p className="text-[13px] leading-relaxed text-muted">
+            <p className={styles.botNote}>
               {t("login.firstTime")}{" "}
               <a
                 href={botLink}
                 target="_blank"
                 rel="noreferrer"
-                className="font-medium text-lime"
+                className={styles.botLink}
               >
                 @{TELEGRAM_BOT_USERNAME}
               </a>
@@ -95,7 +96,7 @@ export function TelegramOtpForm() {
           <Button
             variant="lime"
             size="lg"
-            className="w-full"
+            block
             onClick={requestCode}
             loading={loading}
             disabled={!username.trim()}
@@ -119,7 +120,7 @@ export function TelegramOtpForm() {
               placeholder="••••••"
               inputMode="numeric"
               autoFocus
-              className="text-center font-dot text-2xl tracking-[0.4em]"
+              className={styles.codeInput}
               onKeyDown={(e) =>
                 e.key === "Enter" && code.length === 6 && verifyCode()
               }
@@ -129,7 +130,7 @@ export function TelegramOtpForm() {
           <Button
             variant="lime"
             size="lg"
-            className="w-full"
+            block
             onClick={verifyCode}
             loading={loading}
             disabled={code.length !== 6}
@@ -138,7 +139,7 @@ export function TelegramOtpForm() {
           </Button>
           <button
             type="button"
-            className="w-full text-center text-sm text-muted"
+            className={styles.switchUser}
             onClick={() => {
               setStep("username");
               setCode("");

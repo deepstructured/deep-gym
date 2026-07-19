@@ -1,0 +1,34 @@
+@use "../../styles/palette" as *;
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.glyph {
+  margin-bottom: 0.5rem;
+  height: 4rem;
+  width: 4rem;
+  border-radius: 9999px;
+  opacity: 0.4;
+}
+
+.title {
+  font-weight: 500;
+  color: $text;
+}
+
+.hint {
+  max-width: 15rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: $muted;
+}
+
+.action {
+  margin-top: 0.75rem;
+}

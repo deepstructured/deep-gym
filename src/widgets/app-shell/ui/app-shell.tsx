@@ -5,6 +5,7 @@ import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import { BrandMark, IconChevronLeft } from "@/shared/ui";
 import { BottomNav } from "./bottom-nav";
+import styles from "./app-shell.module.scss";
 
 interface AppShellProps {
   title?: string;
@@ -28,29 +29,25 @@ export function AppShell({
   const { t } = useI18n();
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pt-14 pb-32">
+    <div className={styles.shell}>
       {(title || back || action) && (
-        <header className="sticky top-0 z-30 -mx-5 mb-4 flex items-center gap-3 bg-bg/85 px-5 py-3 backdrop-blur-xl">
+        <header className={styles.header}>
           {back && (
             <button
               type="button"
               onClick={() => router.back()}
               aria-label={t("common.back")}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line bg-raised text-text"
+              className={styles.back}
             >
               <IconChevronLeft size={20} />
             </button>
           )}
           {!back && title && <BrandMark width={24} />}
-          {title && (
-            <h1 className="min-w-0 flex-1 truncate text-xl font-semibold">
-              {title}
-            </h1>
-          )}
-          {action && <div className="shrink-0">{action}</div>}
+          {title && <h1 className={styles.title}>{title}</h1>}
+          {action && <div className={styles.action}>{action}</div>}
         </header>
       )}
-      <div className={cn("flex-1", className)}>{children}</div>
+      <div className={cn(styles.content, className)}>{children}</div>
       {!hideNav && <BottomNav />}
     </div>
   );

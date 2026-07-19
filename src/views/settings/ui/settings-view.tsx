@@ -46,6 +46,7 @@ import {
   Segmented,
   Tag,
 } from '@/shared/ui'
+import styles from './settings-view.module.scss'
 
 export function SettingsView() {
   const { t, lang, setLang } = useI18n()
@@ -141,10 +142,10 @@ export function SettingsView() {
 
   return (
     <AppShell title={t('settings.title')}>
-      <div className="space-y-5">
+      <div className={styles.stack}>
         {/* Profile */}
-        <Card variant="surface" className="space-y-4 p-4">
-          <p className="text-sm font-semibold">{t('settings.profile')}</p>
+        <Card variant="surface" className={styles.card}>
+          <p className={styles.cardTitle}>{t('settings.profile')}</p>
 
           <AvatarEditor
             avatarUrl={profile.avatar_url}
@@ -160,18 +161,16 @@ export function SettingsView() {
             />
           </Field>
           {profile.telegram_username && (
-            <p className="text-sm text-muted">
+            <p className={styles.telegramNote}>
               Telegram: <Tag>@{profile.telegram_username}</Tag>
             </p>
           )}
         </Card>
 
         {/* Language & units */}
-        <Card variant="surface" className="space-y-4 p-4">
+        <Card variant="surface" className={styles.card}>
           <div>
-            <p className="mb-2 text-sm font-semibold">
-              {t('settings.language')}
-            </p>
+            <p className={styles.groupLabel}>{t('settings.language')}</p>
             <Segmented
               value={lang}
               onChange={changeLanguage}
@@ -179,9 +178,7 @@ export function SettingsView() {
             />
           </div>
           <div>
-            <p className="mb-2 text-sm font-semibold">
-              {t('settings.weightUnit')}
-            </p>
+            <p className={styles.groupLabel}>{t('settings.weightUnit')}</p>
             <Segmented
               value={unit}
               onChange={(next) => updateProfile.mutate({ unit: next })}
@@ -197,12 +194,10 @@ export function SettingsView() {
         <TrainingWeekCard value={profile.training_schedule} />
 
         {/* Plates */}
-        <Card variant="surface" className="space-y-4 p-4">
+        <Card variant="surface" className={styles.card}>
           <div>
-            <p className="text-sm font-semibold">{t('settings.plateCalc')}</p>
-            <p className="mt-0.5 text-xs text-muted">
-              {t('settings.plateCalcHint')}
-            </p>
+            <p className={styles.cardTitle}>{t('settings.plateCalc')}</p>
+            <p className={styles.cardHint}>{t('settings.plateCalcHint')}</p>
           </div>
 
           <Field label={t('settings.barWeight', { unit })}>
@@ -213,25 +208,25 @@ export function SettingsView() {
               }
               onBlur={saveBarWeight}
               inputMode="decimal"
-              className="max-w-32"
+              className={styles.barInput}
             />
           </Field>
 
-          <div className="flex flex-wrap gap-2">
+          <div className={styles.chipsWrap}>
             {plates.map((plate) => (
               <span
                 key={`${plate.unit}-${plate.value}`}
-                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-raised pr-2 pl-3.5 text-sm"
+                className={styles.plateChip}
               >
-                <span className="font-dot">{plate.value}</span>
-                <span className="text-xs text-muted">{plate.unit}</span>
+                <span className={styles.plateValue}>{plate.value}</span>
+                <span className={styles.plateUnit}>{plate.unit}</span>
                 <button
                   type="button"
                   aria-label={t('settings.removePlate', {
                     plate: `${plate.value} ${plate.unit}`,
                   })}
                   onClick={() => removePlate(plate)}
-                  className="text-faint active:text-flame"
+                  className={styles.chipRemove}
                 >
                   <IconClose size={14} />
                 </button>
@@ -239,7 +234,7 @@ export function SettingsView() {
             ))}
           </div>
 
-          <div className="flex gap-2">
+          <div className={styles.addRow}>
             <Input
               value={newPlate}
               onChange={(e) =>
@@ -248,19 +243,18 @@ export function SettingsView() {
               onKeyDown={(e) => e.key === 'Enter' && addPlate()}
               inputMode="decimal"
               placeholder={t('settings.plateWeight')}
-              className="h-10 flex-1"
+              className={styles.addInput}
             />
-            <div className="flex rounded-full border border-line bg-surface p-0.5 items-center">
+            <div className={styles.unitSwitch}>
               {(['kg', 'lb'] as const).map((option) => (
                 <button
                   key={option}
                   type="button"
                   onClick={() => setNewPlateUnit(option)}
-                  className={
-                    newPlateUnit === option
-                      ? 'h-9 rounded-full bg-lime px-3 text-sm font-medium text-black'
-                      : 'h-9 rounded-full px-3 text-sm font-medium text-muted'
-                  }
+                  className={cn(
+                    styles.unitOption,
+                    newPlateUnit === option && styles.unitOptionActive,
+                  )}
                 >
                   {option}
                 </button>
@@ -268,8 +262,7 @@ export function SettingsView() {
             </div>
             <Button
               variant="surface"
-              size="sm"
-              className="h-10"
+              size="compact"
               onClick={addPlate}
             >
               <IconPlus size={16} />
@@ -285,9 +278,7 @@ export function SettingsView() {
 
         <SignOutButton />
 
-        <p className="pb-2 text-center text-xs text-faint">
-          {t('settings.install')}
-        </p>
+        <p className={styles.installNote}>{t('settings.install')}</p>
       </div>
 
       <WhatsNewSheet
@@ -305,57 +296,48 @@ function HelpUpdatesCard({
 }) {
   const { t } = useI18n()
 
-  const rowClassName =
-    'group flex min-h-[4.75rem] w-full items-center gap-3 px-4 py-3 text-left transition-[background-color,transform] active:scale-[0.99] active:bg-raised'
-
   return (
-    <Card variant="surface" className="p-0">
-      <div className="flex items-center gap-2 px-4 pt-4 pb-3">
-        <span className="h-2 w-2 rounded-full bg-indigo-bright shadow-[0_0_12px_rgba(91,103,255,0.32)]" />
-        <p className="text-sm font-semibold">{t('settings.helpUpdates')}</p>
+    <Card variant="surface" className={styles.helpCard}>
+      <div className={styles.helpHead}>
+        <span className={styles.helpDot} />
+        <p className={styles.cardTitle}>{t('settings.helpUpdates')}</p>
       </div>
 
-      <div className="border-t border-line/70">
-        <Link href="/onboarding?replay=1" className={rowClassName}>
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-lime/20 bg-lime/10 text-lime">
+      <div className={styles.helpRows}>
+        <Link href="/onboarding?replay=1" className={styles.helpRow}>
+          <span className={cn(styles.helpIcon, styles.helpIconLime)}>
             <IconInfo size={18} />
           </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold">
+          <span className={styles.helpText}>
+            <span className={styles.helpRowTitle}>
               {t('settings.appGuide')}
             </span>
-            <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+            <span className={styles.helpRowHint}>
               {t('settings.appGuideHint')}
             </span>
           </span>
-          <IconChevronRight
-            size={18}
-            className="shrink-0 text-faint transition-transform group-active:translate-x-0.5"
-          />
+          <IconChevronRight size={18} className={styles.helpChevron} />
         </Link>
 
         <button
           type="button"
           onClick={onOpenWhatsNew}
-          className={`${rowClassName} border-t border-line/70`}
+          className={cn(styles.helpRow, styles.helpRowBorder)}
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-indigo-bright/25 bg-indigo/25 text-[#aeb8ff]">
+          <span className={cn(styles.helpIcon, styles.helpIconIndigo)}>
             <IconHistory size={18} />
           </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold">
+          <span className={styles.helpText}>
+            <span className={styles.helpRowTitle}>
               {t('settings.whatsNew')}
             </span>
-            <span className="mt-0.5 block text-xs leading-relaxed text-muted">
+            <span className={styles.helpRowHint}>
               {t('settings.whatsNewHint', {
                 version: CURRENT_RELEASE.label,
               })}
             </span>
           </span>
-          <IconChevronRight
-            size={18}
-            className="shrink-0 text-faint transition-transform group-active:translate-x-0.5"
-          />
+          <IconChevronRight size={18} className={styles.helpChevron} />
         </button>
       </div>
     </Card>
@@ -391,15 +373,15 @@ function AvatarEditor({
     upload.isPending || removeAvatar.isPending || setPreset.isPending
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-4">
+    <div className={styles.avatarEditor}>
+      <div className={styles.avatarRow}>
         <Avatar src={avatarUrl} size={72} alt={displayName ?? ''} />
-        <div className="flex min-w-0 flex-col items-start gap-2">
+        <div className={styles.avatarActions}>
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            className="hidden"
+            className={styles.fileInput}
             onChange={onFileChange}
           />
           <Button
@@ -414,7 +396,7 @@ function AvatarEditor({
           {avatarUrl != null && (
             <button
               type="button"
-              className="text-xs text-muted disabled:opacity-50"
+              className={styles.useDefault}
               disabled={busy}
               onClick={() => {
                 setError(null)
@@ -426,7 +408,7 @@ function AvatarEditor({
               {t('settings.useDefault')}
             </button>
           )}
-          <p className="text-xs text-faint">{t('settings.avatarHint')}</p>
+          <p className={styles.avatarHint}>{t('settings.avatarHint')}</p>
         </div>
       </div>
 
@@ -435,14 +417,14 @@ function AvatarEditor({
           type="button"
           aria-expanded={showPresets}
           onClick={() => setShowPresets((value) => !value)}
-          className="flex w-full items-center justify-between rounded-tile border border-line bg-raised px-4 py-2.5 text-sm font-medium"
+          className={styles.presetsToggle}
         >
           {t('settings.chooseAvatar')}
           <IconChevronDown
             size={16}
             className={cn(
-              'text-faint transition-transform',
-              showPresets && 'rotate-180',
+              styles.presetsChevron,
+              showPresets && styles.presetsChevronOpen,
             )}
           />
         </button>
@@ -451,7 +433,7 @@ function AvatarEditor({
           <AvatarPresetGrid
             value={avatarUrl}
             disabled={busy}
-            className="mt-3"
+            className={styles.presetsGrid}
             onSelect={(url) => {
               setError(null)
               if (url === null) {
@@ -490,19 +472,17 @@ function MuscleGroupsCard() {
   const pending = groups?.find((g) => g.id === deleteId)
 
   return (
-    <Card variant="surface" className="space-y-4 p-4">
+    <Card variant="surface" className={styles.card}>
       <div>
-        <p className="text-sm font-semibold">{t('settings.muscleGroups')}</p>
-        <p className="mt-0.5 text-xs text-muted">
-          {t('settings.muscleGroupsHint')}
-        </p>
+        <p className={styles.cardTitle}>{t('settings.muscleGroups')}</p>
+        <p className={styles.cardHint}>{t('settings.muscleGroupsHint')}</p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className={styles.chipsWrap}>
         {groups?.map((group) => (
           <span
             key={group.id}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-raised px-3.5 text-sm"
+            className={styles.groupChip}
           >
             {group.name}
             {group.user_id != null && (
@@ -510,7 +490,7 @@ function MuscleGroupsCard() {
                 type="button"
                 aria-label={t('settings.deleteGroup', { name: group.name })}
                 onClick={() => setDeleteId(group.id)}
-                className="text-faint active:text-flame"
+                className={styles.chipRemove}
               >
                 <IconClose size={14} />
               </button>
@@ -519,18 +499,17 @@ function MuscleGroupsCard() {
         ))}
       </div>
 
-      <div className="flex gap-2">
+      <div className={styles.addRow}>
         <Input
           value={newGroup}
           onChange={(e) => setNewGroup(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && add()}
           placeholder={t('settings.newGroup')}
-          className="h-10 flex-1"
+          className={styles.addInput}
         />
         <Button
           variant="surface"
-          size="sm"
-          className="h-10"
+          size="compact"
           onClick={add}
           loading={createGroup.isPending}
         >

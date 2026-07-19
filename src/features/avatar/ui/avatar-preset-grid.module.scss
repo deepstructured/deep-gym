@@ -1,0 +1,30 @@
+@use "../../../shared/styles/palette" as *;
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  column-gap: 0.75rem;
+  row-gap: 1rem;
+}
+
+.preset {
+  justify-self: center;
+  border-radius: 9999px;
+  transition:
+    opacity $tr,
+    transform $tr;
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.selected {
+  box-shadow:
+    0 0 0 2px $surface,
+    0 0 0 4px $lime;
+}

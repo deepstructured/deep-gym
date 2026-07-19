@@ -4,6 +4,7 @@ import { useI18n } from "@/shared/i18n";
 import { kgToUnit, roundWeight, type Unit } from "@/shared/lib/weight";
 import { DotValue, IconFlame } from "@/shared/ui";
 import type { WeightRepStats } from "../model/stats";
+import styles from "./reps-by-weight-table.module.scss";
 
 interface RepsByWeightTableProps {
   stats: WeightRepStats[];
@@ -25,38 +26,36 @@ export function RepsByWeightTable({
 
   return (
     <div>
-      <div className="mb-1 grid grid-cols-[1.2fr_0.7fr_0.7fr_0.7fr_0.7fr] px-1 text-[10px] font-medium tracking-wide text-faint uppercase">
+      <div className={styles.head}>
         <span>{t("detail.weight")}</span>
-        <span className="text-center">{t("detail.sets")}</span>
-        <span className="text-center">{t("detail.avg")}</span>
-        <span className="text-center">{t("detail.med")}</span>
-        <span className="text-center">{t("detail.mode")}</span>
+        <span className={styles.center}>{t("detail.sets")}</span>
+        <span className={styles.center}>{t("detail.avg")}</span>
+        <span className={styles.center}>{t("detail.med")}</span>
+        <span className={styles.center}>{t("detail.mode")}</span>
       </div>
-      <div className="divide-y divide-line/50">
+      <div className={styles.rows}>
         {rows.map((row) => (
           <div
             key={row.weightKg}
-            className="grid grid-cols-[1.2fr_0.7fr_0.7fr_0.7fr_0.7fr] items-center px-1 py-2.5"
+            className={styles.row}
           >
-            <span className="flex items-center gap-1.5">
+            <span className={styles.weightCell}>
               <DotValue
                 value={roundWeight(kgToUnit(row.weightKg, unit))}
-                className="text-lg"
+                className={styles.weightValue}
               />
               {row.failureRate > 0 && (
                 <IconFlame
                   size={13}
-                  className="text-flame"
+                  className={styles.flame}
                   opacity={0.4 + row.failureRate * 0.6}
                 />
               )}
             </span>
-            <span className="text-center font-dot text-muted">
-              {row.setCount}
-            </span>
-            <span className="text-center font-dot">{row.avgReps}</span>
-            <span className="text-center font-dot">{row.medianReps}</span>
-            <span className="text-center font-dot">{row.modeReps}</span>
+            <span className={styles.cellMuted}>{row.setCount}</span>
+            <span className={styles.cell}>{row.avgReps}</span>
+            <span className={styles.cell}>{row.medianReps}</span>
+            <span className={styles.cell}>{row.modeReps}</span>
           </div>
         ))}
       </div>

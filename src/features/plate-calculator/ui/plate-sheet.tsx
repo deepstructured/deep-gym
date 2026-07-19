@@ -15,7 +15,9 @@ import {
   type PlateCount,
   type Unit,
 } from "@/shared/lib/weight";
+import { cn } from "@/shared/lib/cn";
 import { DotValue, Sheet, Tag } from "@/shared/ui";
+import styles from "./plate-sheet.module.scss";
 
 export interface PlateContext {
   weightKg: number;
@@ -84,74 +86,73 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
       }
     >
       {open && (
-        <div className="space-y-5">
-          <div className="rounded-tile grad-indigo glow-indigo relative overflow-hidden p-5 text-center">
-            <div className="dots-bg pointer-events-none absolute inset-0 opacity-25" />
+        <div className={styles.body}>
+          <div className={cn(styles.hero, "grad-indigo glow-indigo")}>
+            <div className={cn(styles.heroDots, "dots-bg")} />
             <DotValue
               value={roundWeight(kgToUnit(weightKg, unit))}
               suffix={isDumbbell ? t("plates.each", { unit }) : unit}
-              className="relative text-5xl text-white"
-              suffixClassName="text-white/70"
+              className={styles.heroValue}
+              suffixClassName={styles.heroSuffix}
             />
             {isBarbell && !barCoversAll && (
-              <p className="relative mt-2 text-xs text-white/60">
+              <p className={styles.heroBarNote}>
                 {t("plates.includesBar", { bar: formatWeight(barKg, unit) })}
               </p>
             )}
           </div>
 
           {isDumbbell ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between rounded-tile border border-line bg-surface px-4 py-3">
-                <span className="flex items-center gap-3">
+            <div className={styles.stack}>
+              <div className={styles.dumbbellRow}>
+                <span className={styles.dumbbellLabel}>
                   <DumbbellGlyph />
-                  <span className="font-medium">
+                  <span className={styles.dumbbellName}>
                     {t("plates.dumbbell", {
                       weight: formatWeight(weightKg, unit),
                     })}
                   </span>
                 </span>
-                <DotValue value="x2" className="text-xl text-lime" />
+                <DotValue value="x2" className={styles.dumbbellCount} />
               </div>
-              <p className="pt-1 text-center text-sm text-muted">
+              <p className={styles.centerNote}>
                 {t("plates.oneEachHand")} ·{" "}
-                <span className="font-dot">
+                <span className={styles.dotFont}>
                   {roundWeight(kgToUnit(weightKg * 2, unit))}
                 </span>{" "}
                 {t("plates.totalLoad", { unit })}
               </p>
             </div>
           ) : barCoversAll ? (
-            <p className="text-center text-sm text-muted">
+            <p className={styles.centerNoteBare}>
               {t("plates.barCovers")}
             </p>
           ) : variants.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-[13px] font-medium text-muted">
+            <div className={styles.stack}>
+              <p className={styles.sectionLabel}>
                 {t("plates.ways")}
               </p>
               {variants.map((variant, index) => (
                 <div
                   key={index}
-                  className={
-                    index === 0
-                      ? "rounded-tile border border-lime/40 bg-lime/5 px-4 py-3"
-                      : "rounded-tile border border-line bg-surface px-4 py-3"
-                  }
+                  className={cn(
+                    styles.variant,
+                    index === 0 && styles.variantBest,
+                  )}
                 >
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <div className={styles.variantChips}>
                     {variant.counts.map((count) => (
                       <PlateChip key={`${count.plate.unit}-${count.plate.value}`} item={count} />
                     ))}
                     {index === 0 && (
-                      <Tag tone="lime" className="ml-auto">
+                      <Tag tone="lime" className={styles.bestTag}>
                         {t("plates.fewest")}
                       </Tag>
                     )}
                   </div>
                   {(isBarbell ||
                     Math.abs(variant.assembledKg - weightKg) > 0.05) && (
-                    <p className="mt-1.5 text-xs text-faint">
+                    <p className={styles.variantNote}>
                       {isBarbell && (
                         <>
                           {t("plates.perSide")}{" "}
@@ -176,30 +177,30 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
               ))}
             </div>
           ) : greedy && greedy.counts.length > 0 ? (
-            <div className="space-y-2">
-              <p className="text-[13px] font-medium text-muted">
+            <div className={styles.stack}>
+              <p className={styles.sectionLabel}>
                 {t("plates.closest")}
               </p>
-              <div className="rounded-tile border border-line bg-surface px-4 py-3">
-                <div className="flex flex-wrap items-center gap-1.5">
+              <div className={styles.variant}>
+                <div className={styles.variantChips}>
                   {greedy.counts.map((count) => (
                     <PlateChip key={`${count.plate.unit}-${count.plate.value}`} item={count} />
                   ))}
                 </div>
               </div>
-              <p className="pt-1 text-center text-sm text-muted">
+              <p className={styles.centerNote}>
                 {t("plates.missing", {
                   weight: formatWeight(greedy.remainderKg, unit),
                 })}{" "}
-                <Link href="/settings" className="text-lime" onClick={onClose}>
+                <Link href="/settings" className={styles.settingsLink} onClick={onClose}>
                   {t("plates.editPlates")}
                 </Link>
               </p>
             </div>
           ) : (
-            <p className="text-center text-sm text-muted">
+            <p className={styles.centerNoteBare}>
               {t("plates.none")}{" "}
-              <Link href="/settings" className="text-lime" onClick={onClose}>
+              <Link href="/settings" className={styles.settingsLink} onClick={onClose}>
                 {t("plates.addInSettings")}
               </Link>
               .
@@ -214,17 +215,17 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
 /** "2 × 20 kg" chip; count shown as the TOTAL number of plates (both sides). */
 function PlateChip({ item }: { item: PlateCount }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-raised py-1 pr-3 pl-2 text-sm">
+    <span className={styles.plateChip}>
       <span
-        className="inline-block rounded-full border-lime/80"
+        className={styles.plateRing}
         style={{
           width: 16,
           height: 16,
           borderWidth: Math.min(6, 2.5 + item.plate.kg / 9),
         }}
       />
-      <span className="font-dot">{item.count * 2}</span>
-      <span className="text-faint">×</span>
+      <span className={styles.plateCount}>{item.count * 2}</span>
+      <span className={styles.plateX}>×</span>
       <span>
         {item.plate.value} {item.plate.unit}
       </span>

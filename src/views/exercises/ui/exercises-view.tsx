@@ -7,6 +7,7 @@ import { useMuscleGroups } from "@/entities/muscle-group";
 import { useProfile } from "@/entities/user";
 import { useI18n } from "@/shared/i18n";
 import { formatWeight } from "@/shared/lib/weight";
+import { cn } from "@/shared/lib/cn";
 import { AppShell } from "@/widgets/app-shell";
 import {
   Chip,
@@ -17,6 +18,7 @@ import {
   PageLoader,
   Tag,
 } from "@/shared/ui";
+import styles from "./exercises-view.module.scss";
 
 export function ExercisesView() {
   const { t } = useI18n();
@@ -49,13 +51,13 @@ export function ExercisesView() {
 
   return (
     <AppShell title={t("exercises.title")}>
-      <div className="mb-4 space-y-3">
+      <div className={styles.filters}>
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("picker.search")}
         />
-        <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
+        <div className={cn(styles.groupRow, "no-scrollbar")}>
           <Chip selected={groupFilter === null} onClick={() => setGroupFilter(null)}>
             {t("common.all")}
           </Chip>
@@ -81,14 +83,14 @@ export function ExercisesView() {
           hint={t("exercises.emptyHint")}
         />
       ) : (
-        <div className="space-y-6">
+        <div className={styles.sections}>
           {visibleGroups.map(({ group, exercises: list }) => (
             <section key={group.id}>
-              <h2 className="mb-2 flex items-baseline gap-2 text-[13px] font-semibold tracking-wide text-muted uppercase">
+              <h2 className={styles.sectionTitle}>
                 {group.name}
-                <span className="font-dot text-faint">{list.length}</span>
+                <span className={styles.sectionCount}>{list.length}</span>
               </h2>
-              <div className="space-y-2">
+              <div className={styles.list}>
                 {list.map((exercise) => (
                   <ExerciseRow key={exercise.id} exercise={exercise} unit={unit} />
                 ))}
@@ -113,16 +115,14 @@ function ExerciseRow({
   return (
     <Link
       href={`/exercises/${exercise.id}`}
-      className="surface-well flex items-center gap-3 rounded-tile px-4 py-3.5 transition-[background-color,transform] active:scale-[0.99] active:bg-raised"
+      className={cn(styles.row, "surface-well")}
     >
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium">{exercise.name}</p>
-        <Tag className="mt-1">{t(`equipment.${exercise.equipment}`)}</Tag>
+      <div className={styles.rowText}>
+        <p className={styles.rowName}>{exercise.name}</p>
+        <Tag className={styles.rowTag}>{t(`equipment.${exercise.equipment}`)}</Tag>
       </div>
-      <div className="shrink-0 text-right">
-        <p className="text-[10px] tracking-wide text-faint uppercase">
-          {t("exercises.working")}
-        </p>
+      <div className={styles.rowWeight}>
+        <p className={styles.rowWeightLabel}>{t("exercises.working")}</p>
         <DotValue
           value={
             exercise.working_weight_kg != null
@@ -135,10 +135,10 @@ function ExerciseRow({
           suffix={
             exercise.working_weight_kg != null ? exerciseUnit : undefined
           }
-          className="text-xl text-lime"
+          className={styles.rowWeightValue}
         />
       </div>
-      <IconChevronRight size={18} className="shrink-0 text-faint" />
+      <IconChevronRight size={18} className={styles.rowChevron} />
     </Link>
   );
 }

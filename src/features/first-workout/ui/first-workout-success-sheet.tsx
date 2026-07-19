@@ -1,5 +1,6 @@
 import { useI18n } from "@/shared/i18n";
 import { Button, IconCheck, Sheet } from "@/shared/ui";
+import styles from "./first-workout.module.scss";
 
 interface FirstWorkoutSuccessSheetProps {
   open: boolean;
@@ -14,22 +15,17 @@ export function FirstWorkoutSuccessSheet({
   const { t } = useI18n();
 
   return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      title={t("firstWorkout.savedTitle")}
-    >
-      <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-lime/25 bg-lime/10 text-lime">
+    <Sheet open={open} onClose={onClose} title={t("firstWorkout.savedTitle")}>
+      <div className={styles.successGlyph}>
         <IconCheck size={26} />
       </div>
-      <p className="text-[15px] leading-relaxed text-muted">
-        {t("firstWorkout.savedBody")}
-      </p>
+      <p className={styles.successBody}>{t("firstWorkout.savedBody")}</p>
       <Button
         type="button"
         variant="lime"
         size="lg"
-        className="mt-6 w-full"
+        block
+        className={styles.successCta}
         onClick={onClose}
       >
         {t("firstWorkout.openHistory")}

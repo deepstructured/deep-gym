@@ -25,7 +25,8 @@ export function SignOutButton({ compact = false }: { compact?: boolean }) {
     <Button
       variant={compact ? "ghost" : "danger"}
       size={compact ? "sm" : "lg"}
-      className={compact ? "text-faint" : "w-full"}
+      tone={compact ? "faint" : undefined}
+      block={!compact}
       onClick={signOut}
       loading={loading}
     >

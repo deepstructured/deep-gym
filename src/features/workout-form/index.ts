@@ -6,3 +6,4 @@ export {
   draftToInput,
   type WorkoutDraft,
 } from "./model/draft";
+export { useNewWorkoutDraftSync } from "./model/draft-sync";

@@ -1,0 +1,204 @@
+@use "../../../shared/styles/palette" as *;
+
+.editButton {
+  @include icon-circle(2.5rem);
+  color: $muted;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Doubled so the larger padding beats the Card base. */
+.workingCard.workingCard {
+  padding: 1.5rem;
+}
+
+.workingDots {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.25;
+}
+
+.workingInner {
+  position: relative;
+}
+
+.workingHead {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workingLabel {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: rgba(#fff, 0.8);
+}
+
+.workingActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.workingAction {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(#fff, 0.15);
+  color: #fff;
+
+  &:disabled {
+    opacity: 0.4;
+  }
+}
+
+.workingValue {
+  font-size: 3.75rem;
+  color: #fff;
+}
+
+.workingSuffix {
+  font-size: 1.125rem;
+  color: rgba(#fff, 0.7);
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.statTile {
+  border-radius: $radius-tile;
+  border: 1px solid rgba($line, 0.6);
+  background: $surface;
+  padding: 0.875rem 1rem;
+}
+
+.statTileLabel {
+  @include micro-label;
+  margin-bottom: 0.375rem;
+}
+
+.statTileValue {
+  font-size: 1.5rem;
+}
+
+.chartCard {
+  color: #fff;
+}
+
+.cardLabelOnGradient {
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: rgba(#fff, 0.8);
+}
+
+/* Doubled so the tighter padding beats the Card base. */
+.tableCard.tableCard {
+  padding: 1rem;
+}
+
+.cardLabel {
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: $muted;
+}
+
+.recentList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.recentDate {
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: $faint;
+}
+
+.recentSets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.setChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  border: 1px solid $line;
+  background: $raised;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.setValue {
+  font-family: $font-dot;
+}
+
+.setX {
+  color: $faint;
+}
+
+.setFlame {
+  color: $flame;
+}
+
+.noSets {
+  padding: 1rem 0;
+  text-align: center;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: $muted;
+}
+
+/* ── Sheets ──────────────────────────────────────────────────────── */
+
+.sheetStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sheetHint {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: $muted;
+}
+
+/* Doubled: restyles the kit Input for the big weight entry. */
+.weightInput.weightInput {
+  text-align: center;
+  font-family: $font-dot;
+  font-size: 1.5rem;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

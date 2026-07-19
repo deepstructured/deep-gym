@@ -1,10 +1,7 @@
 import Link from "next/link";
 import { useI18n } from "@/shared/i18n";
-import {
-  Card,
-  IconChevronRight,
-  IconDumbbell,
-} from "@/shared/ui";
+import { Card, IconChevronRight, IconDumbbell } from "@/shared/ui";
+import styles from "./first-workout.module.scss";
 
 const STEP_KEYS = [
   "firstWorkout.stepType",
@@ -17,41 +14,31 @@ export function FirstWorkoutGuideCard() {
   const { t } = useI18n();
 
   return (
-    <Card
-      variant="surface"
-      className="border border-lime/20 bg-lime/[0.035] p-5"
-    >
-      <div className="pointer-events-none absolute -top-16 -right-12 h-40 w-40 rounded-full bg-lime/10 blur-3xl" />
-      <div className="relative">
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-lime/25 bg-lime/10 text-lime">
+    <Card variant="surface" className={styles.guideCard}>
+      <div className={styles.guideGlow} />
+      <div className={styles.guideInner}>
+        <div className={styles.guideHeader}>
+          <span className={styles.guideIcon}>
             <IconDumbbell size={19} />
           </span>
-          <div className="min-w-0">
-            <h2 className="text-[17px] font-semibold">
+          <div className={styles.guideText}>
+            <h2 className={styles.guideTitle}>
               {t("firstWorkout.guideTitle")}
             </h2>
-            <p className="mt-1 text-sm leading-relaxed text-muted">
-              {t("firstWorkout.guideBody")}
-            </p>
+            <p className={styles.guideBody}>{t("firstWorkout.guideBody")}</p>
           </div>
         </div>
 
-        <ol className="mt-5 space-y-3">
+        <ol className={styles.steps}>
           {STEP_KEYS.map((key, index) => (
-            <li key={key} className="flex items-center gap-3 text-sm">
-              <span className="font-dot flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/6 text-[12px] text-lime">
-                {index + 1}
-              </span>
-              <span className="text-text/90">{t(key)}</span>
+            <li key={key} className={styles.step}>
+              <span className={styles.stepNumber}>{index + 1}</span>
+              <span className={styles.stepText}>{t(key)}</span>
             </li>
           ))}
         </ol>
 
-        <Link
-          href="/workouts/new?first=1"
-          className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-lime px-5 text-[15px] font-semibold text-black active:brightness-90"
-        >
+        <Link href="/workouts/new?first=1" className={styles.guideCta}>
           {t("firstWorkout.open")}
           <IconChevronRight size={17} />
         </Link>

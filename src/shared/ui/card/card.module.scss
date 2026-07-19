@@ -1,0 +1,14 @@
+@use "../../styles/palette" as *;
+
+.card {
+  position: relative;
+  overflow: hidden;
+  border-radius: $radius-card;
+  padding: 1.25rem;
+}
+
+/* Gradient variants render light-on-dark; the fills themselves come from
+   the global grad-* / glow-* classes. */
+.onGradient {
+  color: #fff;
+}

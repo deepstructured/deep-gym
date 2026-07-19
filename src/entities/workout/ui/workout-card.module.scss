@@ -1,11 +1,132 @@
-.card {
+@use "../../../shared/styles/palette" as *;
+
+/* Doubled so its padding beats the Card base at equal specificity. */
+.card.card {
+  padding: 1rem;
   transition: border-color 0.2s ease;
 
-  &:focus {
-    border-color: #d7f651;
-  }
-
+  &:focus,
   &:active {
-    border-color: #d7f651;
+    border-color: $lime;
   }
+}
+
+.header {
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.headerText {
+  min-width: 0;
+}
+
+.type {
+  font-weight: 700;
+  color: $lime;
+}
+
+.meta {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: $muted;
+}
+
+.actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.iconAction {
+  @include icon-circle(2rem);
+  color: $muted;
+}
+
+.note {
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  border-radius: $radius-tile;
+  background: $raised;
+  padding: 0.5rem 0.75rem;
+  font-size: 13px;
+  line-height: 1.625;
+  color: $muted;
+}
+
+.noteIcon {
+  margin-top: 0.125rem;
+  flex-shrink: 0;
+}
+
+.exercises {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.exerciseHeader {
+  margin-bottom: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.exerciseName {
+  @include truncate;
+  min-width: 0;
+  flex: 1;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.exerciseTag {
+  flex-shrink: 0;
+}
+
+.sets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.set {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  border: 1px solid $line;
+  background: $raised;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.setValue {
+  font-family: $font-dot;
+}
+
+.setUnit {
+  font-size: 10px;
+  color: $faint;
+}
+
+.setX {
+  color: $faint;
+}
+
+.flame {
+  color: $flame;
+}
+
+.exerciseNote {
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  line-height: 1.625;
+  color: $faint;
 }

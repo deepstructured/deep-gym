@@ -42,6 +42,7 @@ import {
   PageLoader,
   Segmented,
 } from '@/shared/ui'
+import styles from './history-view.module.scss'
 
 type Mode = 'day' | 'week' | 'month'
 
@@ -110,7 +111,7 @@ export function HistoryView() {
   return (
     <AppShell title={t('history.title')}>
       <Segmented
-        className="mb-4"
+        className={styles.modeSwitch}
         value={mode}
         onChange={setMode}
         options={[
@@ -121,18 +122,18 @@ export function HistoryView() {
       />
 
       {/* Period navigator */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className={styles.navigator}>
         <button
           type="button"
           aria-label={t('history.previous')}
           onClick={() => shift(-1)}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-raised text-muted"
+          className={styles.navButton}
         >
           <IconChevronLeft size={18} />
         </button>
         <button
           type="button"
-          className="text-[15px] font-semibold"
+          className={styles.heading}
           onClick={() => setCursor(new Date())}
         >
           {heading}
@@ -141,7 +142,7 @@ export function HistoryView() {
           type="button"
           aria-label={t('history.next')}
           onClick={() => shift(1)}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-raised text-muted"
+          className={styles.navButton}
         >
           <IconChevronRight size={18} />
         </button>
@@ -209,8 +210,8 @@ function WeekStrip({
   )
 
   return (
-    <div className="mb-5">
-      <div className="grid grid-cols-7 gap-1.5">
+    <div className={styles.periodBlock}>
+      <div className={styles.weekGrid}>
         {days.map((day) => {
           const count = workouts.filter((w) =>
             isSameDay(fromISODate(w.date), day),
@@ -227,30 +228,28 @@ function WeekStrip({
               aria-pressed={active}
               onClick={() => onSelect(day)}
               className={cn(
-                'flex flex-col items-center gap-1 rounded-tile border py-2.5',
-                active ? 'border-lime/60 bg-lime/10' : 'border-line bg-surface',
-                isToday(day) && !active && 'border-faint',
+                styles.weekDay,
+                active && styles.weekDayActive,
+                isToday(day) && !active && styles.weekDayToday,
               )}
             >
-              <span className="text-[10px] font-medium text-faint uppercase">
+              <span className={styles.weekDayLetter}>
                 {format(day, 'EEEEE', { locale: getDateLocale() })}
               </span>
               <span
                 className={cn(
-                  'font-dot text-lg leading-none',
-                  active ? 'text-lime' : 'text-text',
+                  styles.weekDayNumber,
+                  active && styles.weekDayNumberActive,
                 )}
               >
                 {format(day, 'd')}
               </span>
               <span
                 className={cn(
-                  'h-1.5 w-1.5 rounded-full border',
+                  styles.weekDot,
                   count > 0
-                    ? 'border-lime bg-lime'
-                    : planned
-                      ? 'border-cherry bg-cherry/10'
-                      : 'border-transparent bg-transparent',
+                    ? styles.weekDotLogged
+                    : planned && styles.weekDotPlanned,
                 )}
               />
             </button>
@@ -291,13 +290,13 @@ function MonthGrid({
   )
 
   return (
-    <div className="mb-5">
-      <div className="mb-1 grid grid-cols-7 text-center text-[10px] font-medium text-faint uppercase">
+    <div className={styles.periodBlock}>
+      <div className={styles.monthWeekdays}>
         {weekdayLetters.map((letter, index) => (
           <span key={index}>{letter}</span>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1">
+      <div className={styles.monthGrid}>
         {days.map((day) => {
           const count = workouts.filter((w) =>
             isSameDay(fromISODate(w.date), day),
@@ -315,31 +314,27 @@ function MonthGrid({
               aria-pressed={active}
               onClick={() => onSelect(day)}
               className={cn(
-                'flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border text-sm',
+                styles.monthDay,
                 active
-                  ? 'border-lime/60 bg-lime/10'
-                  : isToday(day)
-                    ? 'border-faint'
-                    : 'border-transparent',
-                count > 0 && !active && !isToday(day) && 'bg-surface',
+                  ? styles.monthDayActive
+                  : isToday(day) && styles.monthDayToday,
+                count > 0 && !active && !isToday(day) && styles.monthDayLogged,
               )}
             >
               <span
                 className={cn(
-                  'font-dot leading-none',
-                  inMonth ? 'text-text' : 'text-faint/50',
+                  styles.monthDayNumber,
+                  !inMonth && styles.monthDayNumberOutside,
                 )}
               >
                 {format(day, 'd')}
               </span>
-              <span className="flex h-1.5 items-center gap-0.5">
+              <span className={styles.monthDots}>
                 {count > 0
                   ? Array.from({ length: Math.min(count, 3) }).map((_, i) => (
-                      <span key={i} className="h-1 w-1 rounded-full bg-lime" />
+                      <span key={i} className={styles.monthDot} />
                     ))
-                  : planned && (
-                      <span className="h-1.5 w-1.5 rounded-full border border-cherry bg-cherry/10" />
-                    )}
+                  : planned && <span className={styles.monthDotPlanned} />}
               </span>
             </button>
           )
@@ -353,8 +348,8 @@ function MonthGrid({
 function PlannedLegend() {
   const { t } = useI18n()
   return (
-    <p className="mt-2 flex items-center justify-end gap-1.5 text-[10px] text-faint">
-      <span className="h-1.5 w-1.5 rounded-full border border-cherry bg-cherry/10" />
+    <p className={styles.plannedLegend}>
+      <span className={styles.plannedLegendDot} />
       {t('history.plannedMarker')}
     </p>
   )
@@ -386,8 +381,8 @@ function SelectedDayWorkouts({
     if (scheduledWorkout) {
       const today = isToday(cursor)
       return (
-        <div className="space-y-3 pt-3">
-          <p className="mx-auto max-w-64 text-center text-sm leading-relaxed text-muted">
+        <div className={styles.plannedBlock}>
+          <p className={styles.plannedNote}>
             {t(today ? 'history.todayPlanned' : 'history.plannedDay')}
           </p>
           <ScheduledWorkoutCard
@@ -403,9 +398,9 @@ function SelectedDayWorkouts({
   }
 
   return (
-    <div className="space-y-4">
+    <div className={styles.dayList}>
       {mode !== 'day' && (
-        <p className="text-[13px] font-medium text-muted">
+        <p className={styles.dayLabel}>
           {formatDayFull(toISODate(cursor))}
         </p>
       )}

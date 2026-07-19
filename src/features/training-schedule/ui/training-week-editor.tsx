@@ -18,6 +18,7 @@ import {
   type TrainingWeekPreset,
   type TrainingWeekPresetId,
 } from "../model/presets";
+import styles from "./training-week-editor.module.scss";
 
 const MONDAY = new Date(2024, 0, 1);
 type BaseWorkoutType = (typeof BASE_WORKOUT_TYPES)[number];
@@ -88,13 +89,10 @@ export function TrainingWeekEditor({
     <fieldset
       disabled={disabled}
       aria-label={ariaLabel}
-      className={cn(
-        "m-0 min-w-0 space-y-2 border-0 p-0 disabled:pointer-events-none disabled:opacity-50",
-        className,
-      )}
+      className={cn(styles.editor, className)}
     >
       {quickPresets && quickPresets.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 pb-2">
+        <div className={styles.presets}>
           {quickPresets.map((preset) => {
             const label = presetLabels?.[preset.id] ?? String(preset.dayCount);
             const selected = schedulesMatch(value, preset.value);
@@ -107,10 +105,8 @@ export function TrainingWeekEditor({
                 aria-pressed={selected}
                 onClick={() => applyPreset(preset)}
                 className={cn(
-                  "h-11 rounded-full border text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50",
-                  selected
-                    ? "border-lime/40 bg-lime/10 text-lime"
-                    : "border-line bg-raised/70 text-muted active:bg-line/60",
+                  styles.preset,
+                  selected && styles.presetSelected,
                 )}
               >
                 {label}
@@ -133,20 +129,13 @@ export function TrainingWeekEditor({
         return (
           <div
             key={weekday}
-            className={cn(
-              "rounded-tile border px-3.5 py-3 transition-colors",
-              enabled
-                ? "border-lime/20 bg-lime/[0.035] shadow-[inset_0_1px_0_rgba(255,255,255,0.035)]"
-                : "border-line/70 bg-raised/70",
-            )}
+            className={cn(styles.day, enabled && styles.dayEnabled)}
           >
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium">{day}</p>
+            <div className={styles.dayHeader}>
+              <div className={styles.dayText}>
+                <p className={styles.dayName}>{day}</p>
                 {!enabled && (
-                  <p className="mt-0.5 text-xs text-faint">
-                    {t("settings.restDay")}
-                  </p>
+                  <p className={styles.restNote}>{t("settings.restDay")}</p>
                 )}
               </div>
               <Toggle
@@ -158,12 +147,12 @@ export function TrainingWeekEditor({
             </div>
 
             {enabled && (
-              <div className="relative mt-3">
+              <div className={styles.selectWrap}>
                 <select
                   value={value[weekday] ?? ""}
                   onChange={(event) => setDayType(weekday, event.target.value)}
                   aria-label={t("settings.workoutTypeFor", { day })}
-                  className="h-11 w-full appearance-none rounded-xl border border-line bg-surface pr-10 pl-3.5 text-sm text-text outline-none focus:border-lime/50 disabled:opacity-50"
+                  className={styles.select}
                 >
                   <option value="">{t("settings.chooseWorkoutType")}</option>
                   {typeOptions.map((type) => {
@@ -177,10 +166,7 @@ export function TrainingWeekEditor({
                     );
                   })}
                 </select>
-                <IconChevronDown
-                  size={16}
-                  className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-faint"
-                />
+                <IconChevronDown size={16} className={styles.selectChevron} />
               </div>
             )}
           </div>
@@ -188,7 +174,7 @@ export function TrainingWeekEditor({
       })}
 
       {showIncompleteMessage && hasIncompleteTrainingDays(value) && (
-        <p className="pt-2 text-xs text-flame">
+        <p className={styles.incompleteNote}>
           {t("settings.chooseTypeForEnabled")}
         </p>
       )}

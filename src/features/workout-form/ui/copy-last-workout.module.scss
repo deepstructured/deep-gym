@@ -1,0 +1,36 @@
+@use "../../../shared/styles/palette" as *;
+
+.button {
+  @include dashed-card;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  text-align: left;
+}
+
+.icon {
+  @include icon-circle(2.25rem);
+  color: $lime;
+}
+
+.text {
+  min-width: 0;
+}
+
+.title {
+  @include truncate;
+  display: block;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: $text;
+}
+
+.meta {
+  display: block;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: $muted;
+}

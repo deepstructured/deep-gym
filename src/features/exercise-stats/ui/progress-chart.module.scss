@@ -1,0 +1,29 @@
+.chart {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.4rem;
+  border: 1px solid rgba(#fff, 0.05);
+  padding: 0.5rem 0.625rem;
+  background:
+    radial-gradient(
+      115% 90% at 50% 115%,
+      rgba(64, 84, 214, 0.34) 0%,
+      rgba(24, 39, 136, 0.18) 48%,
+      rgba(10, 10, 12, 0.06) 82%
+    ),
+    linear-gradient(180deg, rgba(17, 19, 36, 0.72), rgba(10, 10, 12, 0.4));
+}
+
+.svg {
+  display: block;
+  width: 100%;
+}
+
+.axisLabels {
+  margin-top: 0.125rem;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0.125rem;
+  font-size: 10px;
+  color: rgba(#fff, 0.35);
+}

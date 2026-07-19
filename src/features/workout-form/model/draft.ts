@@ -168,20 +168,32 @@ export function draftToInput(
   };
 }
 
+/** A draft with nothing worth keeping — type/date alone don't count. */
+export function isDraftEmpty(draft: WorkoutDraft): boolean {
+  return draft.exercises.length === 0 && draft.notes.trim() === "";
+}
+
 interface NewWorkoutDraftStore {
   draft: WorkoutDraft;
+  /** Client-stamped time of the last local edit; null until first edit.
+   *  Drives cross-device last-write-wins in the draft sync. */
+  updatedAt: string | null;
   setDraft: (draft: WorkoutDraft) => void;
   reset: () => void;
 }
 
 /** Persisted draft for the "new workout" flow — survives navigation
- *  and app restarts mid-session at the gym. */
+ *  and app restarts mid-session at the gym. A cloud copy is synced by
+ *  `useNewWorkoutDraftSync` so the draft follows the user across devices. */
 export const useNewWorkoutDraft = create<NewWorkoutDraftStore>()(
   persist(
     (set) => ({
       draft: emptyDraft(),
-      setDraft: (draft) => set({ draft }),
-      reset: () => set({ draft: emptyDraft() }),
+      updatedAt: null,
+      setDraft: (draft) =>
+        set({ draft, updatedAt: new Date().toISOString() }),
+      reset: () =>
+        set({ draft: emptyDraft(), updatedAt: new Date().toISOString() }),
     }),
     { name: "deepgym-workout-draft" },
   ),

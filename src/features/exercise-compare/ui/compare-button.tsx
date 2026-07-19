@@ -25,6 +25,7 @@ import {
   Sheet,
   Spinner,
 } from "@/shared/ui";
+import styles from "./compare-button.module.scss";
 
 /** Minimal shape of the sets being logged right now, in the display unit. */
 export interface CompareCurrentSet {
@@ -62,7 +63,7 @@ export function CompareButton(props: CompareButtonProps) {
           e.stopPropagation();
           setOpen(true);
         }}
-        className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-raised text-muted"
+        className={styles.trigger}
       >
         <IconCompare size={16} />
       </button>
@@ -120,10 +121,10 @@ function CompareSheet({
 
   return (
     <Sheet open onClose={onClose} title={t("compare.title")}>
-      <p className="mb-4 text-sm text-muted">{exerciseName}</p>
+      <p className={styles.exerciseName}>{exerciseName}</p>
 
       {isLoading ? (
-        <div className="flex justify-center py-10 text-muted">
+        <div className={styles.loading}>
           <Spinner size={24} />
         </div>
       ) : markedDates.size === 0 ? (
@@ -132,11 +133,11 @@ function CompareSheet({
           hint={t("compare.emptyHint")}
         />
       ) : (
-        <div className="space-y-4">
+        <div className={styles.stack}>
           {/* This session, for reference — a past workout shows its date */}
           {filledCurrent.length > 0 && (
             <div>
-              <p className="mb-1.5 text-[11px] font-medium tracking-wide text-faint uppercase">
+              <p className={styles.sectionLabel}>
                 {currentDate === todayISO()
                   ? t("compare.thisSession")
                   : formatDayFull(currentDate)}
@@ -155,18 +156,15 @@ function CompareSheet({
           <button
             type="button"
             onClick={() => setShowCalendar((v) => !v)}
-            className="flex w-full items-center gap-3 rounded-tile border border-line bg-raised px-4 py-3 text-left"
+            className={styles.dayPicker}
           >
-            <IconCalendar size={18} className="text-lime" />
-            <span className="flex-1 font-medium">
+            <IconCalendar size={18} className={styles.dayPickerIcon} />
+            <span className={styles.dayPickerLabel}>
               {activeDate ? formatDayFull(activeDate) : t("compare.pickDay")}
             </span>
             <IconChevronDown
               size={18}
-              className={cn(
-                "text-faint transition-transform",
-                showCalendar && "rotate-180",
-              )}
+              className={cn(styles.chevron, showCalendar && styles.chevronOpen)}
             />
           </button>
 
@@ -179,13 +177,13 @@ function CompareSheet({
                 setSelected(iso);
                 setShowCalendar(false);
               }}
-              className="rounded-tile border border-line bg-surface p-3"
+              className={styles.calendar}
             />
           )}
 
           {/* Selected day's sets */}
           <div>
-            <p className="mb-1.5 text-[11px] font-medium tracking-wide text-faint uppercase">
+            <p className={styles.sectionLabel}>
               {activeDate ? formatDayFull(activeDate) : t("compare.selectedDay")}
             </p>
             {selectedSets && selectedSets.length > 0 ? (
@@ -201,13 +199,13 @@ function CompareSheet({
                   }))}
                 />
                 {selectedNotes && (
-                  <p className="mt-2 rounded-tile border border-line bg-raised px-3 py-2 text-sm text-muted">
+                  <p className={styles.dayNotes}>
                     {selectedNotes}
                   </p>
                 )}
               </>
             ) : (
-              <p className="rounded-tile border border-dashed border-line bg-surface/50 px-4 py-5 text-center text-sm text-muted">
+              <p className={styles.noSets}>
                 {t("compare.noSets")}
               </p>
             )}
@@ -224,16 +222,16 @@ function SetChips({
   sets: { weight: string; reps: string; toFailure: boolean }[];
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className={styles.chips}>
       {sets.map((set, i) => (
         <span
           key={i}
-          className="inline-flex items-center gap-1 rounded-full border border-line bg-raised px-2.5 py-1 text-xs"
+          className={styles.chip}
         >
-          <span className="font-dot">{set.weight}</span>
-          <span className="text-faint">×</span>
-          <span className="font-dot">{set.reps}</span>
-          {set.toFailure && <IconFlame size={12} className="text-flame" />}
+          <span className={styles.chipValue}>{set.weight}</span>
+          <span className={styles.chipX}>×</span>
+          <span className={styles.chipValue}>{set.reps}</span>
+          {set.toFailure && <IconFlame size={12} className={styles.chipFlame} />}
         </span>
       ))}
     </div>

@@ -11,6 +11,7 @@ import {
   IconPlus,
   IconSettings,
 } from "@/shared/ui";
+import styles from "./bottom-nav.module.scss";
 
 const tabs: {
   href: string;
@@ -30,8 +31,8 @@ export function BottomNav() {
   const { t } = useI18n();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line/60 bg-bg/85 backdrop-blur-xl safe-bottom">
-      <div className="mx-auto flex max-w-md items-center justify-around px-3 py-2">
+    <nav className={styles.nav}>
+      <div className={styles.tabs}>
         {tabs.map(({ href, labelKey, icon: Icon, primary }) => {
           const active =
             href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -43,7 +44,7 @@ export function BottomNav() {
                 key={href}
                 href={href}
                 aria-label={label}
-                className="flex h-13 w-13 -translate-y-3 items-center justify-center rounded-full bg-lime text-black shadow-[0_10px_30px_-6px_rgba(215,246,81,0.5)] active:brightness-90"
+                className={styles.primary}
               >
                 <Icon size={26} />
               </Link>
@@ -54,10 +55,7 @@ export function BottomNav() {
             <Link
               key={href}
               href={href}
-              className={cn(
-                "flex w-14 flex-col items-center gap-1 py-1 text-[10px] font-medium transition-colors",
-                active ? "text-lime" : "text-faint",
-              )}
+              className={cn(styles.tab, active && styles.tabActive)}
             >
               <Icon size={22} />
               {label}

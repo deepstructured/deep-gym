@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { formatShort } from "@/shared/lib/dates";
+import styles from "./progress-chart.module.scss";
 
 interface ProgressChartProps {
   points: { date: string; value: number }[];
@@ -68,16 +69,10 @@ export function ProgressChart({ points, unit }: ProgressChartProps) {
   const last = points[points.length - 1];
 
   return (
-    <div
-      className="relative overflow-hidden rounded-[1.4rem] border border-white/[0.05] px-2.5 pt-2 pb-2"
-      style={{
-        background:
-          "radial-gradient(115% 90% at 50% 115%, rgba(64, 84, 214, 0.34) 0%, rgba(24, 39, 136, 0.18) 48%, rgba(10, 10, 12, 0.06) 82%), linear-gradient(180deg, rgba(17, 19, 36, 0.72), rgba(10, 10, 12, 0.4))",
-      }}
-    >
+    <div className={styles.chart}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="w-full"
+        className={styles.svg}
         role="img"
         aria-label={`Progress from ${first.value} to ${last.value} ${unit}`}
       >
@@ -193,7 +188,7 @@ export function ProgressChart({ points, unit }: ProgressChartProps) {
           {min} {unit}
         </text>
       </svg>
-      <div className="mt-0.5 flex justify-between px-0.5 text-[10px] text-white/35">
+      <div className={styles.axisLabels}>
         <span>{formatShort(first.date)}</span>
         {points.length > 1 && <span>{formatShort(last.date)}</span>}
       </div>

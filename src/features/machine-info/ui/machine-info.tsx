@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useExercises, useUpdateExercise } from "@/entities/exercise";
 import { useI18n } from "@/shared/i18n";
+import { cn } from "@/shared/lib/cn";
 import { Button, IconInfo, Sheet, TextArea } from "@/shared/ui";
+import styles from "./machine-info.module.scss";
 
 interface MachineInfoButtonProps {
   exerciseId: string;
@@ -58,11 +60,10 @@ export function MachineInfoButton({
           e.stopPropagation();
           setOpen(true);
         }}
-        className={
-          onGradient
-            ? "flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-white"
-            : "flex h-8 w-8 items-center justify-center rounded-full border border-line bg-raised text-lime"
-        }
+        className={cn(
+          styles.trigger,
+          onGradient && styles.triggerOnGradient,
+        )}
       >
         <IconInfo size={17} />
       </button>
@@ -72,9 +73,9 @@ export function MachineInfoButton({
         onClose={() => setOpen(false)}
         title={t("machine.title")}
       >
-        <p className="mb-3 text-sm text-muted">{exerciseName}</p>
+        <p className={styles.exerciseName}>{exerciseName}</p>
         {editing ? (
-          <div className="space-y-4">
+          <div className={styles.stack}>
             <TextArea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -82,10 +83,10 @@ export function MachineInfoButton({
               placeholder={t("machine.placeholder")}
               autoFocus
             />
-            <div className="flex gap-3">
+            <div className={styles.actions}>
               <Button
                 variant="surface"
-                className="flex-1"
+                grow
                 onClick={() => {
                   setEditing(false);
                   setText(currentSettings ?? "");
@@ -95,7 +96,7 @@ export function MachineInfoButton({
               </Button>
               <Button
                 variant="lime"
-                className="flex-1"
+                grow
                 onClick={save}
                 loading={update.isPending}
               >
@@ -104,15 +105,15 @@ export function MachineInfoButton({
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="rounded-tile border border-line bg-raised px-4 py-4 whitespace-pre-wrap text-[15px] leading-relaxed">
+          <div className={styles.stack}>
+            <div className={styles.settings}>
               {currentSettings || (
-                <span className="text-faint">{t("machine.empty")}</span>
+                <span className={styles.settingsEmpty}>{t("machine.empty")}</span>
               )}
             </div>
             <Button
               variant="surface"
-              className="w-full"
+              block
               onClick={() => setEditing(true)}
             >
               {currentSettings ? t("machine.edit") : t("machine.add")}

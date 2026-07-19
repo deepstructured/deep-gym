@@ -8,10 +8,13 @@ export {
   useWorkoutCount,
   useWorkouts,
   useWorkout,
+  useWorkoutSummaries,
+  getWorkout,
   useLastWorkoutOfType,
   useCreateWorkout,
   useUpdateWorkout,
   useDeleteWorkout,
+  type WorkoutSummary,
 } from "./api/queries";
 export {
   useExerciseHistory,

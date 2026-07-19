@@ -1,0 +1,159 @@
+@use "../../../shared/styles/palette" as *;
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Weight hero; indigo gradient + dot grid come from global fills. */
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: $radius-tile;
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.heroDots {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.25;
+}
+
+.heroValue {
+  position: relative;
+  font-size: 3rem;
+  color: #fff;
+}
+
+.heroSuffix {
+  color: rgba(#fff, 0.7);
+}
+
+.heroBarNote {
+  position: relative;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: rgba(#fff, 0.6);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dumbbellRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: $radius-tile;
+  border: 1px solid $line;
+  background: $surface;
+  padding: 0.75rem 1rem;
+}
+
+.dumbbellLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dumbbellName {
+  font-weight: 500;
+}
+
+.dumbbellCount {
+  font-size: 1.25rem;
+  color: $lime;
+}
+
+.centerNote {
+  padding-top: 0.25rem;
+  text-align: center;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: $muted;
+}
+
+.centerNoteBare {
+  text-align: center;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: $muted;
+}
+
+.sectionLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: $muted;
+}
+
+.variant {
+  border-radius: $radius-tile;
+  border: 1px solid $line;
+  background: $surface;
+  padding: 0.75rem 1rem;
+}
+
+.variantBest {
+  border-color: rgba($lime, 0.4);
+  background: rgba($lime, 0.05);
+}
+
+.variantChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.bestTag {
+  margin-left: auto;
+}
+
+.variantNote {
+  margin-top: 0.375rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: $faint;
+}
+
+.settingsLink {
+  color: $lime;
+}
+
+.plateChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  border: 1px solid $line;
+  background: $raised;
+  padding: 0.25rem 0.75rem 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+/* The ring thickness (borderWidth) is set inline per plate weight. */
+.plateRing {
+  display: inline-block;
+  border-radius: 9999px;
+  border-style: solid;
+  border-color: rgba($lime, 0.8);
+}
+
+.plateCount {
+  font-family: $font-dot;
+}
+
+.plateX {
+  color: $faint;
+}
+
+.dotFont {
+  font-family: $font-dot;
+}

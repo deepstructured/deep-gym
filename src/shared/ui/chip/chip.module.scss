@@ -1,0 +1,31 @@
+@use "../../styles/palette" as *;
+
+.chip {
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  user-select: none;
+  transition:
+    color $tr,
+    background-color $tr,
+    border-color $tr;
+}
+
+.idle {
+  border: 1px solid $line;
+  background: $raised;
+  color: $muted;
+
+  &:active {
+    color: $text;
+  }
+}
+
+.selected {
+  background: $lime;
+  color: #000;
+}

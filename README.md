@@ -61,8 +61,15 @@ what changed. Mark a set with 🔥 when you hit failure.
 Had a rough day? Attach a note to the whole workout or to a single
 exercise — *"slept 4 hours, kept it light"* — and it stays in your history.
 
-Your draft is **saved locally as you type**: close the app, switch songs,
-come back — nothing is lost.
+Your draft is **saved as you type** — locally and to your account: close
+the app, switch songs, even pick up your phone after starting on the
+laptop — nothing is lost.
+
+Repeating a session? **Copy last** offers your most recent workout of the
+selected type — and if your schedule runs the same type several times a
+week, it matches the weekday, so a Sunday draft suggests last Sunday's
+session. Need a different one? Open the **calendar picker** and copy any
+past workout, exactly as it was logged.
 
 <p>
 <img src="docs/screenshots/new-workout.png" width="300" alt="New workout" />
@@ -179,5 +186,5 @@ Settings whenever you want.
 
 Want to self-host or hack on DeepGym? See **[SETUP.md](SETUP.md)** —
 Supabase setup, Google OAuth, the Telegram bot, local development and
-architecture notes (Next.js + TypeScript + Tailwind + Supabase,
+architecture notes (Next.js + TypeScript + SCSS modules + Supabase,
 Feature-Sliced Design).

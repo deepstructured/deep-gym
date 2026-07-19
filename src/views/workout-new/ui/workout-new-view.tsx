@@ -9,10 +9,12 @@ import {
   WorkoutForm,
   draftToInput,
   useNewWorkoutDraft,
+  useNewWorkoutDraftSync,
 } from "@/features/workout-form";
 import { useI18n } from "@/shared/i18n";
 import { AppShell } from "@/widgets/app-shell";
 import { Button, ErrorNote, PageLoader } from "@/shared/ui";
+import styles from "./workout-new-view.module.scss";
 
 export function WorkoutNewView() {
   const router = useRouter();
@@ -23,16 +25,17 @@ export function WorkoutNewView() {
   const [error, setError] = useState<string | null>(null);
   const [isFirstWorkout, setIsFirstWorkout] = useState(false);
 
-  // zustand/persist rehydrates on the client — render after mount to avoid
-  // hydration mismatch with a stored draft.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // Renders a loader until the cloud draft pull settles — this both avoids
+  // a hydration mismatch with the locally stored draft and stops a fresher
+  // remote draft from replacing a form the user is already editing.
+  const { ready } = useNewWorkoutDraftSync();
 
   // Scheduled-workout cards preselect both the workout type and its date.
   // Read via window.location instead of useSearchParams to skip the
-  // Suspense boundary Next requires for the latter.
+  // Suspense boundary Next requires for the latter. Runs after the cloud
+  // pull so an explicit "start this scheduled workout" tap wins over it.
   useEffect(() => {
-    if (!mounted) return;
+    if (!ready) return;
     const params = new URLSearchParams(window.location.search);
     setIsFirstWorkout(params.get("first") === "1");
     const type = params.get("type");
@@ -47,7 +50,7 @@ export function WorkoutNewView() {
     if (next.type !== current.type || next.date !== current.date) {
       apply(next);
     }
-  }, [mounted]);
+  }, [ready]);
 
   const unit = profile?.unit ?? "kg";
   const canSave = draft.exercises.length > 0 && !createWorkout.isPending;
@@ -79,10 +82,10 @@ export function WorkoutNewView() {
         </Button>
       }
     >
-      {!mounted ? (
+      {!ready ? (
         <PageLoader />
       ) : (
-        <div className="space-y-5">
+        <div className={styles.stack}>
           {isFirstWorkout && <FirstWorkoutFormTip />}
 
           <WorkoutForm
@@ -98,7 +101,7 @@ export function WorkoutNewView() {
             <Button
               variant="gradient"
               size="lg"
-              className="w-full"
+              block
               onClick={save}
               loading={createWorkout.isPending}
             >
@@ -107,11 +110,7 @@ export function WorkoutNewView() {
           )}
 
           {(draft.exercises.length > 0 || draft.notes) && (
-            <button
-              type="button"
-              className="w-full pb-2 text-center text-sm text-faint"
-              onClick={reset}
-            >
+            <button type="button" className={styles.discard} onClick={reset}>
               {t("workout.discard")}
             </button>
           )}

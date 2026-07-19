@@ -10,7 +10,9 @@ import {
   CURRENT_RELEASE,
 } from "@/shared/config/releases";
 import { useI18n } from "@/shared/i18n";
+import { cn } from "@/shared/lib/cn";
 import { BrandMark, Button, Spinner } from "@/shared/ui";
+import styles from "./product-experience.module.scss";
 
 const PUBLIC_PATHS = ["/login", "/offline", "/auth"];
 
@@ -138,15 +140,12 @@ function EligibilityError({
   const { t } = useI18n();
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-bg px-5">
-      <div className="surface-well w-full max-w-sm rounded-card border border-line p-6 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-lime/20 bg-lime/8 text-lime">
+    <main className={styles.errorMain}>
+      <div className={cn(styles.errorCard, "surface-well")}>
+        <div className={styles.errorGlyph}>
           <BrandMark width={36} />
         </div>
-        <p
-          role="alert"
-          className="mx-auto mt-5 max-w-[17rem] text-[15px] leading-relaxed text-muted"
-        >
+        <p role="alert" className={styles.errorText}>
           {t("onboarding.eligibilityError")}
         </p>
         <Button
@@ -154,7 +153,8 @@ function EligibilityError({
           variant="lime"
           size="md"
           loading={retrying}
-          className="mt-6 w-full"
+          block
+          className={styles.retry}
           onClick={onRetry}
         >
           {t("common.retry")}
@@ -166,8 +166,8 @@ function EligibilityError({
 
 function ExperienceLoader() {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-bg">
-      <div className="flex flex-col items-center gap-4 text-lime">
+    <div className={styles.loader}>
+      <div className={styles.loaderInner}>
         <BrandMark width={38} />
         <Spinner size={20} />
       </div>

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-DeepGym — a mobile-first PWA workout tracker. Next.js 15 (App Router) + React 19 + TypeScript + Tailwind CSS 4 + Supabase (Auth + Postgres with RLS), TanStack React Query, Zustand. Detailed docs: [SETUP.md](SETUP.md) (setup, auth providers, dev utilities) and [docs/APP_SCHEMA_RU.md](docs/APP_SCHEMA_RU.md) (full app schema, in Russian).
+DeepGym — a mobile-first PWA workout tracker. Next.js 15 (App Router) + React 19 + TypeScript + SCSS modules + Supabase (Auth + Postgres with RLS), TanStack React Query, Zustand. Detailed docs: [SETUP.md](SETUP.md) (setup, auth providers, dev utilities) and [docs/APP_SCHEMA_RU.md](docs/APP_SCHEMA_RU.md) (full app schema, in Russian).
 
 ## Commands
 
@@ -48,9 +48,10 @@ FSD import rule: layers import only downward (views → widgets → features →
 
 Key locations:
 - **Supabase clients** — `src/shared/lib/supabase/`: `client.ts` (browser), `server.ts` (server components/routes), `admin.ts` (service-role, server-only).
-- **Server state** — React Query hooks in each entity's `api/queries.ts`. **Local state** — Zustand; the new-workout draft persists to localStorage so input survives app closes.
+- **Server state** — React Query hooks in each entity's `api/queries.ts`. **Local state** — Zustand; the new-workout draft persists to localStorage so input survives app closes, and `useNewWorkoutDraftSync` (`src/features/workout-form/model/draft-sync.ts`) mirrors it to the `workout_drafts` table (debounced push, pull on mount, last-write-wins by client-stamped `updated_at`) so the draft follows the user across devices.
 - **i18n** — `src/shared/i18n/` (context + translations); UI strings go through it, not hardcoded.
-- **UI kit** — `src/shared/ui/` (button, sheet, calendar, segmented, …), exported via `index.ts`. Styling: Tailwind 4 + SCSS modules for some components.
+- **UI kit** — `src/shared/ui/` (button, sheet, calendar, segmented, …). One folder per component holding its `component.tsx` + `component.module.scss` (e.g. `src/shared/ui/avatar/avatar.tsx`); the kit's public API is `src/shared/ui/index.ts` — import from `@/shared/ui`, never a deep path.
+- **Styling** — co-located SCSS modules (`component.module.scss`) with semantic class names; no utility-class framework. Design tokens are CSS variables in `src/app/globals.css`, mirrored as SCSS vars/mixins in `src/shared/styles/_palette.scss` (import with a relative `@use "../styles/palette" as *;`). Shared decorative fills (`grad-*`, `glow-*`, `dots-bg`, `surface-well`, `stat-well`, `no-scrollbar`, `safe-bottom`) are global classes in `globals.css`. To override a kit component's own property from a caller module, double the selector (`.foo.foo { … }`) so the override wins deterministically; prefer component props (Button: `block`, `grow`, `iconOnly`, `tone`, `dashed`, sizes incl. `compact`) over class overrides.
 - **Product lifecycle versions** — `src/shared/config/releases.ts`; onboarding and release-note sequences are independent from `package.json` and the service-worker cache version.
 - **First-run/release gate** — `src/widgets/product-experience/`; onboarding view is under `src/views/onboarding/`, and release content is under `src/features/whats-new/`.
 
@@ -69,6 +70,7 @@ Key locations:
 ## Domain conventions
 
 - Weights are **always stored in kg** (`weight_kg`). Display unit is resolved per exercise: `exercise.unit ?? profile.unit`.
+- “Copy last workout” is weekday-aware: when the training schedule runs the selected type on 2+ weekdays, the offer prefers the most recent workout of that type on the draft date's weekday (Sunday draft → last Sunday's session). The new-workout form also has a calendar picker (`copy-workout-picker.tsx`) to copy any past session; it adopts the copied workout's type.
 - Auth: Google OAuth + Telegram OTP (bot sends 6-digit code → `/api/auth/telegram/*`). `middleware.ts` redirects unauthenticated users to `/login`; public paths: `/login`, `/auth`, `/api`, `/offline`.
 - **Do not break** `/api/auth/telegram/verify` returning session tokens in its response — the native Expo/RN sibling app (deep-gym-mobile) depends on it.
 - Built-in legacy SVG avatar URLs must remain available because existing `profiles.avatar_url` values may reference them; current selectable presets are the checked-in DeepGym WebP pixel avatars.

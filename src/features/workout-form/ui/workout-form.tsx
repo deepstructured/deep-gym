@@ -33,7 +33,9 @@ import {
   type WorkoutDraft,
 } from "../model/draft";
 import { CopyLastWorkout } from "./copy-last-workout";
+import { CopyWorkoutPicker } from "./copy-workout-picker";
 import { ExercisePicker } from "./exercise-picker";
+import styles from "./workout-form.module.scss";
 
 interface WorkoutFormProps {
   value: WorkoutDraft;
@@ -98,10 +100,10 @@ export function WorkoutForm({
   }
 
   return (
-    <div className="space-y-5">
+    <div className={styles.form}>
       {/* Type */}
       <Field label={t("workout.type")}>
-        <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
+        <div className={cn(styles.typeRow, "no-scrollbar")}>
           {typeOptions.map((type) => (
             <Chip
               key={type}
@@ -126,7 +128,7 @@ export function WorkoutForm({
       {/* Workout notes */}
       {value.showNotes ? (
         <Field label={t("workout.note")}>
-          <div className="relative">
+          <div className={styles.noteWrap}>
             <TextArea
               value={value.notes}
               onChange={(e) => patch({ notes: e.target.value })}
@@ -135,7 +137,7 @@ export function WorkoutForm({
             <button
               type="button"
               aria-label={t("workout.removeNote")}
-              className="absolute top-2 right-2 text-faint"
+              className={styles.noteRemove}
               onClick={() => patch({ notes: "", showNotes: false })}
             >
               <IconClose size={16} />
@@ -146,7 +148,7 @@ export function WorkoutForm({
         <button
           type="button"
           onClick={() => patch({ showNotes: true })}
-          className="flex items-center gap-2 text-sm font-medium text-muted"
+          className={styles.addNote}
         >
           <IconNote size={16} />
           {t("workout.addNote")}
@@ -154,7 +156,7 @@ export function WorkoutForm({
       )}
 
       {/* Exercises */}
-      <div className="space-y-4">
+      <div className={styles.exercises}>
         {value.exercises.map((exercise, index) => (
           <ExerciseEditor
             key={exercise.key}
@@ -179,19 +181,28 @@ export function WorkoutForm({
       </div>
 
       {enableCopyLast && value.exercises.length === 0 && (
-        <CopyLastWorkout
-          type={value.type}
-          unit={unit}
-          onCopy={(exercises) =>
-            patch({ exercises: [...value.exercises, ...exercises] })
-          }
-        />
+        <>
+          <CopyLastWorkout
+            type={value.type}
+            date={value.date}
+            unit={unit}
+            onCopy={(exercises) =>
+              patch({ exercises: [...value.exercises, ...exercises] })
+            }
+          />
+          <CopyWorkoutPicker
+            unit={unit}
+            onCopy={(exercises, type) =>
+              patch({ exercises: [...value.exercises, ...exercises], type })
+            }
+          />
+        </>
       )}
 
       <button
         type="button"
         onClick={() => setPickerOpen(true)}
-        className="flex h-14 w-full items-center justify-center gap-2 rounded-card border border-dashed border-line bg-surface/50 font-medium text-lime active:bg-surface"
+        className={styles.addExercise}
       >
         <IconPlus size={20} />
         {t("workout.addExercise")}
@@ -244,14 +255,14 @@ function ExerciseEditor({
 }: ExerciseEditorProps) {
   const { t } = useI18n();
   return (
-    <Card variant="surface" className="p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="font-dot text-lg text-faint">
+    <Card variant="surface" className={styles.exerciseCard}>
+      <div className={styles.exerciseHeader}>
+        <span className={styles.exerciseIndex}>
           {String(index + 1).padStart(2, "0")}
         </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">{exercise.name}</p>
-          <Tag className="mt-0.5">{exercise.muscleGroupName}</Tag>
+        <div className={styles.exerciseTitle}>
+          <p className={styles.exerciseName}>{exercise.name}</p>
+          <Tag className={styles.exerciseGroup}>{exercise.muscleGroupName}</Tag>
         </div>
         {exercise.equipment === "machine" && (
           <MachineInfoButton
@@ -272,8 +283,8 @@ function ExerciseEditor({
           aria-label={t("exercise.note")}
           onClick={() => onPatch({ showNotes: !exercise.showNotes })}
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-full border border-line bg-raised",
-            exercise.showNotes || exercise.notes ? "text-lime" : "text-muted",
+            styles.iconToggle,
+            (exercise.showNotes || exercise.notes) && styles.iconToggleActive,
           )}
         >
           <IconNote size={16} />
@@ -282,40 +293,41 @@ function ExerciseEditor({
           type="button"
           aria-label={t("exercise.remove")}
           onClick={onRemove}
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-raised text-muted"
+          className={styles.iconToggle}
         >
           <IconTrash size={15} />
         </button>
       </div>
 
       {/* Sets header */}
-      <div className="mb-1 grid grid-cols-[1.6rem_1fr_1fr_2.4rem_1.8rem] items-center gap-2 px-1 text-[11px] font-medium tracking-wide text-faint uppercase">
+      <div className={styles.setsHeader}>
         <span>#</span>
-        <span className={exercise.unit !== unit ? "text-lime/80" : undefined}>
+        <span
+          className={
+            exercise.unit !== unit ? styles.headerUnitOverride : undefined
+          }
+        >
           {t("set.weight", { unit: exercise.unit ?? unit })}
         </span>
         <span>{t("set.reps")}</span>
-        <span className="text-center">{t("set.fail")}</span>
+        <span style={{ textAlign: "center" }}>{t("set.fail")}</span>
         <span />
       </div>
 
-      <div className="space-y-2">
+      <div className={styles.setRows}>
         {exercise.sets.map((set, setIndex) => (
-          <div
-            key={set.key}
-            className="grid grid-cols-[1.6rem_1fr_1fr_2.4rem_1.8rem] items-center gap-2"
-          >
-            <span className="px-1 font-dot text-sm text-faint">
-              {setIndex + 1}
-            </span>
+          <div key={set.key} className={styles.setRow}>
+            <span className={styles.setIndex}>{setIndex + 1}</span>
 
-            <div className="relative">
+            <div className={styles.weightWrap}>
               <Input
                 value={set.weight}
                 inputMode="decimal"
                 placeholder="0"
                 className={
-                  exercise.equipment === "crossover" ? "h-11" : "h-11 pr-9"
+                  exercise.equipment === "crossover"
+                    ? styles.setInput
+                    : styles.setInputPadded
                 }
                 onChange={(e) =>
                   onPatchSet(set.key, {
@@ -329,7 +341,7 @@ function ExerciseEditor({
                   type="button"
                   aria-label={t("set.plates")}
                   onClick={() => onShowPlates(set.weight, exercise)}
-                  className="absolute top-1/2 right-2 -translate-y-1/2 text-faint active:text-lime"
+                  className={styles.platesButton}
                 >
                   <PlatesGlyph />
                 </button>
@@ -340,7 +352,7 @@ function ExerciseEditor({
               value={set.reps}
               inputMode="numeric"
               placeholder="0"
-              className="h-11"
+              className={styles.setInput}
               onChange={(e) =>
                 onPatchSet(set.key, {
                   reps: e.target.value.replace(/\D/g, ""),
@@ -355,10 +367,8 @@ function ExerciseEditor({
               aria-label={t("set.toFailure")}
               onClick={() => onPatchSet(set.key, { toFailure: !set.toFailure })}
               className={cn(
-                "mx-auto flex h-9 w-9 items-center justify-center rounded-full border transition-colors",
-                set.toFailure
-                  ? "border-flame/50 bg-flame/20 text-[#ff7a5c]"
-                  : "border-line bg-raised text-faint",
+                styles.failButton,
+                set.toFailure && styles.failActive,
               )}
             >
               <IconFlame size={17} />
@@ -373,7 +383,7 @@ function ExerciseEditor({
                 })
               }
               disabled={exercise.sets.length === 1}
-              className="flex h-9 w-8 items-center justify-center text-faint disabled:opacity-30"
+              className={styles.removeSet}
             >
               <IconClose size={16} />
             </button>
@@ -384,7 +394,8 @@ function ExerciseEditor({
       <Button
         variant="ghost"
         size="sm"
-        className="mt-2 text-lime"
+        tone="lime"
+        className={styles.addSet}
         onClick={() =>
           onPatch({
             sets: [...exercise.sets, newSet(exercise.sets.at(-1))],
@@ -401,7 +412,7 @@ function ExerciseEditor({
           onChange={(e) => onPatch({ notes: e.target.value })}
           placeholder={t("exercise.notePlaceholder")}
           rows={2}
-          className="mt-2"
+          className={styles.exerciseNote}
         />
       )}
     </Card>

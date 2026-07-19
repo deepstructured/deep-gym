@@ -2,7 +2,7 @@
 
 Technical guide. For the product tour see [README.md](README.md).
 
-**Stack:** Next.js (App Router) + TypeScript + Tailwind CSS 4 + Supabase, Feature-Sliced Design. Installable PWA.
+**Stack:** Next.js (App Router) + TypeScript + SCSS modules + Supabase, Feature-Sliced Design. Installable PWA.
 
 ## 1. Install & run
 
@@ -21,7 +21,7 @@ npm run dev
 2. Open **SQL Editor** and run every file in `supabase/migrations/` in
    numeric order — they create the schema, RLS policies and subsequent
    profile features. The current sequence is `0001_init.sql` through
-   `0004_onboarding_release_state.sql`.
+   `0005_workout_drafts.sql`.
 3. **Project Settings → API**: copy into `.env.local`:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`

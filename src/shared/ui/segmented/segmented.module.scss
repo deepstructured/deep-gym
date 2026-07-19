@@ -1,0 +1,36 @@
+@use "../../styles/palette" as *;
+
+.group {
+  display: flex;
+  border-radius: 9999px;
+  border: 1px solid $line;
+  background: $surface;
+  padding: 0.25rem;
+}
+
+.option {
+  height: 2.75rem;
+  flex: 1;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: $muted;
+  transition:
+    color $tr,
+    background-color $tr;
+
+  &:active {
+    color: $text;
+  }
+}
+
+/* Declared after .option so its colors win at equal specificity. */
+.active {
+  background: $lime;
+  color: #000;
+
+  &:active {
+    color: #000;
+  }
+}

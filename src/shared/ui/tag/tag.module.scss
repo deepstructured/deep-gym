@@ -1,0 +1,36 @@
+@use "../../styles/palette" as *;
+
+.tag {
+  display: inline-flex;
+  height: 1.5rem;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+}
+
+.neutral {
+  background: $raised;
+  color: $muted;
+  border: 1px solid $line;
+}
+
+.lime {
+  background: rgba($lime, 0.15);
+  color: $lime;
+  border: 1px solid rgba($lime, 0.25);
+}
+
+.pink {
+  background: rgba($pink, 0.15);
+  color: $pink;
+  border: 1px solid rgba($pink, 0.25);
+}
+
+.onGradient {
+  background: rgba(#fff, 0.15);
+  color: #fff;
+  border: 1px solid rgba(#fff, 0.2);
+}

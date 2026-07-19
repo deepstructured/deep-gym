@@ -1,0 +1,172 @@
+@use "../../../shared/styles/palette" as *;
+
+/* ── Guide card (zero-workout Home) ──────────────────────────────── */
+
+/* Doubled so the lime treatment beats the Card base + surface-well. */
+.guideCard.guideCard {
+  border: 1px solid rgba($lime, 0.2);
+  background: rgba($lime, 0.035);
+  padding: 1.25rem;
+}
+
+.guideGlow {
+  pointer-events: none;
+  position: absolute;
+  top: -4rem;
+  right: -3rem;
+  height: 10rem;
+  width: 10rem;
+  border-radius: 9999px;
+  background: rgba($lime, 0.1);
+  filter: blur(64px);
+}
+
+.guideInner {
+  position: relative;
+}
+
+.guideHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.guideIcon {
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba($lime, 0.25);
+  background: rgba($lime, 0.1);
+  color: $lime;
+}
+
+.guideText {
+  min-width: 0;
+}
+
+.guideTitle {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.guideBody {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: $muted;
+}
+
+.steps {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.stepNumber {
+  display: flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(#fff, 0.06);
+  font-family: $font-dot;
+  font-size: 12px;
+  color: $lime;
+}
+
+.stepText {
+  color: rgba($text, 0.9);
+}
+
+.guideCta {
+  margin-top: 1.25rem;
+  display: flex;
+  height: 3rem;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  background: $lime;
+  padding: 0 1.25rem;
+  font-size: 15px;
+  font-weight: 600;
+  color: #000;
+
+  &:active {
+    filter: brightness(0.9);
+  }
+}
+
+/* ── In-form tip ─────────────────────────────────────────────────── */
+
+.tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border-radius: $radius-card;
+  border: 1px solid rgba($lime, 0.2);
+  background: rgba($lime, 0.055);
+  padding: 1rem;
+}
+
+.tipIcon {
+  margin-top: 0.125rem;
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba($lime, 0.1);
+  color: $lime;
+}
+
+.tipText {
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: $muted;
+}
+
+/* ── Success sheet ───────────────────────────────────────────────── */
+
+.successGlyph {
+  margin-bottom: 1.25rem;
+  display: flex;
+  height: 3.5rem;
+  width: 3.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba($lime, 0.25);
+  background: rgba($lime, 0.1);
+  color: $lime;
+}
+
+.successBody {
+  font-size: 15px;
+  line-height: 1.625;
+  color: $muted;
+}
+
+.successCta {
+  margin-top: 1.5rem;
+}

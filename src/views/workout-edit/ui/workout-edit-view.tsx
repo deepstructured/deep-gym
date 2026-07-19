@@ -22,6 +22,7 @@ const ENABLE_WORKOUT_SHARE = false;
 import { useI18n } from "@/shared/i18n";
 import { AppShell } from "@/widgets/app-shell";
 import { Button, ConfirmSheet, ErrorNote, PageLoader } from "@/shared/ui";
+import styles from "./workout-edit-view.module.scss";
 
 export function WorkoutEditView({ workoutId }: { workoutId: string }) {
   const router = useRouter();
@@ -100,13 +101,13 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
           <PageLoader />
         )
       ) : (
-        <div className="space-y-5">
+        <div className={styles.stack}>
           <WorkoutForm value={draft} onChange={setDraft} unit={unit} />
           {error && <ErrorNote message={error} />}
           <Button
             variant="gradient"
             size="lg"
-            className="w-full"
+            block
             onClick={save}
             disabled={!canSave}
             loading={updateWorkout.isPending}
@@ -119,7 +120,7 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
           <Button
             variant="danger"
             size="lg"
-            className="w-full"
+            block
             onClick={() => setConfirmDelete(true)}
             disabled={updateWorkout.isPending}
             loading={deleteWorkout.isPending}

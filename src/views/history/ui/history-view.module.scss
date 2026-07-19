@@ -1,0 +1,209 @@
+@use "../../../shared/styles/palette" as *;
+
+.modeSwitch {
+  margin-bottom: 1rem;
+}
+
+.navigator {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.navButton {
+  @include icon-circle(2.5rem);
+  color: $muted;
+}
+
+.heading {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.periodBlock {
+  margin-bottom: 1.25rem;
+}
+
+.weekGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.375rem;
+}
+
+.weekDay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: $radius-tile;
+  border: 1px solid $line;
+  background: $surface;
+  padding: 0.625rem 0;
+}
+
+.weekDayActive {
+  border-color: rgba($lime, 0.6);
+  background: rgba($lime, 0.1);
+}
+
+.weekDayToday {
+  border-color: $faint;
+}
+
+.weekDayLetter {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: $faint;
+}
+
+.weekDayNumber {
+  font-family: $font-dot;
+  font-size: 1.125rem;
+  line-height: 1;
+  color: $text;
+}
+
+.weekDayNumberActive {
+  color: $lime;
+}
+
+.weekDot {
+  height: 0.375rem;
+  width: 0.375rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.weekDotLogged {
+  border-color: $lime;
+  background: $lime;
+}
+
+.weekDotPlanned {
+  border-color: $cherry;
+  background: rgba($cherry, 0.1);
+}
+
+.monthWeekdays {
+  margin-bottom: 0.25rem;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: $faint;
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+}
+
+.monthDay {
+  display: flex;
+  aspect-ratio: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.monthDayActive {
+  border-color: rgba($lime, 0.6);
+  background: rgba($lime, 0.1);
+}
+
+.monthDayToday {
+  border-color: $faint;
+}
+
+.monthDayLogged {
+  background: $surface;
+}
+
+.monthDayNumber {
+  font-family: $font-dot;
+  line-height: 1;
+  color: $text;
+}
+
+.monthDayNumberOutside {
+  color: rgba($faint, 0.5);
+}
+
+.monthDots {
+  display: flex;
+  height: 0.375rem;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.monthDot {
+  height: 0.25rem;
+  width: 0.25rem;
+  border-radius: 9999px;
+  background: $lime;
+}
+
+.monthDotPlanned {
+  height: 0.375rem;
+  width: 0.375rem;
+  border-radius: 9999px;
+  border: 1px solid $cherry;
+  background: rgba($cherry, 0.1);
+}
+
+.plannedLegend {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+  font-size: 10px;
+  color: $faint;
+}
+
+.plannedLegendDot {
+  height: 0.375rem;
+  width: 0.375rem;
+  border-radius: 9999px;
+  border: 1px solid $cherry;
+  background: rgba($cherry, 0.1);
+}
+
+.dayList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dayLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: $muted;
+}
+
+.plannedBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+.plannedNote {
+  margin: 0 auto;
+  max-width: 16rem;
+  text-align: center;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: $muted;
+}

@@ -1,0 +1,203 @@
+@use "../../../shared/styles/palette" as *;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Horizontally scrollable type chips, bleeding to the screen edges. */
+.typeRow {
+  margin: 0 -1.25rem;
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0 1.25rem 0.25rem;
+}
+
+.noteWrap {
+  position: relative;
+}
+
+.noteRemove {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  color: $faint;
+}
+
+.addNote {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: $muted;
+}
+
+.exercises {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.addExercise {
+  @include dashed-card;
+  display: flex;
+  height: 3.5rem;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: $lime;
+}
+
+/* ── Exercise editor ─────────────────────────────────────────────── */
+
+/* Doubled so its padding beats the Card base at equal specificity. */
+.exerciseCard.exerciseCard {
+  padding: 1rem;
+}
+
+.exerciseHeader {
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.exerciseIndex {
+  font-family: $font-dot;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  color: $faint;
+}
+
+.exerciseTitle {
+  min-width: 0;
+  flex: 1;
+}
+
+.exerciseName {
+  @include truncate;
+  font-weight: 600;
+}
+
+.exerciseGroup {
+  margin-top: 0.125rem;
+}
+
+.iconToggle {
+  @include icon-circle(2rem);
+  color: $muted;
+}
+
+.iconToggleActive {
+  color: $lime;
+}
+
+.setsHeader {
+  @include micro-label;
+  margin-bottom: 0.25rem;
+  display: grid;
+  grid-template-columns: 1.6rem 1fr 1fr 2.4rem 1.8rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.25rem;
+}
+
+.headerUnitOverride {
+  color: rgba($lime, 0.8);
+}
+
+.setRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.setRow {
+  display: grid;
+  grid-template-columns: 1.6rem 1fr 1fr 2.4rem 1.8rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.setIndex {
+  padding: 0 0.25rem;
+  font-family: $font-dot;
+  font-size: 0.875rem;
+  color: $faint;
+}
+
+.weightWrap {
+  position: relative;
+}
+
+/* Doubled: these override the kit Input's own height/padding. */
+.setInput.setInput {
+  height: 2.75rem;
+}
+
+.setInputPadded.setInputPadded {
+  height: 2.75rem;
+  padding-right: 2.25rem;
+}
+
+.platesButton {
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  transform: translateY(-50%);
+  color: $faint;
+
+  &:active {
+    color: $lime;
+  }
+}
+
+.failButton {
+  margin: 0 auto;
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid $line;
+  background: $raised;
+  color: $faint;
+  transition:
+    color $tr,
+    background-color $tr,
+    border-color $tr;
+}
+
+.failActive {
+  border-color: rgba($flame, 0.5);
+  background: rgba($flame, 0.2);
+  color: $flame-text;
+}
+
+.removeSet {
+  display: flex;
+  height: 2.25rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  color: $faint;
+
+  &:disabled {
+    opacity: 0.3;
+  }
+}
+
+.addSet {
+  margin-top: 0.5rem;
+}
+
+.exerciseNote {
+  margin-top: 0.5rem;
+}

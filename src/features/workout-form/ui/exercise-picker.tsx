@@ -9,6 +9,7 @@ import {
 import { useMuscleGroups } from "@/entities/muscle-group";
 import { EQUIPMENT_OPTIONS, type Equipment } from "@/shared/config/workout";
 import { useI18n } from "@/shared/i18n";
+import { cn } from "@/shared/lib/cn";
 import { parseWeight, unitToKg, type Unit } from "@/shared/lib/weight";
 import {
   Button,
@@ -19,9 +20,9 @@ import {
   Input,
   PageLoader,
   Sheet,
-  Tag,
   TextArea,
 } from "@/shared/ui";
+import styles from "./exercise-picker.module.scss";
 
 interface ExercisePickerProps {
   open: boolean;
@@ -115,10 +116,10 @@ export function ExercisePicker({
         onClose();
       }}
       title={creating ? t("picker.newTitle") : t("picker.title")}
-      className="min-h-[70dvh]"
+      className={styles.sheet}
     >
       {creating ? (
-        <div className="space-y-4">
+        <div className={styles.stack}>
           <Field label={t("picker.name")}>
             <Input
               value={name}
@@ -129,7 +130,7 @@ export function ExercisePicker({
           </Field>
 
           <Field label={t("picker.muscleGroup")}>
-            <div className="flex flex-wrap gap-2">
+            <div className={styles.chips}>
               {groups?.map((group) => (
                 <Chip
                   key={group.id}
@@ -143,7 +144,7 @@ export function ExercisePicker({
           </Field>
 
           <Field label={t("picker.equipment")}>
-            <div className="flex flex-wrap gap-2">
+            <div className={styles.chips}>
               {EQUIPMENT_OPTIONS.map((option) => (
                 <Chip
                   key={option.value}
@@ -167,7 +168,7 @@ export function ExercisePicker({
           )}
 
           <Field label={t("picker.unitForExercise")}>
-            <div className="flex flex-wrap gap-2">
+            <div className={styles.chips}>
               {(
                 [
                   { value: "default", label: t("picker.unitDefault", { unit }) },
@@ -199,13 +200,13 @@ export function ExercisePicker({
 
           {formError && <ErrorNote message={formError} />}
 
-          <div className="flex gap-3 pt-1">
-            <Button variant="surface" className="flex-1" onClick={resetCreateForm}>
+          <div className={styles.actions}>
+            <Button variant="surface" grow onClick={resetCreateForm}>
               {t("common.back")}
             </Button>
             <Button
               variant="lime"
-              className="flex-1"
+              grow
               onClick={handleCreate}
               loading={createExercise.isPending}
             >
@@ -214,14 +215,14 @@ export function ExercisePicker({
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className={styles.stack}>
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("picker.search")}
           />
 
-          <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
+          <div className={cn(styles.filterRow, "no-scrollbar")}>
             <Chip selected={groupFilter === null} onClick={() => setGroupFilter(null)}>
               {t("common.all")}
             </Chip>
@@ -239,7 +240,7 @@ export function ExercisePicker({
           {isLoading ? (
             <PageLoader />
           ) : (
-            <div className="space-y-2">
+            <div className={styles.list}>
               {filtered.map((exercise) => (
                 <button
                   key={exercise.id}
@@ -247,20 +248,20 @@ export function ExercisePicker({
                   onClick={() =>
                     onPick(exercise, groupName(exercise.muscle_group_id))
                   }
-                  className="flex w-full items-center justify-between rounded-tile border border-line bg-raised px-4 py-3.5 text-left active:bg-line/50"
+                  className={styles.item}
                 >
                   <span>
-                    <span className="block font-medium">{exercise.name}</span>
-                    <span className="text-xs text-muted">
+                    <span className={styles.itemName}>{exercise.name}</span>
+                    <span className={styles.itemMeta}>
                       {groupName(exercise.muscle_group_id)} ·{" "}
                       {t(`equipment.${exercise.equipment}`)}
                     </span>
                   </span>
-                  <IconPlus size={18} className="shrink-0 text-lime" />
+                  <IconPlus size={18} className={styles.itemPlus} />
                 </button>
               ))}
               {filtered.length === 0 && (
-                <p className="py-6 text-center text-sm text-muted">
+                <p className={styles.emptyNote}>
                   {search.trim()
                     ? t("picker.emptyFor", { query: search.trim() })
                     : t("picker.empty")}
@@ -271,7 +272,8 @@ export function ExercisePicker({
 
           <Button
             variant="surface"
-            className="w-full border-dashed"
+            block
+            dashed
             onClick={() => {
               setGroupId(groupFilter);
               setCreating(true);

@@ -1,0 +1,508 @@
+@use "../../../shared/styles/palette" as *;
+
+.loader {
+  display: flex;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  background: $bg;
+}
+
+.wizard {
+  margin: 0 auto;
+  display: flex;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 28rem;
+  flex-direction: column;
+  background: $bg;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  border-bottom: 1px solid rgba(#fff, 0.035);
+  background: rgba($bg, 0.88);
+  padding: 1rem 1.25rem 0.75rem;
+  backdrop-filter: blur(24px);
+}
+
+.headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.progress {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $muted;
+}
+
+.exit {
+  @include icon-circle(2.75rem);
+  color: $muted;
+}
+
+.exitPlaceholder {
+  height: 2.75rem;
+  width: 2.75rem;
+}
+
+.progressBar {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.375rem;
+}
+
+.progressSegment {
+  height: 0.25rem;
+  border-radius: 9999px;
+  background: $line;
+  transition: background-color $tr;
+}
+
+.progressSegmentDone {
+  background: $lime;
+}
+
+.main {
+  flex: 1;
+  padding: 1.75rem 1.25rem 2rem;
+}
+
+.step {
+  animation: fade-in 0.2s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  border-top: 1px solid rgba(#fff, 0.045);
+  background: rgba($bg, 0.92);
+  padding: 0.75rem 1.25rem calc(0.9rem + env(safe-area-inset-bottom));
+  backdrop-filter: blur(24px);
+}
+
+.footerStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.footerRow {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.footerFinal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.footerRowTight {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ── Shared step layout ──────────────────────────────────────────── */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.stepEyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: $lime;
+}
+
+.stepTitle {
+  margin-top: 0.5rem;
+  font-size: 1.8rem;
+  line-height: 1.08;
+  font-weight: 600;
+}
+
+.stepBody {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: $muted;
+}
+
+.feature {
+  display: flex;
+  gap: 0.75rem;
+  border-radius: $radius-card;
+  border: 1px solid rgba($line, 0.7);
+  background: rgba($surface, 0.78);
+  padding: 1rem;
+}
+
+.featureIcon {
+  display: flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba($lime, 0.18);
+  background: rgba($lime, 0.08);
+  color: $lime;
+}
+
+.featureText {
+  min-width: 0;
+}
+
+.featureTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.featureNumber {
+  font-family: $font-dot;
+  font-size: 0.75rem;
+  color: $faint;
+}
+
+.featureTitle {
+  font-weight: 600;
+}
+
+.featureBody {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: $muted;
+}
+
+/* ── Welcome step ────────────────────────────────────────────────── */
+
+/* Doubled so size/padding beat the Card base. */
+.welcomeCard.welcomeCard {
+  min-height: 18rem;
+  padding: 1.5rem;
+}
+
+.welcomeContent {
+  margin-top: 5rem;
+}
+
+.eyebrowOnCard {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(#fff, 0.58);
+}
+
+.welcomeTitle {
+  margin-top: 0.5rem;
+  font-size: 2rem;
+  line-height: 1.05;
+  font-weight: 600;
+}
+
+.welcomeBody {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: rgba(#fff, 0.68);
+}
+
+/* ── Profile step ────────────────────────────────────────────────── */
+
+.profileCard.profileCard {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.profileAvatarRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.profileAvatarTitle {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+}
+
+.profileAvatarHint {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: $faint;
+}
+
+.fieldLabel {
+  margin-bottom: 0.5rem;
+  font-size: 13px;
+  font-weight: 500;
+  color: $muted;
+}
+
+/* ── Equipment step ──────────────────────────────────────────────── */
+
+.plateCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.plateIcon {
+  display: flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(#fff, 0.15);
+  background: rgba(#fff, 0.08);
+  color: #fff;
+}
+
+.unitBadge {
+  border-radius: 9999px;
+  border: 1px solid rgba(#fff, 0.12);
+  background: rgba(#000, 0.15);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: rgba(#fff, 0.7);
+}
+
+.plateTitle {
+  margin-top: 2rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
+.plateCount {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: rgba(#fff, 0.62);
+}
+
+.plateList {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.plateItem {
+  border-radius: 9999px;
+  border: 1px solid rgba(#fff, 0.12);
+  background: rgba(#000, 0.18);
+  padding: 0.375rem 0.75rem;
+  font-family: $font-dot;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: rgba(#fff, 0.78);
+}
+
+.barCard.barCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.barInputWrap {
+  position: relative;
+  max-width: 11rem;
+}
+
+/* Doubled: restyles the kit Input for the bar-weight entry. */
+.barInput.barInput {
+  padding-right: 3rem;
+  font-family: $font-dot;
+  font-size: 1.125rem;
+}
+
+.barUnit {
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: $muted;
+}
+
+.barHint {
+  font-size: 0.75rem;
+  line-height: 1.625;
+  color: $muted;
+}
+
+/* ── Schedule step ───────────────────────────────────────────────── */
+
+.modeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.modeButton {
+  position: relative;
+  display: flex;
+  min-height: 8rem;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-radius: $radius-card;
+  border: 1px solid $line;
+  background: rgba($surface, 0.72);
+  color: $muted;
+  padding: 1rem;
+  text-align: left;
+  transition:
+    color $tr,
+    background-color $tr,
+    border-color $tr;
+}
+
+.modeButtonSelected {
+  border-color: rgba($lime, 0.4);
+  background: rgba($lime, 0.07);
+  color: $text;
+}
+
+.modeIcon {
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid $line;
+  background: $raised;
+  color: $faint;
+}
+
+.modeIconSelected {
+  border-color: rgba($lime, 0.25);
+  background: rgba($lime, 0.12);
+  color: $lime;
+}
+
+.modeLabel {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.modeCheck {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: $lime;
+  color: #000;
+}
+
+.flexibleIcon {
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(#fff, 0.15);
+  background: rgba(#fff, 0.08);
+}
+
+.flexibleTitle {
+  margin-top: 2rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
+.flexibleHint {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: rgba(#fff, 0.65);
+}
+
+/* ── Tour step ───────────────────────────────────────────────────── */
+
+.tourTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.tourEyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(#fff, 0.55);
+}
+
+.tourTitle {
+  margin-top: 0.5rem;
+  font-size: 1.5rem;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.tourBody {
+  margin-top: 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: rgba(#fff, 0.66);
+}

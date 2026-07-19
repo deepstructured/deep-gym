@@ -1,0 +1,60 @@
+@use "../../../shared/styles/palette" as *;
+
+.errorMain {
+  display: flex;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  background: $bg;
+  padding: 0 1.25rem;
+}
+
+.errorCard {
+  width: 100%;
+  max-width: 24rem;
+  border-radius: $radius-card;
+  border: 1px solid $line;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.errorGlyph {
+  margin: 0 auto;
+  display: flex;
+  height: 4rem;
+  width: 4rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba($lime, 0.2);
+  background: rgba($lime, 0.08);
+  color: $lime;
+}
+
+.errorText {
+  margin: 1.25rem auto 0;
+  max-width: 17rem;
+  font-size: 15px;
+  line-height: 1.625;
+  color: $muted;
+}
+
+.retry {
+  margin-top: 1.5rem;
+}
+
+.loader {
+  display: flex;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  background: $bg;
+}
+
+.loaderInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: $lime;
+}

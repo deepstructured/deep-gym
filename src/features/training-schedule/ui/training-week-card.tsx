@@ -10,6 +10,7 @@ import {
 } from "@/entities/user";
 import { useI18n } from "@/shared/i18n";
 import { Button, Card, ErrorNote } from "@/shared/ui";
+import styles from "./training-week-card.module.scss";
 import { hasIncompleteTrainingDays } from "../model/presets";
 import { TrainingWeekEditor } from "./training-week-editor";
 
@@ -51,29 +52,25 @@ export function TrainingWeekCard({
   }
 
   return (
-    <Card variant="surface" className="space-y-4 p-4">
+    <Card variant="surface" className={styles.card}>
       <div>
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-lime shadow-[0_0_12px_rgba(215,246,81,0.32)]" />
-          <p className="text-sm font-semibold">{t("settings.trainingWeek")}</p>
+        <div className={styles.titleRow}>
+          <span className={styles.dot} />
+          <p className={styles.title}>{t("settings.trainingWeek")}</p>
         </div>
-        <p className="mt-0.5 text-xs leading-relaxed text-muted">
-          {t("settings.trainingWeekHint")}
-        </p>
+        <p className={styles.hint}>{t("settings.trainingWeekHint")}</p>
       </div>
 
       <TrainingWeekEditor value={draft} onChange={changeDraft} />
       {error && <ErrorNote message={error} />}
       {saved && !dirty && (
-        <p className="text-center text-xs font-medium text-lime">
-          {t("settings.scheduleSaved")}
-        </p>
+        <p className={styles.savedNote}>{t("settings.scheduleSaved")}</p>
       )}
 
       <Button
         type="button"
         variant="lime"
-        className="w-full"
+        block
         disabled={!dirty || incomplete}
         loading={updateProfile.isPending}
         onClick={save}
