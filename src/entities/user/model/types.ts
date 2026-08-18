@@ -17,6 +17,10 @@ export interface Profile {
   avatar_url: string | null;
   /** Monday → Sunday; null until the user configures their training week. */
   training_schedule: TrainingSchedule | null;
+  /** Cached newest body-weight measurement, always stored in kg. */
+  body_weight_kg: number | null;
+  /** Timestamp belonging to body_weight_kg; both cache fields are nullable. */
+  body_weight_measured_at: string | null;
   /** Latest onboarding flow version completed by the user; 0 = incomplete. */
   onboarding_version: number;
   /** When the latest onboarding flow was completed. */

@@ -21,7 +21,7 @@ npm run dev
 2. Open **SQL Editor** and run every file in `supabase/migrations/` in
    numeric order — they create the schema, RLS policies and subsequent
    profile features. The current sequence is `0001_init.sql` through
-   `0005_workout_drafts.sql`.
+   `0007_workout_templates.sql`.
 3. **Project Settings → API**: copy into `.env.local`:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`

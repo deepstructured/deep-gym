@@ -25,7 +25,13 @@ interface ProgressExplorerProps {
   unit: Unit;
 }
 
-const METRICS: ProgressMetric[] = ["topSet", "oneRm", "volume", "reps"];
+const EXTERNAL_METRICS: ProgressMetric[] = [
+  "topSet",
+  "oneRm",
+  "volume",
+  "reps",
+];
+const BODYWEIGHT_METRICS: ProgressMetric[] = ["reps", "addedLoad"];
 
 /**
  * Home-screen analytics explorer: pick a muscle group, pick an exercise —
@@ -57,6 +63,7 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
         for (const set of we.sets) {
           records.push({
             weight_kg: set.weight_kg,
+            body_weight_kg: workout.body_weight_kg ?? null,
             reps: set.reps,
             to_failure: set.to_failure,
             position: set.position,
@@ -121,12 +128,16 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
 
   const records = recordsByExercise.get(activeExercise.id) ?? [];
   const exerciseUnit = activeExercise.unit ?? unit;
+  const isBodyweight = activeExercise.equipment === "bodyweight";
+  const loadMode = isBodyweight ? "bodyweight" : "external";
+  const metrics = isBodyweight ? BODYWEIGHT_METRICS : EXTERNAL_METRICS;
+  const activeMetric = metrics.includes(metric) ? metric : metrics[0];
 
-  const summary = extendedSummary(records);
-  const repStats = repStatsByWeight(records);
+  const summary = extendedSummary(records, { loadMode });
+  const repStats = repStatsByWeight(records, { loadMode });
 
-  const isWeightMetric = metric !== "reps";
-  const points = metricSeries(records, metric).map((point) => ({
+  const isWeightMetric = activeMetric !== "reps";
+  const points = metricSeries(records, activeMetric).map((point) => ({
     date: point.date,
     value: isWeightMetric
       ? roundWeight(kgToUnit(point.valueKg, exerciseUnit))
@@ -146,6 +157,7 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
     oneRm: t("stats.oneRm"),
     volume: t("stats.volume"),
     reps: t("stats.reps"),
+    addedLoad: t("stats.addedLoad"),
   };
 
   return (
@@ -194,14 +206,14 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
         {/* Metric switcher + chart */}
         <div className={styles.metricSection}>
           <div className={styles.metricButtons}>
-            {METRICS.map((option) => (
+            {metrics.map((option) => (
               <button
                 key={option}
                 type="button"
                 onClick={() => setMetric(option)}
                 className={cn(
                   styles.metricButton,
-                  metric === option && styles.metricButtonActive,
+                  activeMetric === option && styles.metricButtonActive,
                 )}
               >
                 {metricLabels[option]}
@@ -212,11 +224,15 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
           <div className={styles.valueRow}>
             <div className={styles.valueText}>
               <p className={styles.valueLabel}>
-                {metricLabels[metric]}
+                {metricLabels[activeMetric]}
               </p>
               <div className={styles.valueDisplay}>
                 <DotValue
-                  value={currentPoint?.value ?? "—"}
+                  value={
+                    currentPoint && activeMetric === "addedLoad"
+                      ? formatSignedValue(currentPoint.value)
+                      : currentPoint?.value ?? "—"
+                  }
                   suffix={
                     currentPoint && isWeightMetric ? exerciseUnit : undefined
                   }
@@ -240,39 +256,60 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
           <ProgressChart
             points={points}
             unit={isWeightMetric ? exerciseUnit : ""}
+            signed={activeMetric === "addedLoad"}
           />
         </div>
 
         {/* Summary tiles */}
         <div className={styles.statGrid}>
-          <MiniStat
-            label={t("detail.bestWeight")}
-            value={
-              summary.bestWeightKg != null
-                ? roundWeight(kgToUnit(summary.bestWeightKg, exerciseUnit))
-                : "—"
-            }
-            suffix={summary.bestWeightKg != null ? exerciseUnit : undefined}
-          />
-          <MiniStat
-            label={t("detail.est1rm")}
-            value={
-              summary.estOneRepMaxKg != null
-                ? roundWeight(kgToUnit(summary.estOneRepMaxKg, exerciseUnit))
-                : "—"
-            }
-            suffix={summary.estOneRepMaxKg != null ? exerciseUnit : undefined}
-          />
+          {isBodyweight ? (
+            <MiniStat
+              label={t("detail.bestAddedLoad")}
+              value={formatSignedWeight(summary.bestAddedLoadKg, exerciseUnit)}
+              suffix={
+                summary.bestAddedLoadKg != null ? exerciseUnit : undefined
+              }
+            />
+          ) : (
+            <>
+              <MiniStat
+                label={t("detail.bestWeight")}
+                value={
+                  summary.bestWeightKg != null
+                    ? roundWeight(kgToUnit(summary.bestWeightKg, exerciseUnit))
+                    : "—"
+                }
+                suffix={
+                  summary.bestWeightKg != null ? exerciseUnit : undefined
+                }
+              />
+              <MiniStat
+                label={t("detail.est1rm")}
+                value={
+                  summary.estOneRepMaxKg != null
+                    ? roundWeight(
+                        kgToUnit(summary.estOneRepMaxKg, exerciseUnit),
+                      )
+                    : "—"
+                }
+                suffix={
+                  summary.estOneRepMaxKg != null ? exerciseUnit : undefined
+                }
+              />
+            </>
+          )}
           <MiniStat label={t("detail.sessions")} value={summary.sessions} />
           <MiniStat label={t("detail.totalSets")} value={summary.totalSets} />
           <MiniStat label={t("stats.totalReps")} value={summary.totalReps} />
-          <MiniStat
-            label={t("stats.volume")}
-            value={formatThousands(
-              Math.round(kgToUnit(summary.totalVolumeKg, exerciseUnit)),
-            )}
-            suffix={exerciseUnit}
-          />
+          {!isBodyweight && summary.totalVolumeKg != null && (
+            <MiniStat
+              label={t("stats.volume")}
+              value={formatThousands(
+                Math.round(kgToUnit(summary.totalVolumeKg, exerciseUnit)),
+              )}
+              suffix={exerciseUnit}
+            />
+          )}
           <MiniStat
             label={t("stats.failRate")}
             value={`${Math.round(summary.failureRate * 100)}%`}
@@ -287,11 +324,19 @@ export function ProgressExplorer({ workouts, unit }: ProgressExplorerProps) {
         {/* Reps by weight */}
         {repStats.length > 0 && (
           <div>
-            <p className={styles.repsLabel}>{t("detail.repsByWeight")}</p>
+            <p className={styles.repsLabel}>
+              {isBodyweight
+                ? t("detail.repsByAddedLoad")
+                : t("detail.repsByWeight")}
+            </p>
             <RepsByWeightTable
               stats={repStats}
               unit={exerciseUnit}
               maxRows={6}
+              loadLabel={
+                isBodyweight ? t("stats.addedLoad") : undefined
+              }
+              signedLoad={isBodyweight}
             />
           </div>
         )}
@@ -320,4 +365,15 @@ function MiniStat({
 /** 12345 → "12 345" (narrow no-break spaces). */
 function formatThousands(value: number): string {
   return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+function formatSignedWeight(valueKg: number | null, unit: Unit) {
+  if (valueKg == null) return "—";
+  const value = roundWeight(kgToUnit(valueKg, unit));
+  return formatSignedValue(value);
+}
+
+function formatSignedValue(value: number) {
+  const normalized = Object.is(value, -0) ? 0 : value;
+  return normalized >= 0 ? `+${normalized}` : normalized;
 }

@@ -16,6 +16,7 @@ import {
 } from '@/features/avatar'
 import { SignOutButton } from '@/features/auth'
 import { TrainingWeekCard } from '@/features/training-schedule'
+import { BodyWeightHistory, BodyWeightTracker } from '@/features/body-weight'
 import { WhatsNewSheet } from '@/features/whats-new'
 import { CURRENT_RELEASE } from '@/shared/config/releases'
 import { LANGUAGE_OPTIONS, useI18n, type Lang } from '@/shared/i18n'
@@ -166,6 +167,9 @@ export function SettingsView() {
             </p>
           )}
         </Card>
+
+        <BodyWeightTracker allowTimestampEdit />
+        <BodyWeightHistory queryLimit={90} maxRows={8} />
 
         {/* Language & units */}
         <Card variant="surface" className={styles.card}>

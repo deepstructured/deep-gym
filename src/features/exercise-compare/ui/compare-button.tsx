@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useExercise } from "@/entities/exercise";
+import { useProfile } from "@/entities/user";
 import {
   useExerciseHistory,
   type ExerciseSetRecord,
@@ -14,7 +16,13 @@ import {
   todayISO,
 } from "@/shared/lib/dates";
 import { cn } from "@/shared/lib/cn";
-import { kgToUnit, roundWeight, type Unit } from "@/shared/lib/weight";
+import {
+  kgToUnit,
+  parseSignedWeight,
+  roundWeight,
+  unitToKg,
+  type Unit,
+} from "@/shared/lib/weight";
 import {
   Calendar,
   EmptyState,
@@ -27,9 +35,48 @@ import {
 } from "@/shared/ui";
 import styles from "./compare-button.module.scss";
 
+interface BodyweightChipValues {
+  base: string;
+  added: string;
+  total: string;
+  unit: Unit;
+}
+
+interface SetChipValue {
+  weight: string;
+  reps: string;
+  toFailure: boolean;
+  bodyweight?: BodyweightChipValues;
+}
+
+function displayWeight(weightKg: number, unit: Unit): string {
+  return String(roundWeight(kgToUnit(weightKg, unit)));
+}
+
+function displaySignedWeight(weightKg: number, unit: Unit): string {
+  const value = roundWeight(kgToUnit(weightKg, unit));
+  const normalized = Object.is(value, -0) ? 0 : value;
+  return normalized >= 0 ? `+${normalized}` : String(normalized);
+}
+
+function bodyweightChip(
+  totalWeightKg: number,
+  bodyWeightKg: number,
+  unit: Unit,
+): BodyweightChipValues {
+  return {
+    base: displayWeight(bodyWeightKg, unit),
+    added: displaySignedWeight(totalWeightKg - bodyWeightKg, unit),
+    total: displayWeight(totalWeightKg, unit),
+    unit,
+  };
+}
+
 /** Minimal shape of the sets being logged right now, in the display unit. */
 export interface CompareCurrentSet {
   weight: string;
+  /** Bodyweight drafts keep this signed load separately from total weight. */
+  addedWeight?: string;
   reps: string;
   toFailure: boolean;
 }
@@ -40,6 +87,9 @@ interface CompareButtonProps {
   unit: Unit;
   /** Sets entered in the current draft, for the side-by-side reference. */
   currentSets: CompareCurrentSet[];
+  /** Canonical snapshot for the current draft. When omitted, today's profile
+   * cache is used as a conservative fallback; null explicitly means absent. */
+  currentBodyWeightKg?: number | null;
   /** The draft workout's date (ISO). Only sessions strictly before it are
    *  offered for comparison — so editing a past workout compares it against
    *  its own past, not against itself or later sessions. */
@@ -79,11 +129,22 @@ function CompareSheet({
   exerciseName,
   unit,
   currentSets,
+  currentBodyWeightKg: draftBodyWeightKg,
   currentDate,
   onClose,
 }: CompareButtonProps & { onClose: () => void }) {
   const { t } = useI18n();
   const { data: history, isLoading } = useExerciseHistory(exerciseId);
+  const { data: exercise } = useExercise(exerciseId);
+  const { data: profile } = useProfile();
+  const isBodyweight = exercise?.equipment === "bodyweight";
+  const currentBodyWeightKg = isBodyweight
+    ? draftBodyWeightKg !== undefined
+      ? draftBodyWeightKg
+      : currentDate === todayISO()
+        ? profile?.body_weight_kg ?? null
+        : null
+    : null;
 
   /** date (ISO) → sets logged that day, sorted by set order.
    *  Only days before the draft's date qualify as "past". */
@@ -116,7 +177,7 @@ function CompareSheet({
   const selectedNotes = selectedSets?.find((s) => s.exerciseNotes)?.exerciseNotes;
 
   const filledCurrent = currentSets.filter(
-    (s) => s.weight.trim() || s.reps.trim(),
+    (s) => s.weight.trim() || s.addedWeight?.trim() || s.reps.trim(),
   );
 
   return (
@@ -143,11 +204,39 @@ function CompareSheet({
                   : formatDayFull(currentDate)}
               </p>
               <SetChips
-                sets={filledCurrent.map((s) => ({
-                  weight: s.weight.trim() || "—",
-                  reps: s.reps.trim() || "—",
-                  toFailure: s.toFailure,
-                }))}
+                sets={filledCurrent.map((s) => {
+                  const totalDisplay = Number(
+                    s.weight.trim().replace(",", "."),
+                  );
+                  const totalWeightKg =
+                    Number.isFinite(totalDisplay) && totalDisplay > 0
+                      ? unitToKg(totalDisplay, unit)
+                      : null;
+                  const addedDisplay = parseSignedWeight(s.addedWeight ?? "");
+                  const profileMatchesDraft =
+                    currentBodyWeightKg != null &&
+                    totalWeightKg != null &&
+                    addedDisplay != null &&
+                    Math.abs(
+                      currentBodyWeightKg +
+                        unitToKg(addedDisplay, unit) -
+                        totalWeightKg,
+                    ) < 0.06;
+
+                  return {
+                    weight: s.weight.trim() || "—",
+                    reps: s.reps.trim() || "—",
+                    toFailure: s.toFailure,
+                    bodyweight:
+                      profileMatchesDraft
+                        ? bodyweightChip(
+                            totalWeightKg!,
+                            currentBodyWeightKg!,
+                            unit,
+                          )
+                        : undefined,
+                  };
+                })}
               />
             </div>
           )}
@@ -189,14 +278,23 @@ function CompareSheet({
             {selectedSets && selectedSets.length > 0 ? (
               <>
                 <SetChips
-                  sets={selectedSets.map((s) => ({
-                    weight:
-                      s.weight_kg != null
-                        ? String(roundWeight(kgToUnit(s.weight_kg, unit)))
-                        : "—",
-                    reps: s.reps != null ? String(s.reps) : "—",
-                    toFailure: s.to_failure,
-                  }))}
+                  sets={selectedSets.map((s) => {
+                    const bodyWeightKg = s.body_weight_kg;
+                    return {
+                      weight:
+                        s.weight_kg != null
+                          ? String(roundWeight(kgToUnit(s.weight_kg, unit)))
+                          : "—",
+                      reps: s.reps != null ? String(s.reps) : "—",
+                      toFailure: s.to_failure,
+                      bodyweight:
+                        isBodyweight &&
+                        bodyWeightKg != null &&
+                        s.weight_kg != null
+                          ? bodyweightChip(s.weight_kg, bodyWeightKg, unit)
+                          : undefined,
+                    };
+                  })}
                 />
                 {selectedNotes && (
                   <p className={styles.dayNotes}>
@@ -219,7 +317,7 @@ function CompareSheet({
 function SetChips({
   sets,
 }: {
-  sets: { weight: string; reps: string; toFailure: boolean }[];
+  sets: SetChipValue[];
 }) {
   return (
     <div className={styles.chips}>
@@ -228,7 +326,19 @@ function SetChips({
           key={i}
           className={styles.chip}
         >
-          <span className={styles.chipValue}>{set.weight}</span>
+          {set.bodyweight ? (
+            <>
+              <span className={styles.chipValue}>{set.bodyweight.base}</span>
+              <span className={styles.chipSignedValue}>
+                {set.bodyweight.added}
+              </span>
+              <span className={styles.chipX}>=</span>
+              <span className={styles.chipValue}>{set.bodyweight.total}</span>
+              <span className={styles.chipUnit}>{set.bodyweight.unit}</span>
+            </>
+          ) : (
+            <span className={styles.chipValue}>{set.weight}</span>
+          )}
           <span className={styles.chipX}>×</span>
           <span className={styles.chipValue}>{set.reps}</span>
           {set.toFailure && <IconFlame size={12} className={styles.chipFlame} />}

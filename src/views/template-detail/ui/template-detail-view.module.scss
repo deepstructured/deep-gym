@@ -1,0 +1,75 @@
+@use "../../../shared/styles/palette" as *;
+
+.edit {
+  @include icon-circle(2.5rem);
+  color: $muted;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: $muted;
+  font-size: 0.8125rem;
+}
+
+.sectionTitle {
+  @include micro-label;
+  margin-bottom: 0.625rem;
+}
+
+.exerciseList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.exerciseRow {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  border: 1px solid $line;
+  border-radius: $radius-tile;
+  background: $surface;
+  padding: 0.875rem 1rem;
+}
+
+.position {
+  flex-shrink: 0;
+  font-family: $font-dot;
+  color: $lime;
+}
+
+.exerciseText {
+  min-width: 0;
+  flex: 1;
+}
+
+.exerciseName {
+  @include truncate;
+  font-weight: 500;
+}
+
+.exerciseMeta {
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: $muted;
+}
+
+.emptyExercises {
+  border: 1px dashed $line;
+  border-radius: $radius-tile;
+  padding: 1.25rem;
+  text-align: center;
+  color: $muted;
+  font-size: 0.875rem;
+}

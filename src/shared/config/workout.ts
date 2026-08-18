@@ -12,9 +12,18 @@ export const EQUIPMENT_OPTIONS = [
   { value: "dumbbell" },
   { value: "machine" },
   { value: "crossover" },
+  { value: "bodyweight" },
 ] as const;
 
 export type Equipment = (typeof EQUIPMENT_OPTIONS)[number]["value"];
+
+/** Persisted load semantics for a workout exercise. External equipment types
+ * can change among themselves without reinterpreting historical set weight. */
+export type ExerciseLoadMode = "external" | "bodyweight";
+
+export function equipmentLoadMode(equipment: Equipment): ExerciseLoadMode {
+  return equipment === "bodyweight" ? "bodyweight" : "external";
+}
 
 export const DEFAULT_PLATES_KG = [30, 25, 20, 15, 10, 5, 2.5, 2, 1.25];
 export const DEFAULT_BAR_KG = 20;

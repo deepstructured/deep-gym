@@ -1,0 +1,50 @@
+@use "../../../shared/styles/palette" as *;
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid $line;
+  border-radius: $radius-tile;
+  background: $surface;
+  padding: 1rem;
+  transition:
+    background-color $tr,
+    transform $tr;
+
+  &:active {
+    transform: scale(0.99);
+    background: $raised;
+  }
+}
+
+.text {
+  min-width: 0;
+  flex: 1;
+}
+
+.name {
+  @include truncate;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.meta {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.75rem;
+  color: $muted;
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: $faint;
+}

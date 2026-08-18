@@ -5,6 +5,9 @@ import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
 
 export interface ExerciseSetRecord {
   weight_kg: number | null;
+  /** Athlete body-weight captured on the parent workout. Null for legacy
+   * workouts logged before body-weight snapshots were introduced. */
+  body_weight_kg: number | null;
   reps: number | null;
   to_failure: boolean;
   position: number;
@@ -22,7 +25,12 @@ interface RawRow {
   workout_exercise: {
     exercise_id: string;
     notes: string | null;
-    workout: { id: string; date: string; type: string };
+    workout: {
+      id: string;
+      date: string;
+      type: string;
+      body_weight_kg: number | null;
+    };
   };
 }
 
@@ -38,7 +46,7 @@ export function useExerciseHistory(exerciseId: string) {
           `weight_kg, reps, to_failure, position,
            workout_exercise:workout_exercises!inner (
              exercise_id, notes,
-             workout:workouts!inner (id, date, type)
+             workout:workouts!inner (id, date, type, body_weight_kg)
            )`,
         )
         .eq("workout_exercise.exercise_id", exerciseId);
@@ -46,6 +54,7 @@ export function useExerciseHistory(exerciseId: string) {
 
       const rows = (data as unknown as RawRow[]).map((row) => ({
         weight_kg: row.weight_kg,
+        body_weight_kg: row.workout_exercise.workout.body_weight_kg,
         reps: row.reps,
         to_failure: row.to_failure,
         position: row.position,

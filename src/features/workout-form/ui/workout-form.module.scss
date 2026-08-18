@@ -56,6 +56,20 @@
 
 /* ── Exercise editor ─────────────────────────────────────────────── */
 
+.sortableExercise {
+  position: relative;
+  z-index: 0;
+}
+
+.sortableDragging {
+  z-index: 10;
+
+  .exerciseCard {
+    box-shadow: 0 1rem 2.5rem rgba(#000, 0.32);
+    opacity: 0.94;
+  }
+}
+
 /* Doubled so its padding beats the Card base at equal specificity. */
 .exerciseCard.exerciseCard {
   padding: 1rem;
@@ -68,11 +82,40 @@
   gap: 0.5rem;
 }
 
+.dragHandle {
+  display: flex;
+  min-width: 2.25rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  border-radius: 0.5rem;
+  color: $faint;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+    color: $lime;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($lime, 0.8);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+}
+
 .exerciseIndex {
   font-family: $font-dot;
-  font-size: 1.125rem;
-  line-height: 1.75rem;
-  color: $faint;
+  font-size: 0.875rem;
+  line-height: 1rem;
 }
 
 .exerciseTitle {
@@ -134,6 +177,53 @@
 
 .weightWrap {
   position: relative;
+}
+
+.bodyweightLoad {
+  min-width: 0;
+}
+
+.bodyweightEquation {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.bodyweightBase {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: baseline;
+  gap: 0.1rem;
+  font-family: $font-dot;
+  font-size: 0.75rem;
+  color: $muted;
+
+  small {
+    font-family: $font-sans;
+    font-size: 0.55rem;
+  }
+}
+
+.bodyweightOperator {
+  flex-shrink: 0;
+  color: $faint;
+  font-size: 0.75rem;
+}
+
+.bodyweightInput.bodyweightInput {
+  min-width: 0;
+  height: 2.35rem;
+  padding: 0 0.4rem;
+}
+
+.bodyweightTotal {
+  @include truncate;
+  display: block;
+  margin-top: 0.15rem;
+  text-align: right;
+  font-size: 0.55rem;
+  color: $faint;
 }
 
 /* Doubled: these override the kit Input's own height/padding. */
@@ -200,4 +290,14 @@
 
 .exerciseNote {
   margin-top: 0.5rem;
+}
+
+@media (max-width: 390px) {
+  .exerciseHeader {
+    gap: 0.375rem;
+  }
+
+  .dragHandle {
+    min-width: 2rem;
+  }
 }

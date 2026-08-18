@@ -2,7 +2,12 @@
 
 import { useI18n } from '@/shared/i18n'
 import { formatDay } from '@/shared/lib/dates'
-import { formatWeight, type Unit } from '@/shared/lib/weight'
+import {
+  formatWeight,
+  kgToUnit,
+  roundWeight,
+  type Unit,
+} from '@/shared/lib/weight'
 import { Card, IconFlame, IconNote, Tag } from '@/shared/ui'
 import type { Workout } from '../model/types'
 import clsx from 'clsx'
@@ -15,6 +20,16 @@ interface WorkoutCardProps {
   className?: string
   onEdit?: () => void
   onDelete?: () => void
+}
+
+function displayWeight(weightKg: number, unit: Unit): string {
+  return String(roundWeight(kgToUnit(weightKg, unit)))
+}
+
+function displaySignedWeight(weightKg: number, unit: Unit): string {
+  const value = roundWeight(kgToUnit(weightKg, unit))
+  const normalized = Object.is(value, -0) ? 0 : value
+  return normalized >= 0 ? `+${normalized}` : String(normalized)
 }
 
 export function WorkoutCard({
@@ -70,26 +85,57 @@ export function WorkoutCard({
                 )}
               </div>
               <div className={s.sets}>
-                {we.sets.map((set) => (
-                  <span key={set.id} className={s.set}>
-                    <span className={s.setValue}>
-                      {set.weight_kg != null
-                        ? formatWeight(set.weight_kg, exerciseUnit).replace(
-                            ` ${exerciseUnit}`,
-                            '',
-                          )
-                        : '—'}
+                {we.sets.map((set) => {
+                  const showBodyweightBreakdown =
+                    we.exercise?.equipment === 'bodyweight' &&
+                    workout.body_weight_kg != null &&
+                    set.weight_kg != null
+
+                  return (
+                    <span key={set.id} className={s.set}>
+                      {showBodyweightBreakdown ? (
+                        <>
+                          <span className={s.setValue}>
+                            {displayWeight(
+                              workout.body_weight_kg!,
+                              exerciseUnit,
+                            )}
+                          </span>
+                          <span className={s.setSignedValue}>
+                            {displaySignedWeight(
+                              set.weight_kg! - workout.body_weight_kg!,
+                              exerciseUnit,
+                            )}
+                          </span>
+                          <span className={s.setX}>=</span>
+                          <span className={s.setValue}>
+                            {displayWeight(set.weight_kg!, exerciseUnit)}
+                          </span>
+                          <span className={s.setUnit}>{exerciseUnit}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className={s.setValue}>
+                            {set.weight_kg != null
+                              ? formatWeight(
+                                  set.weight_kg,
+                                  exerciseUnit,
+                                ).replace(` ${exerciseUnit}`, '')
+                              : '—'}
+                          </span>
+                          {exerciseUnit !== unit && (
+                            <span className={s.setUnit}>{exerciseUnit}</span>
+                          )}
+                        </>
+                      )}
+                      <span className={s.setX}>×</span>
+                      <span className={s.setValue}>{set.reps ?? '—'}</span>
+                      {set.to_failure && (
+                        <IconFlame size={12} className={s.flame} />
+                      )}
                     </span>
-                    {exerciseUnit !== unit && (
-                      <span className={s.setUnit}>{exerciseUnit}</span>
-                    )}
-                    <span className={s.setX}>×</span>
-                    <span className={s.setValue}>{set.reps ?? '—'}</span>
-                    {set.to_failure && (
-                      <IconFlame size={12} className={s.flame} />
-                    )}
-                  </span>
-                ))}
+                  )
+                })}
               </div>
               {we.notes && <p className={s.exerciseNote}>{we.notes}</p>}
             </div>

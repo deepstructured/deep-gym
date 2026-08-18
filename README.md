@@ -56,7 +56,8 @@ Pick a workout type (Upper, Lower, Full Body, Push, Pull or a Split for any
 muscle group), today's date is already set. Add exercises from your personal
 catalog — or create a new one right there. Every exercise starts with one
 set ready to fill; **＋ Add set** copies the previous one so you only change
-what changed. Mark a set with 🔥 when you hit failure.
+what changed. Drag exercises into the order you want, and mark a set with 🔥
+when you hit failure.
 
 Had a rough day? Attach a note to the whole workout or to a single
 exercise — *"slept 4 hours, kept it light"* — and it stays in your history.
@@ -69,7 +70,17 @@ Repeating a session? **Copy last** offers your most recent workout of the
 selected type — and if your schedule runs the same type several times a
 week, it matches the weekday, so a Sunday draft suggests last Sunday's
 session. Need a different one? Open the **calendar picker** and copy any
-past workout, exactly as it was logged.
+past workout. Both flows let you choose between the complete session or one
+empty set per exercise with its last non-empty weight.
+
+Build reusable **workout templates** when the structure matters more than the
+last result. Templates keep the workout type and exercise order, and start a
+fresh draft with one empty set per exercise.
+
+Bodyweight exercises use your latest recorded body weight as the base. Add a
+plate with `+10`, log assisted pull-ups with `-20`, and DeepGym keeps the
+session snapshot separate from your body-weight trend so a changing scale
+number never masquerades as a strength PR.
 
 <p>
 <img src="docs/screenshots/new-workout.png" width="300" alt="New workout" />
@@ -107,7 +118,8 @@ workout.
 
 Exercises organized by muscle group — Back, Chest, Biceps, Triceps,
 Shoulders, Legs, plus any group you add. Each shows its **current working
-weight**, so you always know what to load.
+weight**, so you always know what to load. Create exercises directly from the
+library, without starting a workout; Templates live here too.
 
 Prefer pounds for a specific machine? Set a **per-exercise unit** (kg/lb) —
 it overrides your default just for that exercise.
@@ -169,6 +181,11 @@ Settings whenever you want.
 | Reopen the product guide | Settings → **App guide** |
 | See the current release notes | Settings → **What's new** |
 | Add a set / mark failure | **＋ Add set** / flame button on the set row |
+| Reorder exercises | Drag the numbered handle in the workout form |
+| Copy a workout | New workout → **Copy last** or calendar → choose copy mode |
+| Workout templates | Exercises → **Templates** |
+| Record body weight | Settings → **Body weight**, or the bottom of a new workout |
+| Create an exercise | Exercises → **＋** |
 | Plate breakdown | ⊚ icon next to any weight |
 | Machine setup notes | ⓘ button on machine exercises |
 | Change working weight | Exercise page → ✏️ on the pink card |

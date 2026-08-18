@@ -9,6 +9,10 @@ import styles from "./reps-by-weight-table.module.scss";
 interface RepsByWeightTableProps {
   stats: WeightRepStats[];
   unit: Unit;
+  /** Override the first column for alternate load semantics such as signed
+   * added load on body-weight exercises. */
+  loadLabel?: string;
+  signedLoad?: boolean;
   /** Show only the heaviest N rows (all rows when omitted). */
   maxRows?: number;
 }
@@ -18,6 +22,8 @@ interface RepsByWeightTableProps {
 export function RepsByWeightTable({
   stats,
   unit,
+  loadLabel,
+  signedLoad = false,
   maxRows,
 }: RepsByWeightTableProps) {
   const { t } = useI18n();
@@ -27,7 +33,7 @@ export function RepsByWeightTable({
   return (
     <div>
       <div className={styles.head}>
-        <span>{t("detail.weight")}</span>
+        <span>{loadLabel ?? t("detail.weight")}</span>
         <span className={styles.center}>{t("detail.sets")}</span>
         <span className={styles.center}>{t("detail.avg")}</span>
         <span className={styles.center}>{t("detail.med")}</span>
@@ -41,7 +47,7 @@ export function RepsByWeightTable({
           >
             <span className={styles.weightCell}>
               <DotValue
-                value={roundWeight(kgToUnit(row.weightKg, unit))}
+                value={formatLoad(row.weightKg, unit, signedLoad)}
                 className={styles.weightValue}
               />
               {row.failureRate > 0 && (
@@ -61,4 +67,9 @@ export function RepsByWeightTable({
       </div>
     </div>
   );
+}
+
+function formatLoad(weightKg: number, unit: Unit, signed: boolean) {
+  const value = roundWeight(kgToUnit(weightKg, unit));
+  return signed && value > 0 ? `+${value}` : value;
 }

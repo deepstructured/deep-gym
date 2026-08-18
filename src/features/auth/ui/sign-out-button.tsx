@@ -1,24 +1,29 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/shared/i18n";
+import { NEW_WORKOUT_DRAFT_STORAGE_KEY } from "@/shared/config/storage";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
 import { Button, IconLogout } from "@/shared/ui";
 
 export function SignOutButton({ compact = false }: { compact?: boolean }) {
-  const router = useRouter();
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
 
   async function signOut() {
     setLoading(true);
-    await getSupabaseBrowser().auth.signOut();
+    const { error } = await getSupabaseBrowser().auth.signOut();
+    if (error) {
+      setLoading(false);
+      return;
+    }
+    localStorage.removeItem(NEW_WORKOUT_DRAFT_STORAGE_KEY);
     queryClient.clear();
-    router.push("/login");
-    router.refresh();
+    // A full navigation also clears the in-memory Zustand instance, so the
+    // removed local draft cannot survive a sign-out inside this SPA session.
+    window.location.assign("/login");
   }
 
   return (

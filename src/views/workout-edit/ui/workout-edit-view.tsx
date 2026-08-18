@@ -5,12 +5,14 @@ import { useEffect, useState } from "react";
 import { useMuscleGroups } from "@/entities/muscle-group";
 import { useProfile } from "@/entities/user";
 import {
+  isWorkoutLoadModeMismatchError,
   useDeleteWorkout,
   useUpdateWorkout,
   useWorkout,
 } from "@/entities/workout";
 import {
   WorkoutForm,
+  bodyweightDraftIssue,
   draftToInput,
   workoutToDraft,
   type WorkoutDraft,
@@ -49,11 +51,29 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
   function save() {
     if (!draft) return;
     setError(null);
+    const bodyweightIssue = bodyweightDraftIssue(draft, unit);
+    if (bodyweightIssue) {
+      setError(
+        t(
+          bodyweightIssue === "missing-body-weight"
+            ? "bodyWeight.requiredForAddedLoad"
+            : bodyweightIssue === "nonpositive-total"
+              ? "bodyWeight.invalidTotalLoad"
+              : "bodyWeight.invalidAddedLoad",
+        ),
+      );
+      return;
+    }
     updateWorkout.mutate(
       { id: workoutId, input: draftToInput(draft, unit) },
       {
         onSuccess: () => router.back(),
-        onError: (e) => setError((e as Error).message),
+        onError: (e) =>
+          setError(
+            isWorkoutLoadModeMismatchError(e)
+              ? t("workout.staleExerciseMode")
+              : (e as Error).message,
+          ),
       },
     );
   }

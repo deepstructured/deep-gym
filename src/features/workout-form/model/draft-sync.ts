@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
-import { isDraftEmpty, useNewWorkoutDraft, type WorkoutDraft } from "./draft";
+import {
+  emptyDraft,
+  isDraftEmpty,
+  useNewWorkoutDraft,
+  type WorkoutDraft,
+} from "./draft";
 
 const PUSH_DELAY_MS = 800;
 const PULL_TIMEOUT_MS = 2500;
@@ -35,10 +40,27 @@ export function useNewWorkoutDraftSync(): { ready: boolean } {
     (async () => {
       try {
         const supabase = getSupabaseBrowser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const localBeforePull = useNewWorkoutDraft.getState();
+        if (localBeforePull.ownerId !== user.id) {
+          // Old builds did not persist an owner. Discarding an unowned local
+          // draft is safer than exposing it after an account switch; its
+          // cloud copy, when present, is restored immediately below.
+          useNewWorkoutDraft.setState({
+            draft: emptyDraft(),
+            ownerId: user.id,
+            updatedAt: null,
+          });
+        }
         const result = await Promise.race([
           supabase
             .from("workout_drafts")
             .select("draft, updated_at")
+            .eq("user_id", user.id)
             .maybeSingle(),
           new Promise<null>((resolve) =>
             setTimeout(() => resolve(null), PULL_TIMEOUT_MS),
@@ -55,6 +77,7 @@ export function useNewWorkoutDraftSync(): { ready: boolean } {
           lastSynced.current = JSON.stringify(remote.draft);
           useNewWorkoutDraft.setState({
             draft: remote.draft,
+            ownerId: user.id,
             updatedAt: remote.updated_at,
           });
         }
@@ -74,7 +97,7 @@ export function useNewWorkoutDraftSync(): { ready: boolean } {
     if (!ready) return;
 
     async function push() {
-      const { draft, updatedAt } = useNewWorkoutDraft.getState();
+      const { draft, ownerId, updatedAt } = useNewWorkoutDraft.getState();
       // Never edited on this device — nothing to publish, and pushing an
       // empty default here could wipe a draft made elsewhere.
       if (!updatedAt) return;
@@ -85,7 +108,7 @@ export function useNewWorkoutDraftSync(): { ready: boolean } {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user || ownerId !== user.id) return;
         const { error } = isDraftEmpty(draft)
           ? await supabase
               .from("workout_drafts")

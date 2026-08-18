@@ -13,6 +13,11 @@
     color $tr,
     background-color $tr,
     border-color $tr;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.38;
+  }
 }
 
 .idle {

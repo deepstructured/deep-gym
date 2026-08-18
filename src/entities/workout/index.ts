@@ -14,6 +14,7 @@ export {
   useCreateWorkout,
   useUpdateWorkout,
   useDeleteWorkout,
+  isWorkoutLoadModeMismatchError,
   type WorkoutSummary,
 } from "./api/queries";
 export {

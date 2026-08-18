@@ -14,6 +14,8 @@ DeepGym - мобильный PWA-трекер силовых тренирово�
 - показывать историю и прогресс по упражнениям;
 - работать как приложение на домашнем экране телефона;
 - сохранять черновик новой тренировки локально и в облаке, чтобы ввод не пропал и продолжался с любого устройства;
+- хранить переиспользуемые шаблоны тренировок;
+- вести историю собственного веса и корректно считать добавленную/ассистирующую нагрузку в упражнениях с собственным весом;
 - провести нового пользователя через обязательные настройки до первой тренировки;
 - один раз показать переведенное описание каждой новой версии продукта.
 
@@ -43,7 +45,8 @@ src/app/
 src/views/
   полноценные экраны приложения:
   home, login, onboarding, history, exercises,
-  exercise-detail, workout-new, workout-edit, settings
+  exercise-detail, templates, template-detail, template-editor,
+  workout-new, workout-edit, settings
 
 src/widgets/
   крупные сборные блоки интерфейса:
@@ -53,11 +56,11 @@ src/features/
   пользовательские фичи:
   auth, avatar, first-workout, what's-new, workout-form, workout-share,
   training-schedule, next-workout, plate-calculator,
-  machine-info, exercise-stats, exercise-compare
+  machine-info, exercise-stats, exercise-compare, body-weight
 
 src/entities/
   предметные сущности и их запросы:
-  user, muscle-group, exercise, workout
+  user, muscle-group, exercise, workout, workout-template, body-weight
 
 src/shared/
   переиспользуемые UI-компоненты, lib-функции,
@@ -149,6 +152,10 @@ Middleware выполняется перед защищенными страни
 | `/history` | `app/history/page.tsx` | `HistoryView` | История тренировок: день, неделя, месяц |
 | `/exercises` | `app/exercises/page.tsx` | `ExercisesView` | Каталог упражнений по группам мышц |
 | `/exercises/[id]` | `app/exercises/[id]/page.tsx` | `ExerciseDetailView` | Детальная страница упражнения, аналитика, редактирование |
+| `/templates` | `app/templates/page.tsx` | `TemplatesView` | Список шаблонов тренировок |
+| `/templates/new` | `app/templates/new/page.tsx` | `TemplateEditorView` | Создание шаблона |
+| `/templates/[id]` | `app/templates/[id]/page.tsx` | `TemplateDetailView` | Просмотр шаблона и запуск тренировки |
+| `/templates/[id]/edit` | `app/templates/[id]/edit/page.tsx` | `TemplateEditorView` | Редактирование шаблона |
 | `/workouts/new` | `app/workouts/new/page.tsx` | `WorkoutNewView` | Создание новой тренировки |
 | `/workouts/[id]/edit` | `app/workouts/[id]/edit/page.tsx` | `WorkoutEditView` | Редактирование тренировки |
 | `/settings` | `app/settings/page.tsx` | `SettingsView` | Профиль/аватар, язык, тренировочная неделя, единицы веса, блины, группы мышц, гайд, What's new и выход |
@@ -195,7 +202,7 @@ API routes:
 
 ## 7. База данных
 
-Схема находится в `supabase/migrations/0001_init.sql`–`0005_workout_drafts.sql`.
+Схема находится в `supabase/migrations/0001_init.sql`–`0007_workout_templates.sql`.
 Миграции выполняются вручную в Supabase SQL Editor строго по номеру. Локальный
 `.env.local` подключен к production-проекту, поэтому для QA можно изменять
 только `demo@deepgym.app`.
@@ -208,11 +215,15 @@ erDiagram
   AUTH_USERS ||--o{ EXERCISES : owns
   AUTH_USERS ||--o{ WORKOUTS : owns
   AUTH_USERS ||--o{ MUSCLE_GROUPS : custom_groups
+  AUTH_USERS ||--o{ BODY_WEIGHT_MEASUREMENTS : records
+  AUTH_USERS ||--o{ WORKOUT_TEMPLATES : owns
 
   MUSCLE_GROUPS ||--o{ EXERCISES : groups
   EXERCISES ||--o{ WORKOUT_EXERCISES : used_in
   WORKOUTS ||--o{ WORKOUT_EXERCISES : contains
   WORKOUT_EXERCISES ||--o{ SETS : has
+  WORKOUT_TEMPLATES ||--o{ WORKOUT_TEMPLATE_EXERCISES : contains
+  EXERCISES ||--o{ WORKOUT_TEMPLATE_EXERCISES : references
 
   AUTH_USERS ||--o| WORKOUT_DRAFTS : unsaved_draft
 
@@ -234,6 +245,8 @@ erDiagram
     int last_seen_release_version
     bigint telegram_id
     text telegram_username
+    numeric body_weight_kg
+    timestamptz body_weight_measured_at
     timestamptz created_at
   }
 
@@ -263,6 +276,7 @@ erDiagram
     text type
     date date
     text notes
+    numeric body_weight_kg
     timestamptz created_at
   }
 
@@ -270,6 +284,7 @@ erDiagram
     uuid id PK
     uuid workout_id FK
     uuid exercise_id FK
+    text load_mode
     int position
     text notes
   }
@@ -287,6 +302,31 @@ erDiagram
     uuid user_id PK
     jsonb draft
     timestamptz updated_at
+  }
+
+  BODY_WEIGHT_MEASUREMENTS {
+    uuid id PK
+    uuid user_id FK
+    numeric weight_kg
+    timestamptz measured_at
+    text source
+    timestamptz created_at
+  }
+
+  WORKOUT_TEMPLATES {
+    uuid id PK
+    uuid user_id FK
+    text name
+    text type
+    timestamptz created_at
+    timestamptz updated_at
+  }
+
+  WORKOUT_TEMPLATE_EXERCISES {
+    uuid id PK
+    uuid template_id FK
+    uuid exercise_id FK
+    int position
   }
 
   TELEGRAM_LINKS {
@@ -316,6 +356,7 @@ erDiagram
 - хранит язык интерфейса и URL пользовательского/встроенного аватара;
 - хранит явную тренировочную неделю: массив Monday–Sunday, где `null` — день отдыха; весь массив `null`, пока пользователь не настроил расписание;
 - хранит завершенную версию onboarding, время завершения и последовательность последнего просмотренного продуктового релиза;
+- кеширует последнее измерение собственного веса и его время; источником истории остается `body_weight_measurements`;
 - может хранить Telegram ID и username.
 
 Группы мышц:
@@ -333,6 +374,7 @@ erDiagram
   - `dumbbell` - гантели;
   - `machine` - тренажер с блинами;
   - `crossover` - блочный тренажер/стек;
+  - `bodyweight` - упражнение с собственным весом;
 - могут хранить `machine_settings`;
 - могут иметь `working_weight_kg`;
 - могут иметь override единицы веса `unit`, иначе используется `profile.unit`.
@@ -340,8 +382,24 @@ erDiagram
 Тренировки:
 
 - `workouts` - шапка тренировки: тип, дата, заметка;
-- `workout_exercises` - упражнения внутри конкретной тренировки, с порядком и заметкой;
+- `workout_exercises` - упражнения внутри конкретной тренировки, с порядком, заметкой и snapshot `load_mode` (`external | bodyweight`);
 - `sets` - подходы внутри упражнения: вес, повторы, до отказа.
+- `workouts.body_weight_kg` фиксирует вес атлета именно для этой сессии;
+- для `bodyweight` в `sets.weight_kg` хранится итоговая эффективная нагрузка: `вес тела + подписанная добавка`, где отрицательная добавка означает помощь/ассистирование.
+
+Вес тела:
+
+- `body_weight_measurements` — append-only история измерений;
+- запись идет только через RPC `log_body_weight`, который в одной транзакции добавляет историю и обновляет кеш профиля, если измерение самое новое;
+- измерения можно добавлять из Settings или из нижней части формы новой тренировки;
+- на выбранную дату тренировки автоматически берется последнее измерение не позднее этой даты.
+
+Шаблоны:
+
+- `workout_templates` хранит имя и тип;
+- `workout_template_exercises` хранит только упорядоченные ссылки на упражнения;
+- v1 намеренно не хранит веса, повторы и подходы: при применении каждое упражнение получает один пустой подход с актуальным рабочим/собственным весом;
+- применение создает snapshot в обычном черновике; последующее изменение шаблона не меняет историю тренировок.
 
 Черновики:
 
@@ -363,6 +421,8 @@ Telegram:
 - упражнения доступны только владельцу;
 - тренировки доступны только владельцу;
 - черновик тренировки доступен только владельцу;
+- история веса доступна только владельцу, а запись закрыта атомарным RPC;
+- шаблоны и их упражнения доступны только владельцу; child-policy дополнительно проверяет принадлежность упражнения;
 - подходы доступны через проверку владельца родительской тренировки;
 - группы мышц можно читать, если это дефолтная группа или своя группа;
 - кастомные группы можно создавать/обновлять/удалять только свои.
@@ -379,6 +439,8 @@ Telegram:
 
 - `exercises.working_weight_kg`;
 - `sets.weight_kg`;
+- `profiles.body_weight_kg` и `body_weight_measurements.weight_kg`;
+- `workouts.body_weight_kg`;
 - `profiles.bar_weight_kg`;
 - внутреннего расчета блинов.
 
@@ -396,6 +458,7 @@ Telegram:
 - `roundWeight`;
 - `formatWeight`;
 - `parseWeight`;
+- `parseSignedWeight`;
 - `buildPlateSpecs`;
 - `calcPlateVariants`;
 - `calcPlatesGreedy`.
@@ -498,6 +561,26 @@ Entity hooks находятся в `src/entities/*/api/queries.ts`.
 - invalidates `["exercises"]` и `["workouts"]`;
 - из-за FK cascade упражнение удаляется из workout_exercises, а их sets тоже удаляются каскадом.
 
+### Body weight
+
+`useBodyWeightMeasurements`
+
+- читает историю измерений newest-first с диапазоном и лимитом;
+- используется графиком Settings и автоподстановкой снимка в новую тренировку.
+
+`useLogBodyWeight`
+
+- вызывает атомарный RPC `log_body_weight`;
+- invalidates историю веса и профиль.
+
+### Workout templates
+
+`useWorkoutTemplates` / `useWorkoutTemplate`
+
+- читают список и один шаблон с упражнениями, отсортированными по `position`.
+
+CRUD hooks создают, обновляют и удаляют шаблоны и инвалидируют оба query cache.
+
 ### Workouts
 
 `useWorkoutCount(enabled)`
@@ -521,24 +604,27 @@ Entity hooks находятся в `src/entities/*/api/queries.ts`.
 
 `useCreateWorkout`
 
+- до мутаций сверяет ожидаемый `load_mode` черновика с текущими упражнениями;
 - создает строку `workouts`;
 - последовательно создает `workout_exercises`;
 - для каждого упражнения создает `sets`;
-- invalidates `["workouts"]` и `["exercise-history"]`.
+- при ошибке дочерней вставки best-effort удаляет созданную шапку;
+- invalidates `["workouts"]`, `["exercise-history"]` и `["exercise-usage"]`.
 
 `useUpdateWorkout`
 
+- до мутаций сверяет ожидаемый `load_mode` черновика с текущими упражнениями;
 - обновляет шапку тренировки;
 - удаляет все старые `workout_exercises` по `workout_id`;
 - из-за cascade удаляются старые `sets`;
 - заново вставляет вложенные упражнения и подходы;
-- invalidates `["workouts"]`, `["workout", id]`, `["exercise-history"]`.
+- invalidates `["workouts"]`, `["workout", id]`, `["exercise-history"]` и `["exercise-usage"]`.
 
 `useDeleteWorkout`
 
 - удаляет тренировку;
 - вложенные упражнения и подходы удаляются cascade;
-- invalidates `["workouts"]` и `["exercise-history"]`.
+- invalidates `["workouts"]`, `["exercise-history"]` и `["exercise-usage"]`.
 
 ### Exercise history
 
@@ -736,6 +822,9 @@ Week streak считается по неделям с понедельника:
 оба значения к черновику.
 Переход с first-workout guide добавляет `?first=1`: форма показывает подсказку,
 а после save открывает `/history?first=1` с success sheet.
+Переход с карточки шаблона передает `?template=<id>`. Параметр применяется
+только после завершения cloud pull. Пустой черновик заполняется сразу, а
+непустой заменяется только после подтверждения пользователя.
 
 ### Локальный черновик
 
@@ -779,7 +868,7 @@ localStorage key: deepgym-workout-draft
 
 ### Копирование прошлых тренировок
 
-Пока в черновике нет упражнений, форма новой тренировки предлагает два
+Пока черновик пуст, форма новой тренировки предлагает три
 способа начать с готовой сессии:
 
 - **Copy last** (`copy-last-workout.tsx`) — последняя тренировка выбранного
@@ -790,13 +879,23 @@ localStorage key: deepgym-workout-draft
   истории нет — просто последняя тренировка типа.
 - **Копия из календаря** (`copy-workout-picker.tsx`) — bottom sheet с
   календарем, где отмечены все дни с тренировками. Выбор дня показывает
-  его тренировки; тап по тренировке копирует её упражнения со всеми
-  подходами и переключает тип черновика на тип скопированной сессии.
+  его тренировки и переключает тип черновика на тип скопированной сессии.
+- **Шаблон** (`template-picker.tsx`) — выбирает сохраненную структуру и
+  материализует ее как обычный черновик.
+
+После выбора Copy last или тренировки из календаря пользователь выбирает режим:
+
+- `full` — все подходы, веса, повторы и отметки отказа;
+- `last-weight` — один пустой подход на упражнение с последним непустым весом.
+
+Оба режима очищают заметки тренировки и упражнений; дата текущего черновика
+не меняется.
 
 Структура черновика:
 
 - `type`;
 - `date`;
+- `bodyWeight`, `bodyWeightUnit`, `bodyWeightAuto`;
 - `notes`;
 - `showNotes`;
 - `exercises[]`;
@@ -811,6 +910,7 @@ localStorage key: deepgym-workout-draft
   - sets;
 - внутри set:
   - `weight` строкой в display unit;
+  - `addedWeight` — подписанная добавка для `bodyweight`;
   - `reps` строкой;
   - `toFailure`.
 
@@ -832,6 +932,7 @@ sequenceDiagram
   U->>View: Save workout
   View->>View: draftToInput(draft, unit)
   View->>Hook: mutate(input)
+  Hook->>DB: preflight exercise load_mode
   Hook->>DB: insert workouts
   Hook->>DB: insert workout_exercises по position
   Hook->>DB: insert sets по position
@@ -848,6 +949,8 @@ sequenceDiagram
 - пустые notes превращает в `null`;
 - парсит вес;
 - переводит вес из display unit в kg;
+- сохраняет снимок веса тела и для `bodyweight` вычисляет итоговую нагрузку как `body + added`;
+- добавляет ожидаемый `load_mode`, чтобы БД отклонила устаревший черновик;
 - округляет kg до двух знаков;
 - парсит reps;
 - оставляет `to_failure`.
@@ -862,8 +965,8 @@ sequenceDiagram
 - дата;
 - заметка к тренировке;
 - при пустом списке упражнений (в режиме новой тренировки) — карточка
-  Copy last и кнопка копии из календаря;
-- список упражнений;
+  Copy last, копия из календаря и выбор шаблона;
+- reorder списка упражнений drag-and-drop (pointer/touch и клавиатура);
 - для каждого упражнения:
   - название и группа;
   - кнопка настроек тренажера для `machine`;
@@ -872,6 +975,7 @@ sequenceDiagram
   - удаление упражнения;
   - список подходов;
   - вес;
+  - для `bodyweight`: `вес тела + подписанная добавка = итог`; отрицательная добавка фиксирует ассистирование;
   - повторы;
   - флаг `to failure`;
   - удаление подхода;
@@ -893,6 +997,11 @@ sequenceDiagram
 - открывает `PlateSheet`;
 - берет вес из текущего input;
 - переводит в kg с учетом unit конкретного упражнения.
+- для `bodyweight` не показывается.
+
+Под формой новой тренировки расположен `BodyWeightTracker`: он позволяет
+записать вес на дату тренировки, обновляет снимок черновика и пересчитывает
+итоговую нагрузку bodyweight-подходов, не меняя их подписанную добавку.
 
 ## 15. Выбор и создание упражнения
 
@@ -916,6 +1025,11 @@ sequenceDiagram
   - kg;
   - lb;
 - optional working weight.
+
+Тип `bodyweight` не имеет отдельного `working_weight_kg`: базой служит
+актуальное измерение пользователя. Общая форма создания вынесена в
+`src/entities/exercise/ui/exercise-create-form.tsx` и используется как внутри
+тренировки, так и кнопкой `+` в каталоге Exercises.
 
 После создания:
 
@@ -1040,9 +1154,19 @@ sequenceDiagram
 - дает фильтр по группе;
 - группирует упражнения по muscle group;
 - показывает working weight каждого упражнения;
+- позволяет создать упражнение, не начиная тренировку;
+- дает вход в раздел Templates;
 - ведет на `/exercises/[id]`.
 
 Если у упражнения есть unit override, working weight показывается в unit упражнения.
+Для `bodyweight` вместо рабочего веса показывается текущий вес профиля.
+
+### Шаблоны тренировок
+
+Раздел `/templates` доступен из Exercises. Пользователь может создать,
+просмотреть, изменить и удалить шаблон. Редактор хранит обязательное имя,
+тип тренировки и порядок упражнений. Кнопка `Start workout` открывает новую
+тренировку на основе шаблона; тот же picker доступен в пустой форме тренировки.
 
 ## 21. Детальная страница упражнения
 
@@ -1081,6 +1205,12 @@ sequenceDiagram
 - best weight;
 - estimated 1RM;
 - last date.
+
+Для обычных упражнений сохраняются weight/1RM/volume-метрики. Для
+`bodyweight` масса тела не выдается за силовой прогресс: основные метрики —
+повторы и подписанная добавленная нагрузка `sets.weight_kg - workouts.body_weight_kg`.
+Legacy-сессии без снимка показываются как итоговый вес, но не участвуют в
+графике добавленной нагрузки.
 
 Estimated 1RM считается формулой Epley:
 
@@ -1156,6 +1286,8 @@ Month/week grids показывают сплошные точки по выпо�
 - Telegram username, если связан;
 - язык интерфейса en/ru/uk;
 - глобальную единицу веса kg/lb;
+- запись собственного веса с произвольным прошедшим timestamp;
+- график и последние измерения собственного веса;
 - тренировочную неделю Monday–Sunday;
 - включение тренировочного дня и обязательный выбор его типа;
 - вес грифа;
@@ -1203,8 +1335,8 @@ Month/week grids показывают сплошные точки по выпо�
 
 Кеши:
 
-- `deepgym-v4-static`;
-- `deepgym-v4-pages`.
+- `deepgym-v6-static`;
+- `deepgym-v6-pages`.
 
 Правила:
 
@@ -1304,7 +1436,9 @@ React Query:
 - muscle groups;
 - exercises;
 - workouts;
-- exercise history.
+- exercise history;
+- workout templates;
+- body-weight measurements.
 
 После мутаций соответствующие query invalidates.
 
@@ -1326,6 +1460,7 @@ Zustand persist:
 - только новая тренировка;
 - key `deepgym-workout-draft`;
 - хранится в localStorage;
+- содержит `ownerId` и отбрасывается при смене auth user, чтобы общий браузер не смешивал черновики аккаунтов;
 - сбрасывается после успешного save или discard.
 
 ## 27. Основные пользовательские сценарии
@@ -1348,20 +1483,20 @@ Zustand persist:
 1. Home -> Start workout или BottomNav Add.
 2. Открывается /workouts/new; подтягивается облачный черновик, если он свежее.
 3. Тип по умолчанию Full Body, дата сегодня.
-4. Пользователь нажимает Add exercise — или копирует прошлую сессию
-   (Copy last / календарь).
+4. Пользователь добавляет упражнение, копирует прошлую сессию или применяет шаблон.
 5. Выбирает существующее упражнение или создает новое.
 6. Первый set создается автоматически.
-7. Вес подтягивается из working weight, если он есть.
+7. Вес подтягивается из working weight; для bodyweight — из последнего измерения на дату тренировки.
 8. Пользователь вводит reps, добавляет подходы.
 9. Add set копирует предыдущий вес и reps.
 10. По необходимости отмечает failure.
-11. По необходимости открывает plates, machine info или compare.
-12. Save workout.
-13. Все веса переводятся в kg.
-14. Данные пишутся в workouts -> workout_exercises -> sets.
-15. Черновик очищается.
-16. Пользователь попадает в History.
+11. Перетаскивает упражнения в нужный порядок.
+12. По необходимости записывает собственный вес, открывает plates, machine info или compare.
+13. Save workout.
+14. Все веса переводятся в kg.
+15. Данные пишутся в workouts -> workout_exercises -> sets.
+16. Черновик очищается.
+17. Пользователь попадает в History.
 ```
 
 ### Сценарий: анализ упражнения
@@ -1476,6 +1611,8 @@ NEXT_PUBLIC_SITE_URL
 17. Onboarding/release sequences, package version и service-worker cache version — три независимых механизма.
 18. Старые SVG-аватары нельзя удалять: сохраненные `profiles.avatar_url` существующих пользователей могут ссылаться на них.
 19. Миграции создаются файлами, но применяются к production Supabase только вручную после review.
+20. `bodyweight` хранит итоговую нагрузку в `sets.weight_kg`; signed added/assisted load восстанавливается только при наличии `workouts.body_weight_kg`.
+21. Шаблоны v1 хранят структуру, но не prescription подходов/повторов/весов.
 
 ## 31. Где искать конкретную логику
 
@@ -1492,13 +1629,16 @@ NEXT_PUBLIC_SITE_URL
 | История | `src/views/history/ui/history-view.tsx` |
 | Каталог упражнений | `src/views/exercises/ui/exercises-view.tsx` |
 | Детали упражнения | `src/views/exercise-detail/ui/exercise-detail-view.tsx` |
+| CRUD шаблонов | `src/views/templates/`, `src/views/template-detail/`, `src/views/template-editor/`, `src/entities/workout-template/` |
 | Новая тренировка | `src/views/workout-new/ui/workout-new-view.tsx` |
 | Редактирование тренировки | `src/views/workout-edit/ui/workout-edit-view.tsx` |
 | Форма тренировки | `src/features/workout-form/ui/workout-form.tsx` |
 | Черновик тренировки | `src/features/workout-form/model/draft.ts` |
 | Синхронизация черновика между устройствами | `src/features/workout-form/model/draft-sync.ts` |
 | Copy last / копия из календаря | `src/features/workout-form/ui/copy-last-workout.tsx`, `src/features/workout-form/ui/copy-workout-picker.tsx` |
+| Применение шаблона | `src/features/workout-form/ui/template-picker.tsx`, `src/views/workout-new/ui/workout-new-view.tsx` |
 | Выбор/создание упражнения | `src/features/workout-form/ui/exercise-picker.tsx` |
+| История собственного веса | `src/entities/body-weight/`, `src/features/body-weight/` |
 | Калькулятор блинов | `src/features/plate-calculator/ui/plate-sheet.tsx`, `src/shared/lib/weight.ts` |
 | Настройки тренажера | `src/features/machine-info/ui/machine-info.tsx` |
 | Тренировочная неделя | `src/features/training-schedule/ui/training-week-card.tsx`, `src/features/next-workout/model/predict.ts` |
@@ -1528,6 +1668,8 @@ DeepGym = Next.js PWA shell
       machine settings
       exercise history compare
       exercise stats
+      body-weight tracker
+      workout templates
 ```
 
 Если нужно быстро понять любую часть приложения, лучше идти так:

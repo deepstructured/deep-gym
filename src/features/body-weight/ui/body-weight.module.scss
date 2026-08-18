@@ -1,0 +1,152 @@
+.tracker,
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.headingRow,
+.historyHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.title {
+  color: var(--color-text);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.hint {
+  margin-top: 0.2rem;
+  max-width: 28rem;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.current {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.currentLabel,
+.historyCount {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.currentValue {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 1.25rem;
+}
+
+.formRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.weightField {
+  min-width: 0;
+  flex: 1;
+}
+
+.saveButton {
+  flex: 0 0 auto;
+}
+
+.success {
+  color: var(--color-lime);
+  font-size: 0.78rem;
+}
+
+.chart {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 1.25rem;
+  padding: 0.5rem 0.625rem;
+  background:
+    radial-gradient(
+      110% 90% at 50% 115%,
+      rgba(215, 246, 81, 0.12),
+      transparent 68%
+    ),
+    rgba(10, 10, 12, 0.28);
+}
+
+.chartSvg {
+  width: 100%;
+}
+
+.chartValue {
+  fill: currentColor;
+  font-family: var(--font-dot);
+  font-size: 10px;
+  opacity: 0.44;
+}
+
+.chartDates {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 0.125rem;
+  color: var(--color-muted);
+  font-size: 0.65rem;
+}
+
+.historyRows {
+  display: flex;
+  flex-direction: column;
+}
+
+.historyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--color-line);
+  padding: 0.75rem 0;
+}
+
+.historyRow:first-child {
+  border-top: 0;
+}
+
+.historyWeight {
+  color: var(--color-text);
+  font-family: var(--font-dot);
+  font-size: 1rem;
+}
+
+.historyWeight span {
+  color: var(--color-muted);
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+}
+
+.historyDate {
+  margin-top: 0.15rem;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 420px) {
+  .headingRow,
+  .formRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .current {
+    text-align: left;
+  }
+
+  .saveButton {
+    width: 100%;
+  }
+}

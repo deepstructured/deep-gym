@@ -1,0 +1,56 @@
+@use "../../../shared/styles/palette" as *;
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.875rem;
+  border: 1px solid $line;
+  border-radius: $radius-card;
+  background: rgba($raised, 0.65);
+  padding: 1rem;
+  text-align: left;
+  transition:
+    border-color $tr,
+    background-color $tr;
+
+  &:active {
+    border-color: rgba($lime, 0.45);
+    background: $raised;
+  }
+}
+
+.icon {
+  @include icon-circle(2.5rem);
+  flex: 0 0 auto;
+  color: $lime;
+}
+
+.text {
+  min-width: 0;
+}
+
+.title,
+.hint {
+  display: block;
+}
+
+.title {
+  font-size: 0.9375rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  color: $text;
+}
+
+.hint {
+  margin-top: 0.125rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: $muted;
+}

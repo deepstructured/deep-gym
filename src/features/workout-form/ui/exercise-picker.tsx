@@ -2,25 +2,21 @@
 
 import { useMemo, useState } from "react";
 import {
-  useCreateExercise,
+  ExerciseCreateForm,
   useExercises,
   type Exercise,
 } from "@/entities/exercise";
 import { useMuscleGroups } from "@/entities/muscle-group";
-import { EQUIPMENT_OPTIONS, type Equipment } from "@/shared/config/workout";
 import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
-import { parseWeight, unitToKg, type Unit } from "@/shared/lib/weight";
+import type { Unit } from "@/shared/lib/weight";
 import {
   Button,
   Chip,
-  ErrorNote,
-  Field,
   IconPlus,
   Input,
   PageLoader,
   Sheet,
-  TextArea,
 } from "@/shared/ui";
 import styles from "./exercise-picker.module.scss";
 
@@ -38,24 +34,12 @@ export function ExercisePicker({
   unit,
 }: ExercisePickerProps) {
   const { t } = useI18n();
-  const { data: groups } = useMuscleGroups();
+  const { data: groups, isLoading: groupsLoading } = useMuscleGroups();
   const { data: exercises, isLoading } = useExercises();
-  const createExercise = useCreateExercise();
 
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-
-  // new exercise form
-  const [name, setName] = useState("");
-  const [groupId, setGroupId] = useState<string | null>(null);
-  const [equipment, setEquipment] = useState<Equipment>("free_weight");
-  const [machineSettings, setMachineSettings] = useState("");
-  const [workingWeight, setWorkingWeight] = useState("");
-  const [unitChoice, setUnitChoice] = useState<"default" | Unit>("default");
-  const [formError, setFormError] = useState<string | null>(null);
-
-  const effectiveUnit: Unit = unitChoice === "default" ? unit : unitChoice;
 
   const groupName = (id: string) =>
     groups?.find((g) => g.id === id)?.name ?? "";
@@ -70,42 +54,6 @@ export function ExercisePicker({
 
   function resetCreateForm() {
     setCreating(false);
-    setName("");
-    setEquipment("free_weight");
-    setMachineSettings("");
-    setWorkingWeight("");
-    setUnitChoice("default");
-    setFormError(null);
-  }
-
-  function handleCreate() {
-    const trimmed = name.trim();
-    const gid = groupId ?? groupFilter ?? groups?.[0]?.id;
-    if (!trimmed) return setFormError(t("picker.errName"));
-    if (!gid) return setFormError(t("picker.errGroup"));
-
-    const weight = parseWeight(workingWeight);
-    createExercise.mutate(
-      {
-        name: trimmed,
-        muscle_group_id: gid,
-        equipment,
-        machine_settings:
-          equipment === "machine" ? machineSettings.trim() || null : null,
-        working_weight_kg:
-          weight != null
-            ? Math.round(unitToKg(weight, effectiveUnit) * 100) / 100
-            : null,
-        unit: unitChoice === "default" ? null : unitChoice,
-      },
-      {
-        onSuccess: (exercise) => {
-          resetCreateForm();
-          onPick(exercise, groupName(exercise.muscle_group_id));
-        },
-        onError: (e) => setFormError((e as Error).message),
-      },
-    );
   }
 
   return (
@@ -119,101 +67,18 @@ export function ExercisePicker({
       className={styles.sheet}
     >
       {creating ? (
-        <div className={styles.stack}>
-          <Field label={t("picker.name")}>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("picker.namePlaceholder")}
-              autoFocus
-            />
-          </Field>
-
-          <Field label={t("picker.muscleGroup")}>
-            <div className={styles.chips}>
-              {groups?.map((group) => (
-                <Chip
-                  key={group.id}
-                  selected={(groupId ?? groupFilter) === group.id}
-                  onClick={() => setGroupId(group.id)}
-                >
-                  {group.name}
-                </Chip>
-              ))}
-            </div>
-          </Field>
-
-          <Field label={t("picker.equipment")}>
-            <div className={styles.chips}>
-              {EQUIPMENT_OPTIONS.map((option) => (
-                <Chip
-                  key={option.value}
-                  selected={equipment === option.value}
-                  onClick={() => setEquipment(option.value)}
-                >
-                  {t(`equipment.${option.value}`)}
-                </Chip>
-              ))}
-            </div>
-          </Field>
-
-          {equipment === "machine" && (
-            <Field label={t("picker.machineSetupOptional")}>
-              <TextArea
-                value={machineSettings}
-                onChange={(e) => setMachineSettings(e.target.value)}
-                placeholder={t("picker.machineSetupPlaceholder")}
-              />
-            </Field>
-          )}
-
-          <Field label={t("picker.unitForExercise")}>
-            <div className={styles.chips}>
-              {(
-                [
-                  { value: "default", label: t("picker.unitDefault", { unit }) },
-                  { value: "kg", label: "kg" },
-                  { value: "lb", label: "lb" },
-                ] as const
-              ).map((option) => (
-                <Chip
-                  key={option.value}
-                  selected={unitChoice === option.value}
-                  onClick={() => setUnitChoice(option.value)}
-                >
-                  {option.label}
-                </Chip>
-              ))}
-            </div>
-          </Field>
-
-          <Field label={t("picker.workingWeight", { unit: effectiveUnit })}>
-            <Input
-              value={workingWeight}
-              onChange={(e) =>
-                setWorkingWeight(e.target.value.replace(/[^\d.,]/g, ""))
-              }
-              placeholder="60"
-              inputMode="decimal"
-            />
-          </Field>
-
-          {formError && <ErrorNote message={formError} />}
-
-          <div className={styles.actions}>
-            <Button variant="surface" grow onClick={resetCreateForm}>
-              {t("common.back")}
-            </Button>
-            <Button
-              variant="lime"
-              grow
-              onClick={handleCreate}
-              loading={createExercise.isPending}
-            >
-              {t("picker.createAdd")}
-            </Button>
-          </div>
-        </div>
+        <ExerciseCreateForm
+          key={groupFilter ?? "all"}
+          groups={groups ?? []}
+          unit={unit}
+          defaultGroupId={groupFilter}
+          submitLabel={t("picker.createAdd")}
+          onCancel={resetCreateForm}
+          onCreated={(exercise, muscleGroupName) => {
+            resetCreateForm();
+            onPick(exercise, muscleGroupName);
+          }}
+        />
       ) : (
         <div className={styles.stack}>
           <Input
@@ -237,7 +102,7 @@ export function ExercisePicker({
             ))}
           </div>
 
-          {isLoading ? (
+          {isLoading || groupsLoading ? (
             <PageLoader />
           ) : (
             <div className={styles.list}>
@@ -274,8 +139,8 @@ export function ExercisePicker({
             variant="surface"
             block
             dashed
+            disabled={groupsLoading || !groups?.length}
             onClick={() => {
-              setGroupId(groupFilter);
               setCreating(true);
             }}
           >

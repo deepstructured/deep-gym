@@ -26,6 +26,14 @@ export function parseWeight(raw: string): number | null {
   return Number.isFinite(value) && value > 0 ? value : null;
 }
 
+/** Parse an optional signed load ("+10", "-15", "0"). */
+export function parseSignedWeight(raw: string): number | null {
+  const normalized = raw.trim().replace(",", ".");
+  if (!normalized || normalized === "+" || normalized === "-") return null;
+  const value = Number(normalized);
+  return Number.isFinite(value) ? value : null;
+}
+
 /** A plate denomination as it exists in the gym: 20 kg plate, 45 lb plate… */
 export interface PlateSpec {
   value: number;

@@ -82,6 +82,19 @@ const en = {
     "Days with a dot have logged workouts — pick one to copy it.",
   "workout.copyPickerEmptyDay": "No workouts on this day.",
   "workout.copyThis": "Copy “{type}” workout",
+  "workout.copyModeTitle": "How would you like to copy it?",
+  "workout.copyModeFull": "Full workout",
+  "workout.copyModeFullHint": "All sets, weights, reps and failure marks",
+  "workout.copyModeWeight": "Exercises + last weight",
+  "workout.copyModeWeightHint":
+    "One empty set per exercise with its last weight",
+  "workout.useTemplate": "Use a template",
+  "workout.useTemplateHint": "Start from a saved workout structure",
+  "workout.templatePickerTitle": "Choose a template",
+  "workout.templateReplaceTitle": "Replace the current draft?",
+  "workout.templateReplaceMessage":
+    "Starting from this template will replace the type, exercises and notes in your current draft.",
+  "workout.templateReplaceConfirm": "Replace draft",
   "workout.save": "Save workout",
   "workout.discard": "Discard draft",
   "workout.delete": "Delete workout",
@@ -89,6 +102,8 @@ const en = {
   "workout.deleteMessage":
     "This removes the workout with all its sets. There is no undo.",
   "workout.notFound": "Workout not found",
+  "workout.staleExerciseMode":
+    "An exercise in this draft changed its load mode or is no longer available. Re-add that exercise and save again.",
 
   // built-in workout types (stored values stay language-neutral)
   "workoutType.upper": "Upper",
@@ -99,6 +114,8 @@ const en = {
 
   // set editor
   "set.weight": "Weight, {unit}",
+  "set.addedLoad": "Added, {unit}",
+  "set.totalLoad": "Total",
   "set.reps": "Reps",
   "set.fail": "Fail",
   "set.addSet": "Add set",
@@ -108,6 +125,7 @@ const en = {
   "exercise.note": "Exercise note",
   "exercise.notePlaceholder": "Note for this exercise…",
   "exercise.remove": "Remove exercise",
+  "exercise.reorder": "Reorder {name}",
 
   // exercise picker
   "picker.title": "Add exercise",
@@ -133,8 +151,54 @@ const en = {
   "exercises.title": "Exercises",
   "exercises.emptyTitle": "No exercises yet",
   "exercises.emptyHint":
-    "Exercises are created while logging a workout — or will show up here after your first one.",
+    "Create an exercise here or while logging a workout.",
   "exercises.working": "Working",
+
+  // workout templates
+  "templates.title": "Templates",
+  "templates.new": "New template",
+  "templates.edit": "Edit template",
+  "templates.emptyTitle": "No templates yet",
+  "templates.emptyHint": "Save reusable workout structures for faster logging.",
+  "templates.name": "Template name",
+  "templates.namePlaceholder": "Monday upper body",
+  "templates.exercises": "Exercises",
+  "templates.emptyExercises": "Add at least one exercise to this template.",
+  "templates.nameRequired": "Name the template",
+  "templates.exercisesRequired": "Add at least one exercise",
+  "templates.create": "Create template",
+  "templates.startWorkout": "Start workout",
+  "templates.delete": "Delete template",
+  "templates.deleteTitle": "Delete template?",
+  "templates.deleteMessage": "This removes the template. There is no undo.",
+  "templates.notFound": "Template not found",
+  "templates.moveUp": "Move {name} up",
+  "templates.moveDown": "Move {name} down",
+  "templates.removeExercise": "Remove {name}",
+
+  // body-weight tracking
+  "bodyWeight.title": "Body weight",
+  "bodyWeight.trackerHint": "Record a measurement at any time.",
+  "bodyWeight.current": "Current",
+  "bodyWeight.inputLabel": "Weight, {unit}",
+  "bodyWeight.record": "Record",
+  "bodyWeight.measuredAt": "Measured at",
+  "bodyWeight.saved": "Weight recorded",
+  "bodyWeight.invalid": "Enter a body weight greater than zero",
+  "bodyWeight.invalidTimestamp": "Choose a valid date and time",
+  "bodyWeight.invalidAddedLoad": "Enter a valid added or assisted load",
+  "bodyWeight.requiredForAddedLoad":
+    "Record your body weight before adding or subtracting load",
+  "bodyWeight.invalidTotalLoad": "Total load must be greater than zero",
+  "bodyWeight.historyTitle": "Weight history",
+  "bodyWeight.entryCount": "{count} entries",
+  "bodyWeight.historyEmpty": "No measurements yet",
+  "bodyWeight.historyEmptyHint":
+    "Your weight trend will appear after the first entry.",
+  "bodyWeight.source.settings": "Profile",
+  "bodyWeight.source.workout": "Workout",
+  "bodyWeight.chartAria":
+    "Body weight changed from {from} to {to} {unit}",
 
   // exercise detail
   "detail.title": "Exercise",
@@ -144,9 +208,12 @@ const en = {
   "detail.sessions": "Sessions",
   "detail.totalSets": "Total sets",
   "detail.bestWeight": "Best weight",
+  "detail.bestAddedLoad": "Best added load",
   "detail.est1rm": "Est. 1RM",
   "detail.topSet": "Top set over time",
+  "detail.addedLoadProgress": "Added load over time",
   "detail.repsByWeight": "Reps by weight",
+  "detail.repsByAddedLoad": "Reps by added load",
   "detail.weight": "Weight",
   "detail.sets": "Sets",
   "detail.avg": "Avg",
@@ -162,10 +229,12 @@ const en = {
   "detail.inUnit": "in {unit}",
   "detail.nameEmpty": "Name can't be empty",
   "detail.machineSetup": "Machine setup",
+  "detail.bodyweightModeLocked":
+    "Bodyweight mode cannot be switched after the exercise has been used in a saved workout, because it changes how load is interpreted.",
   "detail.deleteExercise": "Delete exercise",
   "detail.deleteTitle": "Delete exercise?",
   "detail.deleteMessage":
-    "This also removes it from every logged workout. There is no undo.",
+    "This also removes it from every logged workout and workout template. There is no undo.",
 
   // compare with a past session
   "compare.title": "Compare",
@@ -271,18 +340,18 @@ const en = {
   "onboarding.eligibilityError":
     "We couldn't check your workout history. Check your connection and try again.",
   "onboarding.welcome.eyebrow": "WELCOME TO DEEPGYM",
-  "onboarding.welcome.title": "Your training, finally in one place.",
+  "onboarding.welcome.title": "Every workout, ready when you are.",
   "onboarding.welcome.body":
-    "Five short steps will tailor the app and show you the parts that matter during a real workout.",
-  "onboarding.welcome.log.title": "Log without friction",
+    "Five short steps will tailor DeepGym and show you the fastest way to start, log and repeat a session.",
+  "onboarding.welcome.log.title": "Build workouts your way",
   "onboarding.welcome.log.body":
-    "Save exercises, sets, reps, weight and failure in one flow.",
-  "onboarding.welcome.remember.title": "Remember every setup",
+    "Add exercises, drag them into order and log every set in one flow.",
+  "onboarding.welcome.remember.title": "Remember your routines",
   "onboarding.welcome.remember.body":
-    "Keep machine positions, working weights and plate combinations close.",
-  "onboarding.welcome.progress.title": "See actual progress",
+    "Templates keep your exercise order and setup ready for the next session.",
+  "onboarding.welcome.progress.title": "Track the full picture",
   "onboarding.welcome.progress.body":
-    "History, comparisons and charts turn every session into useful context.",
+    "Follow body weight over time alongside reps, load and workout progress.",
   "onboarding.welcome.start": "Set up my app",
   "onboarding.profile.eyebrow": "MAKE IT YOURS",
   "onboarding.profile.title": "How should DeepGym work for you?",
@@ -315,21 +384,21 @@ const en = {
   "onboarding.schedule.required":
     "Choose a schedule or confirm that your week is flexible.",
   "onboarding.tour.eyebrow": "YOU'RE READY",
-  "onboarding.tour.title": "One flow from set one to progress.",
+  "onboarding.tour.title": "From a template to a finished workout.",
   "onboarding.tour.body":
-    "Here's where each part of the app becomes useful after you start training.",
-  "onboarding.tour.workout.title": "Workout",
+    "DeepGym keeps repeat sessions quick without hiding the details that matter.",
+  "onboarding.tour.workout.title": "Flexible workout builder",
   "onboarding.tour.workout.body":
-    "Choose a type, add exercises and log every set. Your draft survives an app close.",
-  "onboarding.tour.equipment.title": "Equipment memory",
+    "Add sets as you train and drag exercises into the order you want. Your draft survives an app close.",
+  "onboarding.tour.equipment.title": "Templates & exercise library",
   "onboarding.tour.equipment.body":
-    "Plate breakdowns and machine notes stay attached to the exercise.",
-  "onboarding.tour.history.title": "History & planning",
+    "Create exercises anytime, save reusable routines and start a workout from any template.",
+  "onboarding.tour.history.title": "Copy & repeat",
   "onboarding.tour.history.body":
-    "See completed days beside planned workouts from your training week.",
-  "onboarding.tour.progress.title": "Progress",
+    "Copy a complete past session, or start clean with one blank set and its last recorded weight.",
+  "onboarding.tour.progress.title": "Body weight & progress",
   "onboarding.tour.progress.body":
-    "Compare sessions and follow weight, volume, reps and estimated 1RM.",
+    "Log body weight anytime, see its history, and track added weight or assistance in body-weight exercises.",
   "onboarding.startFirstWorkout": "Start my first workout",
   "onboarding.startWorkout": "Start workout",
   "onboarding.continueToApp": "Continue to app",
@@ -353,18 +422,18 @@ const en = {
   // release notes
   "whatsNew.title": "What's new",
   "whatsNew.version": "Version {version}",
-  "whatsNew.releaseTitle": "Your draft now follows you.",
+  "whatsNew.releaseTitle": "Start faster. Track more.",
   "whatsNew.releaseBody":
-    "This release syncs the workout you're filling in across your devices and makes copying past sessions precise.",
-  "whatsNew.draftSync.title": "Cloud-synced drafts",
-  "whatsNew.draftSync.body":
-    "Start logging on your laptop, finish on your phone — the unsaved draft now lives in your account.",
-  "whatsNew.copyLast.title": "Smarter “copy last”",
-  "whatsNew.copyLast.body":
-    "Repeat one workout type several times a week? The suggestion now matches the weekday — a Sunday draft offers last Sunday's session.",
-  "whatsNew.copyPicker.title": "Copy any past workout",
-  "whatsNew.copyPicker.body":
-    "Open the calendar in the new-workout form and copy the exact session you want.",
+    "Templates, body-weight history and a faster workout builder make every session easier to repeat and adjust.",
+  "whatsNew.templates.title": "Templates & exercise library",
+  "whatsNew.templates.body":
+    "Create and edit reusable workout templates, start a session from one, and add exercises directly from the Exercises tab.",
+  "whatsNew.bodyweight.title": "Body weight, tracked properly",
+  "whatsNew.bodyweight.body":
+    "Log body-weight history and record body-weight exercises as your weight plus added load—or minus assistance.",
+  "whatsNew.workoutFlow.title": "A faster workout flow",
+  "whatsNew.workoutFlow.body":
+    "Drag exercises into order, then copy either every set from a past workout or one blank set with its last recorded weight.",
   "whatsNew.gotIt": "Got it",
   "whatsNew.saveError":
     "We couldn't save that you've seen this update. Try again.",
@@ -393,6 +462,7 @@ const en = {
   "equipment.dumbbell": "Dumbbell",
   "equipment.machine": "Machine",
   "equipment.crossover": "Crossover",
+  "equipment.bodyweight": "Bodyweight",
 
   // share workout
   "share.workout": "Share workout",
@@ -401,6 +471,7 @@ const en = {
 
   // analytics
   "stats.weight": "Weight",
+  "stats.addedLoad": "Added load",
   "stats.oneRm": "1RM",
   "stats.volume": "Volume",
   "stats.reps": "Reps",
@@ -484,6 +555,20 @@ const ru: Record<MessageKey, string> = {
     "Дни с точкой — записанные тренировки. Выберите день, чтобы скопировать.",
   "workout.copyPickerEmptyDay": "В этот день тренировок нет.",
   "workout.copyThis": "Скопировать «{type}»",
+  "workout.copyModeTitle": "Как скопировать тренировку?",
+  "workout.copyModeFull": "Всю тренировку",
+  "workout.copyModeFullHint":
+    "Все подходы, веса, повторы и отметки отказа",
+  "workout.copyModeWeight": "Упражнения + последний вес",
+  "workout.copyModeWeightHint":
+    "Один пустой подход на упражнение с последним весом",
+  "workout.useTemplate": "Применить шаблон",
+  "workout.useTemplateHint": "Начать с сохранённой структуры тренировки",
+  "workout.templatePickerTitle": "Выберите шаблон",
+  "workout.templateReplaceTitle": "Заменить текущий черновик?",
+  "workout.templateReplaceMessage":
+    "Запуск из шаблона заменит тип, упражнения и заметки в текущем черновике.",
+  "workout.templateReplaceConfirm": "Заменить черновик",
   "workout.save": "Сохранить тренировку",
   "workout.discard": "Удалить черновик",
   "workout.delete": "Удалить тренировку",
@@ -491,6 +576,8 @@ const ru: Record<MessageKey, string> = {
   "workout.deleteMessage":
     "Тренировка и все её подходы будут удалены. Отменить нельзя.",
   "workout.notFound": "Тренировка не найдена",
+  "workout.staleExerciseMode":
+    "Упражнение из черновика сменило режим нагрузки или больше недоступно. Добавьте его заново и повторите сохранение.",
 
   "workoutType.upper": "Верх тела",
   "workoutType.lower": "Низ тела",
@@ -499,6 +586,8 @@ const ru: Record<MessageKey, string> = {
   "workoutType.pull": "Тяга",
 
   "set.weight": "Вес, {unit}",
+  "set.addedLoad": "Доп., {unit}",
+  "set.totalLoad": "Итого",
   "set.reps": "Повт",
   "set.fail": "Отказ",
   "set.addSet": "Добавить подход",
@@ -508,6 +597,7 @@ const ru: Record<MessageKey, string> = {
   "exercise.note": "Заметка к упражнению",
   "exercise.notePlaceholder": "Заметка к этому упражнению…",
   "exercise.remove": "Убрать упражнение",
+  "exercise.reorder": "Изменить порядок: {name}",
 
   "picker.title": "Добавить упражнение",
   "picker.newTitle": "Новое упражнение",
@@ -531,8 +621,54 @@ const ru: Record<MessageKey, string> = {
   "exercises.title": "Упражнения",
   "exercises.emptyTitle": "Упражнений пока нет",
   "exercises.emptyHint":
-    "Упражнения создаются при записи тренировки — они появятся здесь после первой.",
+    "Создайте упражнение здесь или при записи тренировки.",
   "exercises.working": "Рабочий",
+
+  "templates.title": "Шаблоны",
+  "templates.new": "Новый шаблон",
+  "templates.edit": "Редактировать шаблон",
+  "templates.emptyTitle": "Шаблонов пока нет",
+  "templates.emptyHint":
+    "Сохраняйте структуру тренировок, чтобы быстрее начинать запись.",
+  "templates.name": "Название шаблона",
+  "templates.namePlaceholder": "Верх тела в понедельник",
+  "templates.exercises": "Упражнения",
+  "templates.emptyExercises": "Добавьте в шаблон хотя бы одно упражнение.",
+  "templates.nameRequired": "Укажите название шаблона",
+  "templates.exercisesRequired": "Добавьте хотя бы одно упражнение",
+  "templates.create": "Создать шаблон",
+  "templates.startWorkout": "Начать тренировку",
+  "templates.delete": "Удалить шаблон",
+  "templates.deleteTitle": "Удалить шаблон?",
+  "templates.deleteMessage": "Шаблон будет удалён. Отменить нельзя.",
+  "templates.notFound": "Шаблон не найден",
+  "templates.moveUp": "Поднять {name}",
+  "templates.moveDown": "Опустить {name}",
+  "templates.removeExercise": "Убрать {name}",
+
+  "bodyWeight.title": "Вес тела",
+  "bodyWeight.trackerHint": "Записывайте измерение в любой момент.",
+  "bodyWeight.current": "Текущий",
+  "bodyWeight.inputLabel": "Вес, {unit}",
+  "bodyWeight.record": "Записать",
+  "bodyWeight.measuredAt": "Дата и время измерения",
+  "bodyWeight.saved": "Вес записан",
+  "bodyWeight.invalid": "Укажите вес тела больше нуля",
+  "bodyWeight.invalidTimestamp": "Укажите корректные дату и время",
+  "bodyWeight.invalidAddedLoad":
+    "Укажите корректную добавленную или ассистирующую нагрузку",
+  "bodyWeight.requiredForAddedLoad":
+    "Запишите вес тела перед добавлением или вычитанием нагрузки",
+  "bodyWeight.invalidTotalLoad": "Итоговая нагрузка должна быть больше нуля",
+  "bodyWeight.historyTitle": "История веса",
+  "bodyWeight.entryCount": "Записей: {count}",
+  "bodyWeight.historyEmpty": "Измерений пока нет",
+  "bodyWeight.historyEmptyHint":
+    "Динамика веса появится после первой записи.",
+  "bodyWeight.source.settings": "Профиль",
+  "bodyWeight.source.workout": "Тренировка",
+  "bodyWeight.chartAria":
+    "Вес тела изменился с {from} до {to} {unit}",
 
   "detail.title": "Упражнение",
   "detail.editExercise": "Редактировать упражнение",
@@ -541,9 +677,12 @@ const ru: Record<MessageKey, string> = {
   "detail.sessions": "Сессии",
   "detail.totalSets": "Подходы",
   "detail.bestWeight": "Лучший вес",
+  "detail.bestAddedLoad": "Лучшая доп. нагрузка",
   "detail.est1rm": "Оцен. 1ПМ",
   "detail.topSet": "Лучший подход в динамике",
+  "detail.addedLoadProgress": "Доп. нагрузка в динамике",
   "detail.repsByWeight": "Повторы по весу",
+  "detail.repsByAddedLoad": "Повторы по доп. нагрузке",
   "detail.weight": "Вес",
   "detail.sets": "Подх",
   "detail.avg": "Сред",
@@ -559,10 +698,12 @@ const ru: Record<MessageKey, string> = {
   "detail.inUnit": "в {unit}",
   "detail.nameEmpty": "Название не может быть пустым",
   "detail.machineSetup": "Настройки тренажёра",
+  "detail.bodyweightModeLocked":
+    "Режим собственного веса нельзя менять после использования упражнения в сохранённой тренировке: это изменит смысл нагрузки.",
   "detail.deleteExercise": "Удалить упражнение",
   "detail.deleteTitle": "Удалить упражнение?",
   "detail.deleteMessage":
-    "Оно также исчезнет из всех записанных тренировок. Отменить нельзя.",
+    "Оно также исчезнет из всех записанных тренировок и шаблонов. Отменить нельзя.",
 
   "compare.title": "Сравнение",
   "compare.aria": "Сравнить с прошлым результатом",
@@ -664,18 +805,18 @@ const ru: Record<MessageKey, string> = {
   "onboarding.eligibilityError":
     "Не удалось проверить историю тренировок. Проверьте подключение и попробуйте ещё раз.",
   "onboarding.welcome.eyebrow": "ДОБРО ПОЖАЛОВАТЬ В DEEPGYM",
-  "onboarding.welcome.title": "Все тренировки — наконец в одном месте.",
+  "onboarding.welcome.title": "Каждая тренировка — под рукой в нужный момент.",
   "onboarding.welcome.body":
-    "Пять коротких шагов настроят приложение и покажут главное для реальной тренировки.",
-  "onboarding.welcome.log.title": "Записывайте без лишних действий",
+    "Пять коротких шагов настроят DeepGym и покажут, как быстрее начинать, записывать и повторять тренировки.",
+  "onboarding.welcome.log.title": "Собирайте тренировку под себя",
   "onboarding.welcome.log.body":
-    "Упражнения, подходы, повторения, вес и отказ — в одном сценарии.",
-  "onboarding.welcome.remember.title": "Не держите настройки в голове",
+    "Добавляйте упражнения, меняйте их порядок перетягиванием и записывайте все подходы в одном сценарии.",
+  "onboarding.welcome.remember.title": "Сохраняйте свои программы",
   "onboarding.welcome.remember.body":
-    "Положения тренажёров, рабочие веса и комбинации блинов всегда под рукой.",
-  "onboarding.welcome.progress.title": "Видите настоящий прогресс",
+    "Шаблоны запоминают порядок упражнений и готовят основу для следующей сессии.",
+  "onboarding.welcome.progress.title": "Следите за полной картиной",
   "onboarding.welcome.progress.body":
-    "История, сравнения и графики превращают каждую тренировку в полезные данные.",
+    "Отслеживайте вес тела вместе с повторами, нагрузкой и прогрессом тренировок.",
   "onboarding.welcome.start": "Настроить приложение",
   "onboarding.profile.eyebrow": "СДЕЛАЙТЕ ЕГО СВОИМ",
   "onboarding.profile.title": "Как DeepGym должен работать для вас?",
@@ -708,21 +849,21 @@ const ru: Record<MessageKey, string> = {
   "onboarding.schedule.required":
     "Выберите расписание или подтвердите гибкую неделю.",
   "onboarding.tour.eyebrow": "ВСЁ ГОТОВО",
-  "onboarding.tour.title": "Один путь — от первого подхода до прогресса.",
+  "onboarding.tour.title": "От шаблона до готовой тренировки.",
   "onboarding.tour.body":
-    "Вот где каждый раздел приложения становится полезным после начала тренировок.",
-  "onboarding.tour.workout.title": "Тренировка",
+    "DeepGym ускоряет повторные сессии, сохраняя важные детали.",
+  "onboarding.tour.workout.title": "Гибкая форма тренировки",
   "onboarding.tour.workout.body":
-    "Выберите тип, добавьте упражнения и подходы. Черновик сохранится даже после закрытия приложения.",
-  "onboarding.tour.equipment.title": "Память оборудования",
+    "Добавляйте подходы по ходу занятия и перетягивайте упражнения в нужный порядок. Черновик сохранится после закрытия приложения.",
+  "onboarding.tour.equipment.title": "Шаблоны и библиотека упражнений",
   "onboarding.tour.equipment.body":
-    "Расчёт блинов и настройки тренажёров остаются привязаны к упражнению.",
-  "onboarding.tour.history.title": "История и план",
+    "Создавайте упражнения в любой момент, сохраняйте программы и начинайте тренировку из любого шаблона.",
+  "onboarding.tour.history.title": "Копируйте и повторяйте",
   "onboarding.tour.history.body":
-    "Смотрите выполненные дни рядом с запланированными тренировками недели.",
-  "onboarding.tour.progress.title": "Прогресс",
+    "Перенесите всю прошлую сессию или начните с одного пустого подхода и последнего указанного веса.",
+  "onboarding.tour.progress.title": "Вес тела и прогресс",
   "onboarding.tour.progress.body":
-    "Сравнивайте сессии и следите за весом, объёмом, повторами и расчётным 1ПМ.",
+    "Записывайте вес тела в любой момент, смотрите историю и учитывайте дополнительный вес или ассистирование в упражнениях с собственным весом.",
   "onboarding.startFirstWorkout": "Начать первую тренировку",
   "onboarding.startWorkout": "Начать тренировку",
   "onboarding.continueToApp": "Перейти в приложение",
@@ -745,18 +886,18 @@ const ru: Record<MessageKey, string> = {
 
   "whatsNew.title": "Что нового",
   "whatsNew.version": "Версия {version}",
-  "whatsNew.releaseTitle": "Черновик теперь всегда с вами.",
+  "whatsNew.releaseTitle": "Быстрее начинайте. Точнее отслеживайте.",
   "whatsNew.releaseBody":
-    "Обновление синхронизирует заполняемую тренировку между устройствами и делает копирование прошлых сессий точнее.",
-  "whatsNew.draftSync.title": "Черновик в облаке",
-  "whatsNew.draftSync.body":
-    "Начните заполнять на ноутбуке, закончите с телефона — несохранённый черновик привязан к аккаунту.",
-  "whatsNew.copyLast.title": "Умнее «скопировать прошлую»",
-  "whatsNew.copyLast.body":
-    "Тренируете один тип несколько раз в неделю? Подсказка теперь учитывает день недели: в воскресенье — прошлое воскресенье.",
-  "whatsNew.copyPicker.title": "Копия любой тренировки",
-  "whatsNew.copyPicker.body":
-    "Откройте календарь в форме новой тренировки и скопируйте именно ту сессию, которая нужна.",
+    "Шаблоны, история веса тела и более удобная форма помогают быстрее повторять и настраивать тренировки.",
+  "whatsNew.templates.title": "Шаблоны и библиотека упражнений",
+  "whatsNew.templates.body":
+    "Создавайте и редактируйте шаблоны, начинайте тренировку на их основе и добавляйте упражнения прямо во вкладке «Упражнения».",
+  "whatsNew.bodyweight.title": "Собственный вес под контролем",
+  "whatsNew.bodyweight.body":
+    "Ведите историю веса тела, а в упражнениях с собственным весом фиксируйте нагрузку со знаком: плюс — дополнительный вес, минус — ассистирование.",
+  "whatsNew.workoutFlow.title": "Удобнее собирать тренировку",
+  "whatsNew.workoutFlow.body":
+    "Меняйте порядок упражнений перетягиванием и копируйте либо все подходы прошлой сессии, либо один пустой подход с последним указанным весом.",
   "whatsNew.gotIt": "Понятно",
   "whatsNew.saveError":
     "Не удалось сохранить отметку о просмотре обновления. Попробуйте ещё раз.",
@@ -782,12 +923,14 @@ const ru: Record<MessageKey, string> = {
   "equipment.dumbbell": "Гантель",
   "equipment.machine": "Тренажёр",
   "equipment.crossover": "Кроссовер",
+  "equipment.bodyweight": "Свой вес",
 
   "share.workout": "Поделиться тренировкой",
   "share.share": "Поделиться",
   "share.download": "Скачать картинку",
 
   "stats.weight": "Вес",
+  "stats.addedLoad": "Доп. нагрузка",
   "stats.oneRm": "1ПМ",
   "stats.volume": "Объём",
   "stats.reps": "Повторы",
@@ -869,6 +1012,20 @@ const uk: Record<MessageKey, string> = {
     "Дні з крапкою — записані тренування. Оберіть день, щоб скопіювати.",
   "workout.copyPickerEmptyDay": "Цього дня тренувань немає.",
   "workout.copyThis": "Скопіювати «{type}»",
+  "workout.copyModeTitle": "Як скопіювати тренування?",
+  "workout.copyModeFull": "Усе тренування",
+  "workout.copyModeFullHint":
+    "Усі підходи, ваги, повтори та позначки відмови",
+  "workout.copyModeWeight": "Вправи + остання вага",
+  "workout.copyModeWeightHint":
+    "Один порожній підхід на вправу з останньою вагою",
+  "workout.useTemplate": "Застосувати шаблон",
+  "workout.useTemplateHint": "Почати зі збереженої структури тренування",
+  "workout.templatePickerTitle": "Оберіть шаблон",
+  "workout.templateReplaceTitle": "Замінити поточну чернетку?",
+  "workout.templateReplaceMessage":
+    "Запуск із шаблону замінить тип, вправи й нотатки в поточній чернетці.",
+  "workout.templateReplaceConfirm": "Замінити чернетку",
   "workout.save": "Зберегти тренування",
   "workout.discard": "Видалити чернетку",
   "workout.delete": "Видалити тренування",
@@ -876,6 +1033,8 @@ const uk: Record<MessageKey, string> = {
   "workout.deleteMessage":
     "Тренування та всі його підходи буде видалено. Скасувати не можна.",
   "workout.notFound": "Тренування не знайдено",
+  "workout.staleExerciseMode":
+    "Вправа з чернетки змінила режим навантаження або більше недоступна. Додайте її заново й повторіть збереження.",
 
   "workoutType.upper": "Верх тіла",
   "workoutType.lower": "Низ тіла",
@@ -884,6 +1043,8 @@ const uk: Record<MessageKey, string> = {
   "workoutType.pull": "Тяга",
 
   "set.weight": "Вага, {unit}",
+  "set.addedLoad": "Дод., {unit}",
+  "set.totalLoad": "Разом",
   "set.reps": "Повт",
   "set.fail": "Відмова",
   "set.addSet": "Додати підхід",
@@ -893,6 +1054,7 @@ const uk: Record<MessageKey, string> = {
   "exercise.note": "Нотатка до вправи",
   "exercise.notePlaceholder": "Нотатка до цієї вправи…",
   "exercise.remove": "Прибрати вправу",
+  "exercise.reorder": "Змінити порядок: {name}",
 
   "picker.title": "Додати вправу",
   "picker.newTitle": "Нова вправа",
@@ -916,8 +1078,55 @@ const uk: Record<MessageKey, string> = {
   "exercises.title": "Вправи",
   "exercises.emptyTitle": "Вправ поки немає",
   "exercises.emptyHint":
-    "Вправи створюються під час запису тренування — вони з'являться тут після першого.",
+    "Створіть вправу тут або під час запису тренування.",
   "exercises.working": "Робоча",
+
+  "templates.title": "Шаблони",
+  "templates.new": "Новий шаблон",
+  "templates.edit": "Редагувати шаблон",
+  "templates.emptyTitle": "Шаблонів поки немає",
+  "templates.emptyHint":
+    "Зберігайте структуру тренувань, щоб швидше починати запис.",
+  "templates.name": "Назва шаблону",
+  "templates.namePlaceholder": "Верх тіла в понеділок",
+  "templates.exercises": "Вправи",
+  "templates.emptyExercises": "Додайте до шаблону хоча б одну вправу.",
+  "templates.nameRequired": "Вкажіть назву шаблону",
+  "templates.exercisesRequired": "Додайте хоча б одну вправу",
+  "templates.create": "Створити шаблон",
+  "templates.startWorkout": "Почати тренування",
+  "templates.delete": "Видалити шаблон",
+  "templates.deleteTitle": "Видалити шаблон?",
+  "templates.deleteMessage": "Шаблон буде видалено. Скасувати не можна.",
+  "templates.notFound": "Шаблон не знайдено",
+  "templates.moveUp": "Підняти {name}",
+  "templates.moveDown": "Опустити {name}",
+  "templates.removeExercise": "Прибрати {name}",
+
+  "bodyWeight.title": "Вага тіла",
+  "bodyWeight.trackerHint": "Записуйте вимірювання в будь-який момент.",
+  "bodyWeight.current": "Поточна",
+  "bodyWeight.inputLabel": "Вага, {unit}",
+  "bodyWeight.record": "Записати",
+  "bodyWeight.measuredAt": "Дата й час вимірювання",
+  "bodyWeight.saved": "Вагу записано",
+  "bodyWeight.invalid": "Вкажіть вагу тіла більше нуля",
+  "bodyWeight.invalidTimestamp": "Вкажіть коректні дату й час",
+  "bodyWeight.invalidAddedLoad":
+    "Вкажіть коректне додаткове або асистуюче навантаження",
+  "bodyWeight.requiredForAddedLoad":
+    "Запишіть вагу тіла перед додаванням або відніманням навантаження",
+  "bodyWeight.invalidTotalLoad":
+    "Підсумкове навантаження має бути більше нуля",
+  "bodyWeight.historyTitle": "Історія ваги",
+  "bodyWeight.entryCount": "Записів: {count}",
+  "bodyWeight.historyEmpty": "Вимірювань поки немає",
+  "bodyWeight.historyEmptyHint":
+    "Динаміка ваги з’явиться після першого запису.",
+  "bodyWeight.source.settings": "Профіль",
+  "bodyWeight.source.workout": "Тренування",
+  "bodyWeight.chartAria":
+    "Вага тіла змінилася з {from} до {to} {unit}",
 
   "detail.title": "Вправа",
   "detail.editExercise": "Редагувати вправу",
@@ -926,9 +1135,12 @@ const uk: Record<MessageKey, string> = {
   "detail.sessions": "Сесії",
   "detail.totalSets": "Підходи",
   "detail.bestWeight": "Найкраща вага",
+  "detail.bestAddedLoad": "Найкраще дод. навантаження",
   "detail.est1rm": "Оцін. 1ПМ",
   "detail.topSet": "Найкращий підхід у динаміці",
+  "detail.addedLoadProgress": "Дод. навантаження в динаміці",
   "detail.repsByWeight": "Повтори за вагою",
+  "detail.repsByAddedLoad": "Повтори за дод. навантаженням",
   "detail.weight": "Вага",
   "detail.sets": "Підх",
   "detail.avg": "Сер",
@@ -944,10 +1156,12 @@ const uk: Record<MessageKey, string> = {
   "detail.inUnit": "в {unit}",
   "detail.nameEmpty": "Назва не може бути порожньою",
   "detail.machineSetup": "Налаштування тренажера",
+  "detail.bodyweightModeLocked":
+    "Режим власної ваги не можна змінювати після використання вправи у збереженому тренуванні: це змінить зміст навантаження.",
   "detail.deleteExercise": "Видалити вправу",
   "detail.deleteTitle": "Видалити вправу?",
   "detail.deleteMessage":
-    "Вона також зникне з усіх записаних тренувань. Скасувати не можна.",
+    "Вона також зникне з усіх записаних тренувань і шаблонів. Скасувати не можна.",
 
   "compare.title": "Порівняння",
   "compare.aria": "Порівняти з минулим результатом",
@@ -1049,19 +1263,18 @@ const uk: Record<MessageKey, string> = {
   "onboarding.eligibilityError":
     "Не вдалося перевірити історію тренувань. Перевірте з'єднання та спробуйте ще раз.",
   "onboarding.welcome.eyebrow": "ЛАСКАВО ПРОСИМО ДО DEEPGYM",
-  "onboarding.welcome.title": "Усі тренування — нарешті в одному місці.",
+  "onboarding.welcome.title": "Кожне тренування — під рукою в потрібний момент.",
   "onboarding.welcome.body":
-    "П'ять коротких кроків налаштують застосунок і покажуть головне для справжнього тренування.",
-  "onboarding.welcome.log.title": "Записуйте без зайвих дій",
+    "П'ять коротких кроків налаштують DeepGym і покажуть, як швидше починати, записувати та повторювати тренування.",
+  "onboarding.welcome.log.title": "Складайте тренування під себе",
   "onboarding.welcome.log.body":
-    "Вправи, підходи, повтори, вага й відмова — в одному сценарії.",
-  "onboarding.welcome.remember.title":
-    "Не тримайте налаштування в голові",
+    "Додавайте вправи, змінюйте їхній порядок перетягуванням і записуйте всі підходи в одному сценарії.",
+  "onboarding.welcome.remember.title": "Зберігайте свої програми",
   "onboarding.welcome.remember.body":
-    "Положення тренажерів, робочі ваги й комбінації млинців завжди поруч.",
-  "onboarding.welcome.progress.title": "Бачите справжній прогрес",
+    "Шаблони запам'ятовують порядок вправ і готують основу для наступної сесії.",
+  "onboarding.welcome.progress.title": "Стежте за повною картиною",
   "onboarding.welcome.progress.body":
-    "Історія, порівняння та графіки перетворюють кожне тренування на корисні дані.",
+    "Відстежуйте вагу тіла разом із повторами, навантаженням і прогресом тренувань.",
   "onboarding.welcome.start": "Налаштувати застосунок",
   "onboarding.profile.eyebrow": "ЗРОБІТЬ ЙОГО СВОЇМ",
   "onboarding.profile.title": "Як DeepGym має працювати для вас?",
@@ -1094,21 +1307,21 @@ const uk: Record<MessageKey, string> = {
   "onboarding.schedule.required":
     "Оберіть розклад або підтвердьте гнучкий тиждень.",
   "onboarding.tour.eyebrow": "УСЕ ГОТОВО",
-  "onboarding.tour.title": "Один шлях — від першого підходу до прогресу.",
+  "onboarding.tour.title": "Від шаблону до завершеного тренування.",
   "onboarding.tour.body":
-    "Ось де кожен розділ застосунку стає корисним після початку тренувань.",
-  "onboarding.tour.workout.title": "Тренування",
+    "DeepGym пришвидшує повторні сесії, зберігаючи важливі деталі.",
+  "onboarding.tour.workout.title": "Гнучка форма тренування",
   "onboarding.tour.workout.body":
-    "Оберіть тип, додайте вправи й підходи. Чернетка збережеться навіть після закриття застосунку.",
-  "onboarding.tour.equipment.title": "Пам'ять обладнання",
+    "Додавайте підходи під час заняття й перетягуйте вправи в потрібний порядок. Чернетка збережеться після закриття застосунку.",
+  "onboarding.tour.equipment.title": "Шаблони та бібліотека вправ",
   "onboarding.tour.equipment.body":
-    "Розрахунок млинців і налаштування тренажерів залишаються прив'язаними до вправи.",
-  "onboarding.tour.history.title": "Історія та план",
+    "Створюйте вправи будь-коли, зберігайте програми та починайте тренування з будь-якого шаблону.",
+  "onboarding.tour.history.title": "Копіюйте та повторюйте",
   "onboarding.tour.history.body":
-    "Дивіться виконані дні поруч із запланованими тренуваннями тижня.",
-  "onboarding.tour.progress.title": "Прогрес",
+    "Перенесіть усю минулу сесію або почніть з одного порожнього підходу й останньої вказаної ваги.",
+  "onboarding.tour.progress.title": "Вага тіла та прогрес",
   "onboarding.tour.progress.body":
-    "Порівнюйте сесії та стежте за вагою, обсягом, повторами й розрахунковим 1ПМ.",
+    "Записуйте вагу тіла будь-коли, переглядайте історію та враховуйте додаткову вагу або асистування у вправах із власною вагою.",
   "onboarding.startFirstWorkout": "Почати перше тренування",
   "onboarding.startWorkout": "Почати тренування",
   "onboarding.continueToApp": "Перейти до застосунку",
@@ -1131,18 +1344,18 @@ const uk: Record<MessageKey, string> = {
 
   "whatsNew.title": "Що нового",
   "whatsNew.version": "Версія {version}",
-  "whatsNew.releaseTitle": "Чернетка тепер завжди з вами.",
+  "whatsNew.releaseTitle": "Швидше починайте. Точніше відстежуйте.",
   "whatsNew.releaseBody":
-    "Оновлення синхронізує тренування, що заповнюється, між пристроями й робить копіювання минулих сесій точнішим.",
-  "whatsNew.draftSync.title": "Чернетка в хмарі",
-  "whatsNew.draftSync.body":
-    "Почніть заповнювати на ноутбуці, закінчіть із телефона — незбережена чернетка прив'язана до акаунта.",
-  "whatsNew.copyLast.title": "Розумніше «скопіювати минуле»",
-  "whatsNew.copyLast.body":
-    "Тренуєте один тип кілька разів на тиждень? Підказка тепер враховує день тижня: у неділю — минула неділя.",
-  "whatsNew.copyPicker.title": "Копія будь-якого тренування",
-  "whatsNew.copyPicker.body":
-    "Відкрийте календар у формі нового тренування та скопіюйте саме ту сесію, яка потрібна.",
+    "Шаблони, історія ваги тіла й зручніша форма допомагають швидше повторювати та налаштовувати тренування.",
+  "whatsNew.templates.title": "Шаблони та бібліотека вправ",
+  "whatsNew.templates.body":
+    "Створюйте й редагуйте шаблони, починайте тренування на їх основі та додавайте вправи прямо у вкладці «Вправи».",
+  "whatsNew.bodyweight.title": "Власна вага під контролем",
+  "whatsNew.bodyweight.body":
+    "Ведіть історію ваги тіла, а у вправах із власною вагою фіксуйте навантаження зі знаком: плюс — додаткова вага, мінус — асистування.",
+  "whatsNew.workoutFlow.title": "Зручніше складати тренування",
+  "whatsNew.workoutFlow.body":
+    "Змінюйте порядок вправ перетягуванням і копіюйте або всі підходи минулої сесії, або один порожній підхід з останньою вказаною вагою.",
   "whatsNew.gotIt": "Зрозуміло",
   "whatsNew.saveError":
     "Не вдалося зберегти позначку про перегляд оновлення. Спробуйте ще раз.",
@@ -1168,12 +1381,14 @@ const uk: Record<MessageKey, string> = {
   "equipment.dumbbell": "Гантель",
   "equipment.machine": "Тренажер",
   "equipment.crossover": "Кросовер",
+  "equipment.bodyweight": "Власна вага",
 
   "share.workout": "Поділитися тренуванням",
   "share.share": "Поділитися",
   "share.download": "Завантажити зображення",
 
   "stats.weight": "Вага",
+  "stats.addedLoad": "Дод. навантаження",
   "stats.oneRm": "1ПМ",
   "stats.volume": "Обсяг",
   "stats.reps": "Повтори",

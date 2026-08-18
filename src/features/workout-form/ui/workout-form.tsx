@@ -1,6 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { useState, type CSSProperties } from "react";
 import type { Exercise } from "@/entities/exercise";
 import { useMuscleGroups } from "@/entities/muscle-group";
 import { CompareButton } from "@/features/exercise-compare";
@@ -9,11 +26,18 @@ import { PlateSheet, type PlateContext } from "@/features/plate-calculator";
 import { BASE_WORKOUT_TYPES } from "@/shared/config/workout";
 import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
-import { unitToKg, type Unit } from "@/shared/lib/weight";
+import {
+  kgToUnit,
+  parseSignedWeight,
+  roundWeight,
+  unitToKg,
+  type Unit,
+} from "@/shared/lib/weight";
 import {
   Button,
   Card,
   Chip,
+  ConfirmSheet,
   Field,
   IconFlame,
   IconClose,
@@ -26,8 +50,11 @@ import {
 } from "@/shared/ui";
 import {
   exerciseToDraft,
+  isDraftEmpty,
+  draftBodyWeightKg,
   newSet,
   parseWeight,
+  rebaseBodyweightExercises,
   type DraftExercise,
   type DraftSet,
   type WorkoutDraft,
@@ -35,6 +62,7 @@ import {
 import { CopyLastWorkout } from "./copy-last-workout";
 import { CopyWorkoutPicker } from "./copy-workout-picker";
 import { ExercisePicker } from "./exercise-picker";
+import { TemplatePicker } from "./template-picker";
 import styles from "./workout-form.module.scss";
 
 interface WorkoutFormProps {
@@ -54,7 +82,20 @@ export function WorkoutForm({
   const { t } = useI18n();
   const { data: groups } = useMuscleGroups();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pendingTemplate, setPendingTemplate] = useState<{
+    exercises: DraftExercise[];
+    type: string;
+  } | null>(null);
   const [plateContext, setPlateContext] = useState<PlateContext | null>(null);
+  const bodyWeightKg = draftBodyWeightKg(value, unit);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const typeOptions = [
     ...BASE_WORKOUT_TYPES,
@@ -97,6 +138,22 @@ export function WorkoutForm({
         displayUnit: exerciseUnit,
       });
     }
+  }
+
+  function reorderExercises({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) return;
+
+    const from = value.exercises.findIndex(
+      (exercise) => exercise.key === active.id,
+    );
+    const to = value.exercises.findIndex(
+      (exercise) => exercise.key === over.id,
+    );
+    if (from < 0 || to < 0) return;
+
+    // One controlled update per completed pointer/keyboard drag. This keeps
+    // localStorage and cloud-draft sync quiet while the item is moving.
+    patch({ exercises: arrayMove(value.exercises, from, to) });
   }
 
   return (
@@ -156,45 +213,89 @@ export function WorkoutForm({
       )}
 
       {/* Exercises */}
-      <div className={styles.exercises}>
-        {value.exercises.map((exercise, index) => (
-          <ExerciseEditor
-            key={exercise.key}
-            index={index}
-            exercise={exercise}
-            workoutDate={value.date}
-            unit={unit}
-            onPatch={(partial) => patchExercise(exercise.key, partial)}
-            onPatchSet={(setKey, partial) =>
-              patchSet(exercise.key, setKey, partial)
-            }
-            onRemove={() =>
-              patch({
-                exercises: value.exercises.filter(
-                  (e) => e.key !== exercise.key,
-                ),
-              })
-            }
-            onShowPlates={showPlates}
-          />
-        ))}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={reorderExercises}
+      >
+        <SortableContext
+          items={value.exercises.map((exercise) => exercise.key)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className={styles.exercises}>
+            {value.exercises.map((exercise, index) => (
+              <ExerciseEditor
+                key={exercise.key}
+                index={index}
+                exercise={exercise}
+                canReorder={value.exercises.length > 1}
+                workoutDate={value.date}
+                unit={unit}
+                bodyWeightKg={bodyWeightKg}
+                onPatch={(partial) => patchExercise(exercise.key, partial)}
+                onPatchSet={(setKey, partial) =>
+                  patchSet(exercise.key, setKey, partial)
+                }
+                onRemove={() =>
+                  patch({
+                    exercises: value.exercises.filter(
+                      (e) => e.key !== exercise.key,
+                    ),
+                  })
+                }
+                onShowPlates={showPlates}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
-      {enableCopyLast && value.exercises.length === 0 && (
+      {enableCopyLast && isDraftEmpty(value) && (
         <>
           <CopyLastWorkout
             type={value.type}
             date={value.date}
             unit={unit}
             onCopy={(exercises) =>
-              patch({ exercises: [...value.exercises, ...exercises] })
+              patch({
+                exercises: [
+                  ...value.exercises,
+                  ...rebaseBodyweightExercises(exercises, bodyWeightKg),
+                ],
+                notes: "",
+                showNotes: false,
+              })
             }
           />
           <CopyWorkoutPicker
             unit={unit}
             onCopy={(exercises, type) =>
-              patch({ exercises: [...value.exercises, ...exercises], type })
+              patch({
+                exercises: [
+                  ...value.exercises,
+                  ...rebaseBodyweightExercises(exercises, bodyWeightKg),
+                ],
+                type,
+                notes: "",
+                showNotes: false,
+              })
             }
+          />
+          <TemplatePicker
+            unit={unit}
+            bodyWeightKg={bodyWeightKg}
+            onApply={(exercises, type) => {
+              if (!isDraftEmpty(value)) {
+                setPendingTemplate({ exercises, type });
+                return;
+              }
+              patch({
+                exercises,
+                type,
+                notes: "",
+                showNotes: false,
+              });
+            }}
           />
         </>
       )}
@@ -216,7 +317,7 @@ export function WorkoutForm({
           patch({
             exercises: [
               ...value.exercises,
-              exerciseToDraft(picked, muscleGroupName, unit),
+              exerciseToDraft(picked, muscleGroupName, unit, bodyWeightKg),
             ],
           });
           setPickerOpen(false);
@@ -227,6 +328,24 @@ export function WorkoutForm({
         context={plateContext}
         onClose={() => setPlateContext(null)}
       />
+
+      <ConfirmSheet
+        open={pendingTemplate != null}
+        onClose={() => setPendingTemplate(null)}
+        title={t("workout.templateReplaceTitle")}
+        message={t("workout.templateReplaceMessage")}
+        confirmLabel={t("workout.templateReplaceConfirm")}
+        onConfirm={() => {
+          if (!pendingTemplate) return;
+          patch({
+            exercises: pendingTemplate.exercises,
+            type: pendingTemplate.type,
+            notes: "",
+            showNotes: false,
+          });
+          setPendingTemplate(null);
+        }}
+      />
     </div>
   );
 }
@@ -234,9 +353,11 @@ export function WorkoutForm({
 interface ExerciseEditorProps {
   index: number;
   exercise: DraftExercise;
+  canReorder: boolean;
   /** The draft workout's date — compare offers only sessions before it. */
   workoutDate: string;
   unit: Unit;
+  bodyWeightKg: number | null;
   onPatch: (partial: Partial<DraftExercise>) => void;
   onPatchSet: (setKey: string, partial: Partial<DraftSet>) => void;
   onRemove: () => void;
@@ -246,20 +367,55 @@ interface ExerciseEditorProps {
 function ExerciseEditor({
   index,
   exercise,
+  canReorder,
   workoutDate,
   unit,
+  bodyWeightKg,
   onPatch,
   onPatchSet,
   onRemove,
   onShowPlates,
 }: ExerciseEditorProps) {
   const { t } = useI18n();
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: exercise.key, disabled: !canReorder });
+  const sortableStyle: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   return (
-    <Card variant="surface" className={styles.exerciseCard}>
-      <div className={styles.exerciseHeader}>
-        <span className={styles.exerciseIndex}>
-          {String(index + 1).padStart(2, "0")}
-        </span>
+    <div
+      ref={setNodeRef}
+      style={sortableStyle}
+      className={cn(
+        styles.sortableExercise,
+        isDragging && styles.sortableDragging,
+      )}
+    >
+      <Card variant="surface" className={styles.exerciseCard}>
+        <div className={styles.exerciseHeader}>
+          <button
+            ref={setActivatorNodeRef}
+            type="button"
+            disabled={!canReorder}
+            className={styles.dragHandle}
+            {...attributes}
+            {...listeners}
+            aria-label={t("exercise.reorder", { name: exercise.name })}
+          >
+            <GripGlyph />
+            <span className={styles.exerciseIndex}>
+              {String(index + 1).padStart(2, "0")}
+            </span>
+          </button>
         <div className={styles.exerciseTitle}>
           <p className={styles.exerciseName}>{exercise.name}</p>
           <Tag className={styles.exerciseGroup}>{exercise.muscleGroupName}</Tag>
@@ -276,6 +432,7 @@ function ExerciseEditor({
           exerciseName={exercise.name}
           unit={exercise.unit ?? unit}
           currentSets={exercise.sets}
+          currentBodyWeightKg={bodyWeightKg}
           currentDate={workoutDate}
         />
         <button
@@ -297,7 +454,7 @@ function ExerciseEditor({
         >
           <IconTrash size={15} />
         </button>
-      </div>
+        </div>
 
       {/* Sets header */}
       <div className={styles.setsHeader}>
@@ -307,7 +464,9 @@ function ExerciseEditor({
             exercise.unit !== unit ? styles.headerUnitOverride : undefined
           }
         >
-          {t("set.weight", { unit: exercise.unit ?? unit })}
+          {exercise.equipment === "bodyweight"
+            ? t("set.addedLoad", { unit: exercise.unit ?? unit })
+            : t("set.weight", { unit: exercise.unit ?? unit })}
         </span>
         <span>{t("set.reps")}</span>
         <span style={{ textAlign: "center" }}>{t("set.fail")}</span>
@@ -319,34 +478,48 @@ function ExerciseEditor({
           <div key={set.key} className={styles.setRow}>
             <span className={styles.setIndex}>{setIndex + 1}</span>
 
-            <div className={styles.weightWrap}>
-              <Input
-                value={set.weight}
-                inputMode="decimal"
-                placeholder="0"
-                className={
-                  exercise.equipment === "crossover"
-                    ? styles.setInput
-                    : styles.setInputPadded
-                }
-                onChange={(e) =>
+            {exercise.equipment === "bodyweight" ? (
+              <BodyweightLoadInput
+                set={set}
+                unit={exercise.unit ?? unit}
+                bodyWeightKg={bodyWeightKg}
+                onChange={(addedWeight, totalWeight) =>
                   onPatchSet(set.key, {
-                    weight: e.target.value.replace(/[^\d.,]/g, ""),
+                    addedWeight,
+                    weight: totalWeight,
                   })
                 }
               />
-              {/* crossover is a cable stack — no plates to break down */}
-              {exercise.equipment !== "crossover" && (
-                <button
-                  type="button"
-                  aria-label={t("set.plates")}
-                  onClick={() => onShowPlates(set.weight, exercise)}
-                  className={styles.platesButton}
-                >
-                  <PlatesGlyph />
-                </button>
-              )}
-            </div>
+            ) : (
+              <div className={styles.weightWrap}>
+                <Input
+                  value={set.weight}
+                  inputMode="decimal"
+                  placeholder="0"
+                  className={
+                    exercise.equipment === "crossover"
+                      ? styles.setInput
+                      : styles.setInputPadded
+                  }
+                  onChange={(e) =>
+                    onPatchSet(set.key, {
+                      weight: e.target.value.replace(/[^\d.,]/g, ""),
+                    })
+                  }
+                />
+                {/* crossover is a cable stack — no plates to break down */}
+                {exercise.equipment !== "crossover" && (
+                  <button
+                    type="button"
+                    aria-label={t("set.plates")}
+                    onClick={() => onShowPlates(set.weight, exercise)}
+                    className={styles.platesButton}
+                  >
+                    <PlatesGlyph />
+                  </button>
+                )}
+              </div>
+            )}
 
             <Input
               value={set.reps}
@@ -415,7 +588,57 @@ function ExerciseEditor({
           className={styles.exerciseNote}
         />
       )}
-    </Card>
+      </Card>
+    </div>
+  );
+}
+
+function BodyweightLoadInput({
+  set,
+  unit,
+  bodyWeightKg,
+  onChange,
+}: {
+  set: DraftSet;
+  unit: Unit;
+  bodyWeightKg: number | null;
+  onChange: (addedWeight: string, totalWeight: string) => void;
+}) {
+  const { t } = useI18n();
+  const body =
+    bodyWeightKg != null ? roundWeight(kgToUnit(bodyWeightKg, unit)) : null;
+  const added = parseSignedWeight(set.addedWeight ?? "") ?? 0;
+  const total = body != null ? roundWeight(body + added) : null;
+
+  return (
+    <div className={styles.bodyweightLoad}>
+      <div className={styles.bodyweightEquation}>
+        <span className={styles.bodyweightBase}>
+          {body ?? "—"}
+          <small>{unit}</small>
+        </span>
+        <span className={styles.bodyweightOperator}>+</span>
+        <Input
+          value={set.addedWeight ?? ""}
+          inputMode="decimal"
+          placeholder="0"
+          aria-label={t("set.addedLoad", { unit })}
+          className={styles.bodyweightInput}
+          onChange={(event) => {
+            const next = event.target.value.replace(/\s/g, "");
+            if (!/^[+-]?\d*(?:[.,]\d*)?$/.test(next)) return;
+            const nextAdded = parseSignedWeight(next) ?? 0;
+            onChange(
+              next,
+              body != null ? String(roundWeight(body + nextAdded)) : "",
+            );
+          }}
+        />
+      </div>
+      <span className={styles.bodyweightTotal}>
+        {t("set.totalLoad")}: {total ?? "—"} {unit}
+      </span>
+    </div>
   );
 }
 
@@ -426,6 +649,24 @@ function PlatesGlyph() {
       <circle cx="12" cy="12" r="8.5" />
       <circle cx="12" cy="12" r="4" />
       <circle cx="12" cy="12" r="0.8" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Six-dot grip kept local to the form so the activator stays lightweight. */
+function GripGlyph() {
+  return (
+    <svg
+      width="12"
+      height="18"
+      viewBox="0 0 12 18"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      {[3, 9, 15].flatMap((y) => [
+        <circle key={`left-${y}`} cx="3" cy={y} r="1.25" />,
+        <circle key={`right-${y}`} cx="9" cy={y} r="1.25" />,
+      ])}
     </svg>
   );
 }

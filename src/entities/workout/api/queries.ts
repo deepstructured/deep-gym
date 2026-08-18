@@ -1,6 +1,11 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  equipmentLoadMode,
+  type Equipment,
+  type ExerciseLoadMode,
+} from "@/shared/config/workout";
 import { fromISODate } from "@/shared/lib/dates";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
 import type { Workout, WorkoutInput } from "../model/types";
@@ -13,6 +18,51 @@ const WORKOUT_SELECT = `
     sets (*)
   )
 `;
+
+const WORKOUT_LOAD_MODE_MISMATCH = "WORKOUT_LOAD_MODE_MISMATCH";
+
+/** Recognize both the local preflight error and the authoritative database
+ * trigger error so views can show one localized recovery message. */
+export function isWorkoutLoadModeMismatchError(error: unknown): boolean {
+  if (!error || typeof error !== "object" || !("message" in error)) return false;
+  return String(error.message).includes(WORKOUT_LOAD_MODE_MISMATCH);
+}
+
+function loadModeMismatchError(): Error {
+  return new Error(WORKOUT_LOAD_MODE_MISMATCH);
+}
+
+/** Fail before mutating a workout when a persisted draft was prepared under a
+ * different bodyweight/external mode. The insert trigger repeats this check
+ * under a row lock to close the race after this preflight. */
+async function assertCurrentExerciseLoadModes(
+  exercises: WorkoutInput["exercises"],
+) {
+  const expectedById = new Map<string, ExerciseLoadMode>();
+  for (const exercise of exercises) {
+    const previous = expectedById.get(exercise.exercise_id);
+    if (previous && previous !== exercise.load_mode) {
+      throw loadModeMismatchError();
+    }
+    expectedById.set(exercise.exercise_id, exercise.load_mode);
+  }
+  if (expectedById.size === 0) return;
+
+  const supabase = getSupabaseBrowser();
+  const { data, error } = await supabase
+    .from("exercises")
+    .select("id, equipment")
+    .in("id", [...expectedById.keys()]);
+  if (error) throw error;
+
+  const rows = data as { id: string; equipment: Equipment }[];
+  if (rows.length !== expectedById.size) throw loadModeMismatchError();
+  for (const row of rows) {
+    if (expectedById.get(row.id) !== equipmentLoadMode(row.equipment)) {
+      throw loadModeMismatchError();
+    }
+  }
+}
 
 function sortNested(workout: Workout): Workout {
   workout.workout_exercises.sort((a, b) => a.position - b.position);
@@ -57,7 +107,8 @@ export function useWorkouts(from: string, to: string) {
   });
 }
 
-/** The user's most recent workout of a given type (for "copy last workout").
+/** The user's most recent workout of a given type before `beforeDate` (for
+ *  "copy last workout").
  *
  *  With `preferWeekdayOf` (an ISO date), a workout of that type on the same
  *  weekday beats a merely newer one: someone running Full Body on Wed/Fri/Sun
@@ -65,10 +116,17 @@ export function useWorkouts(from: string, to: string) {
  *  to the newest of the type when that weekday has no history. */
 export function useLastWorkoutOfType(
   type: string,
+  beforeDate: string,
   preferWeekdayOf?: string | null,
 ) {
   return useQuery({
-    queryKey: ["workouts", "last-of-type", type, preferWeekdayOf ?? null],
+    queryKey: [
+      "workouts",
+      "last-of-type",
+      type,
+      beforeDate,
+      preferWeekdayOf ?? null,
+    ],
     queryFn: async (): Promise<Workout | null> => {
       const supabase = getSupabaseBrowser();
 
@@ -76,6 +134,7 @@ export function useLastWorkoutOfType(
         .from("workouts")
         .select(WORKOUT_SELECT)
         .eq("type", type)
+        .lt("date", beforeDate)
         .order("date", { ascending: false })
         .order("created_at", { ascending: false });
 
@@ -85,6 +144,7 @@ export function useLastWorkoutOfType(
           .from("workouts")
           .select("id, date")
           .eq("type", type)
+          .lt("date", beforeDate)
           .order("date", { ascending: false })
           .order("created_at", { ascending: false })
           .limit(60);
@@ -104,7 +164,7 @@ export function useLastWorkoutOfType(
       const workout = (data as Workout[])[0];
       return workout ? sortNested(workout) : null;
     },
-    enabled: Boolean(type),
+    enabled: Boolean(type && beforeDate),
   });
 }
 
@@ -186,6 +246,7 @@ async function insertExercisesWithSets(
       .insert({
         workout_id: workoutId,
         exercise_id: draft.exercise_id,
+        load_mode: draft.load_mode,
         position: i,
         notes: draft.notes,
       })
@@ -218,6 +279,8 @@ export function useCreateWorkout() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
 
+      await assertCurrentExerciseLoadModes(input.exercises);
+
       const { data: workout, error } = await supabase
         .from("workouts")
         .insert({
@@ -225,18 +288,28 @@ export function useCreateWorkout() {
           type: input.type,
           date: input.date,
           notes: input.notes,
+          body_weight_kg: input.body_weight_kg ?? null,
         })
         .select("id")
         .single();
       if (error) throw error;
 
-      await insertExercisesWithSets(workout.id, input.exercises);
+      try {
+        await insertExercisesWithSets(workout.id, input.exercises);
+      } catch (insertError) {
+        // Creation is still a small client-side sequence. Remove the header so
+        // a rejected stale draft does not leave an empty/partial workout.
+        await supabase.from("workouts").delete().eq("id", workout.id);
+        throw insertError;
+      }
       return workout.id;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workouts"] });
       queryClient.invalidateQueries({ queryKey: ["exercise-history"] });
     },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ["exercise-usage"] }),
   });
 }
 
@@ -252,9 +325,24 @@ export function useUpdateWorkout() {
     }) => {
       const supabase = getSupabaseBrowser();
 
+      await assertCurrentExerciseLoadModes(input.exercises);
+
+      const workoutPatch: {
+        type: string;
+        date: string;
+        notes: string | null;
+        body_weight_kg?: number | null;
+      } = { type: input.type, date: input.date, notes: input.notes };
+      // Editing a legacy draft must not erase a snapshot that the draft shape
+      // did not know about. Once the form integrates the field it can pass null
+      // explicitly to clear it.
+      if ("body_weight_kg" in input) {
+        workoutPatch.body_weight_kg = input.body_weight_kg ?? null;
+      }
+
       const { error } = await supabase
         .from("workouts")
-        .update({ type: input.type, date: input.date, notes: input.notes })
+        .update(workoutPatch)
         .eq("id", id);
       if (error) throw error;
 
@@ -272,6 +360,8 @@ export function useUpdateWorkout() {
       queryClient.invalidateQueries({ queryKey: ["workout", id] });
       queryClient.invalidateQueries({ queryKey: ["exercise-history"] });
     },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ["exercise-usage"] }),
   });
 }
 
@@ -287,5 +377,7 @@ export function useDeleteWorkout() {
       queryClient.invalidateQueries({ queryKey: ["workouts"] });
       queryClient.invalidateQueries({ queryKey: ["exercise-history"] });
     },
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: ["exercise-usage"] }),
   });
 }

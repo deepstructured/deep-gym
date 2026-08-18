@@ -94,6 +94,10 @@ export async function renderWorkoutSticker(
 
   let totalVolumeKg = 0;
   for (const we of workout.workout_exercises) {
+    // Body mass is part of the effective load stored for bodyweight sets, but
+    // it is not external training volume and would otherwise dominate the
+    // sticker's session total.
+    if (we.exercise?.equipment === "bodyweight") continue;
     for (const set of we.sets) {
       if (set.weight_kg != null && set.reps != null) {
         totalVolumeKg += set.weight_kg * set.reps;

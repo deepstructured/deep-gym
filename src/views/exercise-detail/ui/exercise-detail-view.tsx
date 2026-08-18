@@ -5,15 +5,20 @@ import { useMemo, useState } from "react";
 import {
   useDeleteExercise,
   useExercise,
+  useExerciseUsageCount,
   useUpdateExercise,
 } from "@/entities/exercise";
 import { useMuscleGroups } from "@/entities/muscle-group";
 import { useProfile } from "@/entities/user";
-import { useExerciseHistory } from "@/entities/workout";
+import {
+  useExerciseHistory,
+  type ExerciseSetRecord,
+} from "@/entities/workout";
 import {
   ProgressChart,
   RepsByWeightTable,
   exerciseSummary,
+  metricSeries,
   progressSeries,
   repStatsByWeight,
   seriesToUnit,
@@ -57,22 +62,40 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
   const { data: groups } = useMuscleGroups();
   const { data: profile } = useProfile();
   const { data: history } = useExerciseHistory(exerciseId);
+  const exerciseUsage = useExerciseUsageCount(exerciseId);
 
   const [weightSheetOpen, setWeightSheetOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [platesOpen, setPlatesOpen] = useState(false);
 
   const unit = exercise?.unit ?? profile?.unit ?? "kg";
+  const isBodyweight = exercise?.equipment === "bodyweight";
+  const loadMode = isBodyweight ? "bodyweight" : "external";
   const groupName =
     groups?.find((g) => g.id === exercise?.muscle_group_id)?.name ?? "";
 
   const summary = useMemo(
-    () => exerciseSummary(history ?? []),
-    [history],
+    () => exerciseSummary(history ?? [], { loadMode }),
+    [history, loadMode],
   );
-  const repStats = useMemo(() => repStatsByWeight(history ?? []), [history]);
+  const repStats = useMemo(
+    () => repStatsByWeight(history ?? [], { loadMode }),
+    [history, loadMode],
+  );
   const chartPoints = useMemo(
     () => seriesToUnit(progressSeries(history ?? []), unit),
+    [history, unit],
+  );
+  const repsChartPoints = useMemo(
+    () =>
+      metricSeries(history ?? [], "reps").map((point) => ({
+        date: point.date,
+        value: point.valueKg,
+      })),
+    [history],
+  );
+  const addedLoadChartPoints = useMemo(
+    () => seriesToUnit(metricSeries(history ?? [], "addedLoad"), unit),
     [history, unit],
   );
 
@@ -139,37 +162,53 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
           <div className={styles.workingInner}>
             <div className={styles.workingHead}>
               <p className={styles.workingLabel}>
-                {t("detail.currentWorking")}
+                {isBodyweight
+                  ? t("bodyWeight.title")
+                  : t("detail.currentWorking")}
               </p>
-              <div className={styles.workingActions}>
-                {exercise.equipment !== "crossover" && (
+              {!isBodyweight && (
+                <div className={styles.workingActions}>
+                  {exercise.equipment !== "crossover" && (
+                    <button
+                      type="button"
+                      aria-label={t("set.plates")}
+                      onClick={() => setPlatesOpen(true)}
+                      disabled={exercise.working_weight_kg == null}
+                      className={styles.workingAction}
+                    >
+                      <IconPlates size={17} />
+                    </button>
+                  )}
                   <button
                     type="button"
-                    aria-label={t("set.plates")}
-                    onClick={() => setPlatesOpen(true)}
-                    disabled={exercise.working_weight_kg == null}
+                    aria-label={t("detail.editWorking")}
+                    onClick={() => setWeightSheetOpen(true)}
                     className={styles.workingAction}
                   >
-                    <IconPlates size={17} />
+                    <IconEdit size={15} />
                   </button>
-                )}
-                <button
-                  type="button"
-                  aria-label={t("detail.editWorking")}
-                  onClick={() => setWeightSheetOpen(true)}
-                  className={styles.workingAction}
-                >
-                  <IconEdit size={15} />
-                </button>
-              </div>
+                </div>
+              )}
             </div>
             <DotValue
               value={
-                exercise.working_weight_kg != null
-                  ? roundWeight(kgToUnit(exercise.working_weight_kg, unit))
+                isBodyweight
+                  ? profile?.body_weight_kg != null
+                    ? roundWeight(kgToUnit(profile.body_weight_kg, unit))
+                    : "—"
+                  : exercise.working_weight_kg != null
+                    ? roundWeight(kgToUnit(exercise.working_weight_kg, unit))
                   : "—"
               }
-              suffix={unit}
+              suffix={
+                isBodyweight
+                  ? profile?.body_weight_kg != null
+                    ? unit
+                    : undefined
+                  : exercise.working_weight_kg != null
+                    ? unit
+                    : undefined
+              }
               className={styles.workingValue}
               suffixClassName={styles.workingSuffix}
             />
@@ -180,39 +219,82 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
         <div className={styles.statGrid}>
           <StatTile label={t("detail.sessions")} value={summary.sessions} />
           <StatTile label={t("detail.totalSets")} value={summary.totalSets} />
-          <StatTile
-            label={t("detail.bestWeight")}
-            value={
-              summary.bestWeightKg != null
-                ? roundWeight(kgToUnit(summary.bestWeightKg, unit))
-                : "—"
-            }
-            suffix={summary.bestWeightKg != null ? unit : undefined}
-          />
-          <StatTile
-            label={t("detail.est1rm")}
-            value={
-              summary.estOneRepMaxKg != null
-                ? roundWeight(kgToUnit(summary.estOneRepMaxKg, unit))
-                : "—"
-            }
-            suffix={summary.estOneRepMaxKg != null ? unit : undefined}
-          />
+          {isBodyweight ? (
+            <>
+              <StatTile
+                label={t("stats.totalReps")}
+                value={summary.totalReps}
+              />
+              <StatTile
+                label={t("detail.bestAddedLoad")}
+                value={formatSignedWeight(summary.bestAddedLoadKg, unit)}
+                suffix={
+                  summary.bestAddedLoadKg != null ? unit : undefined
+                }
+              />
+            </>
+          ) : (
+            <>
+              <StatTile
+                label={t("detail.bestWeight")}
+                value={
+                  summary.bestWeightKg != null
+                    ? roundWeight(kgToUnit(summary.bestWeightKg, unit))
+                    : "—"
+                }
+                suffix={summary.bestWeightKg != null ? unit : undefined}
+              />
+              <StatTile
+                label={t("detail.est1rm")}
+                value={
+                  summary.estOneRepMaxKg != null
+                    ? roundWeight(kgToUnit(summary.estOneRepMaxKg, unit))
+                    : "—"
+                }
+                suffix={summary.estOneRepMaxKg != null ? unit : undefined}
+              />
+            </>
+          )}
         </div>
 
         {/* Progress */}
-        {chartPoints.length > 1 && (
+        {!isBodyweight && chartPoints.length > 1 && (
           <Card variant="indigo" className={styles.chartCard}>
             <p className={styles.cardLabelOnGradient}>{t("detail.topSet")}</p>
             <ProgressChart points={chartPoints} unit={unit} />
+          </Card>
+        )}
+        {isBodyweight && repsChartPoints.length > 1 && (
+          <Card variant="indigo" className={styles.chartCard}>
+            <p className={styles.cardLabelOnGradient}>{t("stats.reps")}</p>
+            <ProgressChart points={repsChartPoints} unit="" />
+          </Card>
+        )}
+        {isBodyweight && addedLoadChartPoints.length > 1 && (
+          <Card variant="indigo" className={styles.chartCard}>
+            <p className={styles.cardLabelOnGradient}>
+              {t("detail.addedLoadProgress")}
+            </p>
+            <ProgressChart points={addedLoadChartPoints} unit={unit} signed />
           </Card>
         )}
 
         {/* Reps by weight */}
         {repStats.length > 0 && (
           <Card variant="surface" className={styles.tableCard}>
-            <p className={styles.cardLabel}>{t("detail.repsByWeight")}</p>
-            <RepsByWeightTable stats={repStats} unit={unit} />
+            <p className={styles.cardLabel}>
+              {isBodyweight
+                ? t("detail.repsByAddedLoad")
+                : t("detail.repsByWeight")}
+            </p>
+            <RepsByWeightTable
+              stats={repStats}
+              unit={unit}
+              loadLabel={
+                isBodyweight ? t("stats.addedLoad") : undefined
+              }
+              signedLoad={isBodyweight}
+            />
           </Card>
         )}
 
@@ -230,13 +312,11 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
                         key={i}
                         className={styles.setChip}
                       >
-                        <span className={styles.setValue}>
-                          {set.weight_kg != null
-                            ? roundWeight(kgToUnit(set.weight_kg, unit))
-                            : "—"}
-                        </span>
-                        <span className={styles.setX}>×</span>
-                        <span className={styles.setValue}>{set.reps ?? "—"}</span>
+                        <SetLoad
+                          set={set}
+                          unit={unit}
+                          bodyweight={isBodyweight}
+                        />
                         {set.to_failure && (
                           <IconFlame size={12} className={styles.setFlame} />
                         )}
@@ -254,33 +334,43 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
         )}
       </div>
 
-      <WorkingWeightSheet
-        open={weightSheetOpen}
-        onClose={() => setWeightSheetOpen(false)}
-        exerciseId={exercise.id}
-        currentKg={exercise.working_weight_kg}
-        unit={unit}
-      />
+      {!isBodyweight && (
+        <WorkingWeightSheet
+          open={weightSheetOpen}
+          onClose={() => setWeightSheetOpen(false)}
+          exerciseId={exercise.id}
+          currentKg={exercise.working_weight_kg}
+          unit={unit}
+        />
+      )}
 
       <EditExerciseSheet
         open={editOpen}
         onClose={() => setEditOpen(false)}
         exercise={exercise}
+        bodyweightModeLocked={
+          exerciseUsage.isLoading ||
+          exerciseUsage.isError ||
+          exerciseUsage.data == null ||
+          exerciseUsage.data > 0
+        }
         onDeleted={() => router.push("/exercises")}
       />
 
-      <PlateSheet
-        context={
-          platesOpen && exercise.working_weight_kg != null
-            ? {
-                weightKg: exercise.working_weight_kg,
-                equipment: exercise.equipment,
-                displayUnit: unit,
-              }
-            : null
-        }
-        onClose={() => setPlatesOpen(false)}
-      />
+      {!isBodyweight && (
+        <PlateSheet
+          context={
+            platesOpen && exercise.working_weight_kg != null
+              ? {
+                  weightKg: exercise.working_weight_kg,
+                  equipment: exercise.equipment,
+                  displayUnit: unit,
+                }
+              : null
+          }
+          onClose={() => setPlatesOpen(false)}
+        />
+      )}
     </AppShell>
   );
 }
@@ -300,6 +390,60 @@ function StatTile({
       <DotValue value={value} suffix={suffix} className={styles.statTileValue} />
     </div>
   );
+}
+
+function SetLoad({
+  set,
+  unit,
+  bodyweight,
+}: {
+  set: ExerciseSetRecord;
+  unit: "kg" | "lb";
+  bodyweight: boolean;
+}) {
+  const total =
+    set.weight_kg != null
+      ? roundWeight(kgToUnit(set.weight_kg, unit))
+      : null;
+
+  if (
+    bodyweight &&
+    set.body_weight_kg != null &&
+    set.weight_kg != null &&
+    total != null
+  ) {
+    const base = roundWeight(kgToUnit(set.body_weight_kg, unit));
+    const added = roundWeight(
+      kgToUnit(set.weight_kg - set.body_weight_kg, unit),
+    );
+    return (
+      <>
+        <span className={styles.setValue}>{base}</span>
+        <span className={styles.setX}>{added < 0 ? "−" : "+"}</span>
+        <span className={styles.setValue}>{Math.abs(added)}</span>
+        <span className={styles.setX}>=</span>
+        <span className={styles.setValue}>{total}</span>
+        <span className={styles.setUnit}>{unit}</span>
+        <span className={styles.setX}>×</span>
+        <span className={styles.setValue}>{set.reps ?? "—"}</span>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <span className={styles.setValue}>{total ?? "—"}</span>
+      {total != null && <span className={styles.setUnit}>{unit}</span>}
+      <span className={styles.setX}>×</span>
+      <span className={styles.setValue}>{set.reps ?? "—"}</span>
+    </>
+  );
+}
+
+function formatSignedWeight(valueKg: number | null, unit: "kg" | "lb") {
+  if (valueKg == null) return "—";
+  const value = roundWeight(kgToUnit(valueKg, unit));
+  return value > 0 ? `+${value}` : value;
 }
 
 function WorkingWeightSheet({
@@ -369,6 +513,7 @@ function EditExerciseSheet({
   open,
   onClose,
   exercise,
+  bodyweightModeLocked,
   onDeleted,
 }: {
   open: boolean;
@@ -381,6 +526,7 @@ function EditExerciseSheet({
     machine_settings: string | null;
     unit: "kg" | "lb" | null;
   };
+  bodyweightModeLocked: boolean;
   onDeleted: () => void;
 }) {
   const { t } = useI18n();
@@ -403,6 +549,14 @@ function EditExerciseSheet({
 
   function save() {
     if (!name.trim()) return setError(t("detail.nameEmpty"));
+    if (
+      bodyweightModeLocked &&
+      (equipment === "bodyweight") !==
+        (exercise.equipment === "bodyweight")
+    ) {
+      setError(t("detail.bodyweightModeLocked"));
+      return;
+    }
     update.mutate(
       {
         id: exercise.id,
@@ -410,6 +564,9 @@ function EditExerciseSheet({
           name: name.trim(),
           muscle_group_id: groupId,
           equipment,
+          ...(equipment === "bodyweight"
+            ? { working_weight_kg: null }
+            : {}),
           machine_settings:
             equipment === "machine" ? machineSettings.trim() || null : null,
           unit: unitChoice === "default" ? null : unitChoice,
@@ -417,7 +574,14 @@ function EditExerciseSheet({
       },
       {
         onSuccess: onClose,
-        onError: (e) => setError((e as Error).message),
+        onError: (e) => {
+          const message = (e as Error).message;
+          setError(
+            message.includes("Bodyweight mode cannot change")
+              ? t("detail.bodyweightModeLocked")
+              : message,
+          );
+        },
       },
     );
   }
@@ -448,12 +612,22 @@ function EditExerciseSheet({
                 <Chip
                   key={option.value}
                   selected={equipment === option.value}
+                  disabled={
+                    bodyweightModeLocked &&
+                    (option.value === "bodyweight") !==
+                      (exercise.equipment === "bodyweight")
+                  }
                   onClick={() => setEquipment(option.value)}
                 >
                   {t(`equipment.${option.value}`)}
                 </Chip>
               ))}
             </div>
+            {bodyweightModeLocked && (
+              <p className={styles.sheetHint}>
+                {t("detail.bodyweightModeLocked")}
+              </p>
+            )}
           </Field>
           {equipment === "machine" && (
             <Field label={t("detail.machineSetup")}>

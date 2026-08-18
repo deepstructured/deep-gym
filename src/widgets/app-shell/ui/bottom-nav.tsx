@@ -35,7 +35,12 @@ export function BottomNav() {
       <div className={styles.tabs}>
         {tabs.map(({ href, labelKey, icon: Icon, primary }) => {
           const active =
-            href === "/" ? pathname === "/" : pathname.startsWith(href);
+            href === "/"
+              ? pathname === "/"
+              : href === "/exercises"
+                ? pathname.startsWith("/exercises") ||
+                  pathname.startsWith("/templates")
+                : pathname.startsWith(href);
           const label = t(labelKey);
 
           if (primary) {

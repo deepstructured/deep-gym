@@ -111,6 +111,16 @@
   font-family: $font-dot;
 }
 
+.chipSignedValue {
+  font-family: $font-dot;
+  color: $muted;
+}
+
+.chipUnit {
+  font-size: 10px;
+  color: $faint;
+}
+
 .chipX {
   color: $faint;
 }

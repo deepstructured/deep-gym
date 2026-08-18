@@ -1,5 +1,17 @@
 @use "../../../shared/styles/palette" as *;
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.templatesLink {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $lime;
+}
+
 .filters {
   margin-bottom: 1rem;
   display: flex;

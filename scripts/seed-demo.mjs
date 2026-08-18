@@ -20,7 +20,7 @@ for (const line of readFileSync(join(root, ".env.local"), "utf8").split("\n")) {
 
 const EMAIL = "demo@deepgym.app";
 const CURRENT_ONBOARDING_VERSION = 1;
-const CURRENT_RELEASE_SEQUENCE = 2;
+const CURRENT_RELEASE_SEQUENCE = 3;
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -68,6 +68,8 @@ const { error: scheduleError } = await admin
 if (scheduleError) throw scheduleError;
 
 // ── wipe previous demo data ──────────────────────────────────────────────
+await admin.from("workout_templates").delete().eq("user_id", userId);
+await admin.from("body_weight_measurements").delete().eq("user_id", userId);
 await admin.from("workouts").delete().eq("user_id", userId);
 await admin.from("exercises").delete().eq("user_id", userId);
 
@@ -90,6 +92,7 @@ const catalog = [
   { name: "Incline Dumbbell Press", group: "Chest",    equipment: "dumbbell",    base: 20,   step: 1.25, reps: 10 },
   { name: "Lat Pulldown",          group: "Back",      equipment: "crossover",   base: 50,   step: 2.5, reps: 10 },
   { name: "Seated Row",            group: "Back",      equipment: "machine",     base: 55,   step: 2.5, reps: 10, settings: "Chest pad 3 · narrow grip handle" },
+  { name: "Pull-Ups",              group: "Back",      equipment: "bodyweight",  base: -7.5, step: 2.5, reps: 8 },
   { name: "Dumbbell Curl",         group: "Biceps",    equipment: "dumbbell",    base: 12,   step: 1,   reps: 12 },
   { name: "Rope Pushdown",         group: "Triceps",   equipment: "crossover",   base: 22.5, step: 2.5, reps: 12 },
   { name: "Overhead Press",        group: "Shoulders", equipment: "free_weight", base: 35,   step: 2.5, reps: 8 },
@@ -110,7 +113,10 @@ const { data: exercises, error: exError } = await admin
       name: item.name,
       equipment: item.equipment,
       machine_settings: item.settings ?? null,
-      working_weight_kg: weightAt(item, WEEKS - 1),
+      working_weight_kg:
+        item.equipment === "bodyweight"
+          ? null
+          : weightAt(item, WEEKS - 1),
     })),
   )
   .select("id, name");
@@ -118,9 +124,48 @@ if (exError) throw exError;
 const exerciseId = (name) => exercises.find((e) => e.name === name).id;
 console.log(`created ${exercises.length} exercises`);
 
+// ── reusable templates (structure only) ─────────────────────────────────
+const templatePlans = [
+  {
+    name: "Upper foundation",
+    type: "Upper",
+    names: ["Chest Press", "Pull-Ups", "Overhead Press", "Dumbbell Curl"],
+  },
+  {
+    name: "Lower strength",
+    type: "Lower",
+    names: ["Squat", "Leg Press"],
+  },
+];
+
+for (const templatePlan of templatePlans) {
+  const { data: template, error: templateError } = await admin
+    .from("workout_templates")
+    .insert({
+      user_id: userId,
+      name: templatePlan.name,
+      type: templatePlan.type,
+    })
+    .select("id")
+    .single();
+  if (templateError) throw templateError;
+
+  const { error: templateItemsError } = await admin
+    .from("workout_template_exercises")
+    .insert(
+      templatePlan.names.map((name, position) => ({
+        template_id: template.id,
+        exercise_id: exerciseId(name),
+        position,
+      })),
+    );
+  if (templateItemsError) throw templateItemsError;
+}
+console.log(`created ${templatePlans.length} workout templates`);
+
 // ── workouts: Mon / Wed / Fri over 8 weeks ───────────────────────────────
 const plan = [
-  { type: "Upper",       names: ["Chest Press", "Lat Pulldown", "Overhead Press", "Dumbbell Curl"] },
+  { type: "Upper",       names: ["Chest Press", "Pull-Ups", "Lat Pulldown", "Overhead Press", "Dumbbell Curl"] },
   { type: "Lower",       names: ["Squat", "Leg Press"] },
   { type: "Split Chest", names: ["Chest Press", "Incline Dumbbell Press", "Rope Pushdown", "Lateral Raises"] },
 ];
@@ -129,6 +174,32 @@ const iso = (d) => d.toISOString().slice(0, 10);
 const now = new Date();
 const monday = new Date(now);
 monday.setDate(now.getDate() - ((now.getDay() + 6) % 7)); // this week's Monday
+
+const bodyWeightAt = (week) => Math.round((82.4 - week * 0.25) * 100) / 100;
+const bodyWeightMeasurements = Array.from({ length: WEEKS }, (_, week) => {
+  const date = new Date(monday);
+  date.setDate(monday.getDate() - (WEEKS - 1 - week) * 7);
+  return {
+    user_id: userId,
+    weight_kg: bodyWeightAt(week),
+    measured_at: `${iso(date)}T08:00:00.000Z`,
+    source: week === WEEKS - 1 ? "settings" : "workout",
+  };
+});
+const { error: bodyWeightError } = await admin
+  .from("body_weight_measurements")
+  .insert(bodyWeightMeasurements);
+if (bodyWeightError) throw bodyWeightError;
+const latestBodyWeight = bodyWeightMeasurements.at(-1);
+const { error: bodyWeightProfileError } = await admin
+  .from("profiles")
+  .update({
+    body_weight_kg: latestBodyWeight.weight_kg,
+    body_weight_measured_at: latestBodyWeight.measured_at,
+  })
+  .eq("id", userId);
+if (bodyWeightProfileError) throw bodyWeightProfileError;
+console.log(`created ${bodyWeightMeasurements.length} body-weight measurements`);
 
 let workoutCount = 0;
 for (let week = 0; week < WEEKS; week++) {
@@ -140,12 +211,14 @@ for (let week = 0; week < WEEKS; week++) {
     if (week === 2 && dayIndex === 1) continue;
 
     const day = plan[dayIndex];
+    const workoutBodyWeight = bodyWeightAt(week);
     const { data: workout, error: wError } = await admin
       .from("workouts")
       .insert({
         user_id: userId,
         type: day.type,
         date: iso(date),
+        body_weight_kg: workoutBodyWeight,
         notes:
           week === 3 && dayIndex === 0
             ? "Slept badly, kept the weights conservative today."
@@ -162,6 +235,7 @@ for (let week = 0; week < WEEKS; week++) {
         .insert({
           workout_id: workout.id,
           exercise_id: exerciseId(name),
+          load_mode: item.equipment === "bodyweight" ? "bodyweight" : "external",
           position,
           notes:
             week === 5 && name === "Squat"
@@ -172,7 +246,10 @@ for (let week = 0; week < WEEKS; week++) {
         .single();
       if (weError) throw weError;
 
-      const weight = weightAt(item, week);
+      const weight =
+        item.equipment === "bodyweight"
+          ? workoutBodyWeight + weightAt(item, week)
+          : weightAt(item, week);
       const setCount = 3 + ((week + position) % 2);
       const sets = Array.from({ length: setCount }, (_, i) => ({
         workout_exercise_id: we.id,

@@ -10,7 +10,7 @@ import {
   Button,
   ErrorNote,
   IconCalendar,
-  IconCompare,
+  IconDumbbell,
   IconHistory,
   Sheet,
 } from "@/shared/ui";
@@ -25,20 +25,20 @@ interface WhatsNewSheetProps {
 
 const RELEASE_ITEMS = [
   {
-    title: "whatsNew.draftSync.title",
-    body: "whatsNew.draftSync.body",
-    icon: IconCompare,
+    title: "whatsNew.templates.title",
+    body: "whatsNew.templates.body",
+    icon: IconDumbbell,
     tone: styles.toneIndigo,
   },
   {
-    title: "whatsNew.copyLast.title",
-    body: "whatsNew.copyLast.body",
+    title: "whatsNew.bodyweight.title",
+    body: "whatsNew.bodyweight.body",
     icon: IconHistory,
     tone: styles.toneCherry,
   },
   {
-    title: "whatsNew.copyPicker.title",
-    body: "whatsNew.copyPicker.body",
+    title: "whatsNew.workoutFlow.title",
+    body: "whatsNew.workoutFlow.body",
     icon: IconCalendar,
     tone: styles.toneLime,
   },

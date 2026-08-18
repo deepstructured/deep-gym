@@ -2,12 +2,21 @@
 
 import { useMemo, useState } from "react";
 import { useMuscleGroups } from "@/entities/muscle-group";
-import { getWorkout, useWorkoutSummaries } from "@/entities/workout";
+import {
+  getWorkout,
+  useWorkoutSummaries,
+  type Workout,
+} from "@/entities/workout";
 import { useI18n } from "@/shared/i18n";
 import { formatDay } from "@/shared/lib/dates";
 import type { Unit } from "@/shared/lib/weight";
 import { Calendar, ErrorNote, IconCalendar, Sheet, Spinner } from "@/shared/ui";
-import { workoutToDraft, type DraftExercise } from "../model/draft";
+import {
+  workoutToCopiedExercises,
+  type DraftExercise,
+  type WorkoutCopyMode,
+} from "../model/draft";
+import { CopyModeSheet } from "./copy-mode-sheet";
 import styles from "./copy-workout-picker.module.scss";
 
 interface CopyWorkoutPickerProps {
@@ -18,8 +27,8 @@ interface CopyWorkoutPickerProps {
 
 /**
  * "Copy from another day" — a calendar of every logged session. Picking a
- * marked day lists that day's workouts; tapping one copies its exercises
- * (sets, weights, reps) into the draft and adopts its type.
+ * marked day lists that day's workouts; tapping one loads it and asks which
+ * copy mode to use. The copied draft adopts the source workout's type.
  */
 export function CopyWorkoutPicker({ unit, onCopy }: CopyWorkoutPickerProps) {
   const { t, tn } = useI18n();
@@ -28,6 +37,7 @@ export function CopyWorkoutPicker({ unit, onCopy }: CopyWorkoutPickerProps) {
   const [open, setOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [copyingId, setCopyingId] = useState<string | null>(null);
+  const [sourceWorkout, setSourceWorkout] = useState<Workout | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const markedDates = useMemo(
@@ -48,21 +58,30 @@ export function CopyWorkoutPicker({ unit, onCopy }: CopyWorkoutPickerProps) {
     setError(null);
   }
 
-  async function copy(id: string, type: string) {
+  async function chooseSource(id: string) {
     if (copyingId) return;
     setError(null);
     setCopyingId(id);
     try {
       const workout = await getWorkout(id);
-      const groupNames = new Map((groups ?? []).map((g) => [g.id, g.name]));
-      onCopy(workoutToDraft(workout, groupNames, unit).exercises, type);
       setCopyingId(null);
       setOpen(false);
       setSelectedDay(null);
+      setSourceWorkout(workout);
     } catch {
       setCopyingId(null);
       setError(t("common.error"));
     }
+  }
+
+  function copy(mode: WorkoutCopyMode) {
+    if (!sourceWorkout) return;
+    const groupNames = new Map((groups ?? []).map((g) => [g.id, g.name]));
+    onCopy(
+      workoutToCopiedExercises(sourceWorkout, groupNames, unit, mode),
+      sourceWorkout.type,
+    );
+    setSourceWorkout(null);
   }
 
   return (
@@ -95,7 +114,7 @@ export function CopyWorkoutPicker({ unit, onCopy }: CopyWorkoutPickerProps) {
                   key={workout.id}
                   type="button"
                   disabled={copyingId != null}
-                  onClick={() => copy(workout.id, workout.type)}
+                  onClick={() => chooseSource(workout.id)}
                   className={styles.workoutRow}
                 >
                   <span className={styles.icon}>
@@ -122,6 +141,12 @@ export function CopyWorkoutPicker({ unit, onCopy }: CopyWorkoutPickerProps) {
           {error && <ErrorNote message={error} />}
         </div>
       </Sheet>
+
+      <CopyModeSheet
+        open={sourceWorkout != null}
+        onClose={() => setSourceWorkout(null)}
+        onSelect={copy}
+      />
     </>
   );
 }

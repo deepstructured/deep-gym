@@ -13,4 +13,8 @@
   font-size: 0.875rem;
   line-height: 1.25rem;
   color: $faint;
+
+  &:disabled {
+    opacity: 0.45;
+  }
 }

@@ -1,4 +1,5 @@
 import { differenceInCalendarDays } from "date-fns";
+import { bodyweightLoadFromTotal } from "@/entities/body-weight";
 import type { ExerciseSetRecord } from "@/entities/workout";
 import { kgToUnit, roundWeight, type Unit } from "@/shared/lib/weight";
 
@@ -16,8 +17,30 @@ export interface ExerciseSummary {
   totalSets: number;
   totalReps: number;
   bestWeightKg: number | null;
+  /** Best signed external load for a body-weight exercise. A negative value
+   * represents assistance. Null means no workout body-weight snapshot exists. */
+  bestAddedLoadKg: number | null;
   estOneRepMaxKg: number | null;
   lastDate: string | null;
+}
+
+export type ExerciseLoadMode = "external" | "bodyweight";
+
+export interface ExerciseStatsOptions {
+  loadMode?: ExerciseLoadMode;
+}
+
+/** Signed external load for a body-weight set. `sets.weight_kg` remains the
+ * total effective load, so legacy records without a workout snapshot cannot
+ * be split reliably and intentionally return null. */
+export function addedLoadForRecord(
+  record: Pick<ExerciseSetRecord, "weight_kg" | "body_weight_kg">,
+): number | null {
+  if (record.weight_kg == null || record.body_weight_kg == null) return null;
+  return bodyweightLoadFromTotal(
+    record.weight_kg,
+    record.body_weight_kg,
+  ).addedLoadKg;
 }
 
 function median(sorted: number[]): number {
@@ -42,12 +65,22 @@ function mode(values: number[]): number {
   return best;
 }
 
-/** Rep statistics grouped by weight, heaviest first. */
-export function repStatsByWeight(records: ExerciseSetRecord[]): WeightRepStats[] {
+/** Rep statistics grouped by total weight or, for body-weight exercises, by
+ * signed added load. Body-weight legacy records without snapshots are skipped
+ * because their added load cannot be recovered. */
+export function repStatsByWeight(
+  records: ExerciseSetRecord[],
+  options: ExerciseStatsOptions = {},
+): WeightRepStats[] {
   const groups = new Map<number, ExerciseSetRecord[]>();
   for (const record of records) {
-    if (record.weight_kg == null || record.reps == null) continue;
-    const key = roundWeight(record.weight_kg);
+    if (record.reps == null) continue;
+    const loadKg =
+      options.loadMode === "bodyweight"
+        ? addedLoadForRecord(record)
+        : record.weight_kg;
+    if (loadKg == null) continue;
+    const key = roundWeight(loadKg);
     groups.set(key, [...(groups.get(key) ?? []), record]);
   }
 
@@ -66,12 +99,24 @@ export function repStatsByWeight(records: ExerciseSetRecord[]): WeightRepStats[]
     .sort((a, b) => b.weightKg - a.weightKg);
 }
 
-export function exerciseSummary(records: ExerciseSetRecord[]): ExerciseSummary {
+export function exerciseSummary(
+  records: ExerciseSetRecord[],
+  options: ExerciseStatsOptions = {},
+): ExerciseSummary {
   const dates = new Set(records.map((r) => r.workoutDate));
-  const weighted = records.filter((r) => r.weight_kg != null);
+  const isBodyweight = options.loadMode === "bodyweight";
+  const weighted = isBodyweight
+    ? []
+    : records.filter((r) => r.weight_kg != null);
+  const addedLoads = isBodyweight
+    ? records
+        .map(addedLoadForRecord)
+        .filter((value): value is number => value != null)
+    : [];
   const bestWeightKg = weighted.length
     ? Math.max(...weighted.map((r) => r.weight_kg!))
     : null;
+  const bestAddedLoadKg = addedLoads.length ? Math.max(...addedLoads) : null;
 
   // Epley formula on the heaviest set that has reps
   let estOneRepMaxKg: number | null = null;
@@ -86,6 +131,7 @@ export function exerciseSummary(records: ExerciseSetRecord[]): ExerciseSummary {
     totalSets: records.length,
     totalReps: records.reduce((sum, r) => sum + (r.reps ?? 0), 0),
     bestWeightKg,
+    bestAddedLoadKg,
     estOneRepMaxKg:
       estOneRepMaxKg != null ? Math.round(estOneRepMaxKg * 10) / 10 : null,
     lastDate: records.length ? records[records.length - 1].workoutDate : null,
@@ -97,14 +143,22 @@ export interface ProgressPoint {
   valueKg: number;
 }
 
-/** Top-set weight per workout date — the progress line. */
-export function progressSeries(records: ExerciseSetRecord[]): ProgressPoint[] {
+/** Top-set total weight, or signed added load for body-weight exercises, per
+ * workout date. Legacy body-weight records without snapshots are omitted. */
+export function progressSeries(
+  records: ExerciseSetRecord[],
+  options: ExerciseStatsOptions = {},
+): ProgressPoint[] {
   const byDate = new Map<string, number>();
   for (const record of records) {
-    if (record.weight_kg == null) continue;
+    const loadKg =
+      options.loadMode === "bodyweight"
+        ? addedLoadForRecord(record)
+        : record.weight_kg;
+    if (loadKg == null) continue;
     const current = byDate.get(record.workoutDate);
-    if (current == null || record.weight_kg > current) {
-      byDate.set(record.workoutDate, record.weight_kg);
+    if (current == null || loadKg > current) {
+      byDate.set(record.workoutDate, loadKg);
     }
   }
   return [...byDate.entries()]
@@ -120,7 +174,12 @@ export function seriesToUnit(series: ProgressPoint[], unit: Unit) {
 }
 
 /** What the progress chart plots per session. */
-export type ProgressMetric = "topSet" | "oneRm" | "volume" | "reps";
+export type ProgressMetric =
+  | "topSet"
+  | "oneRm"
+  | "volume"
+  | "reps"
+  | "addedLoad";
 
 /** Per-session series for a metric. Values are kg for weight metrics and
  *  plain counts for "reps" — the caller converts units where relevant. */
@@ -161,6 +220,15 @@ export function metricSeries(
         byDate.set(date, (byDate.get(date) ?? 0) + record.reps);
         break;
       }
+      case "addedLoad": {
+        const addedLoadKg = addedLoadForRecord(record);
+        if (addedLoadKg == null) break;
+        const current = byDate.get(date);
+        if (current == null || addedLoadKg > current) {
+          byDate.set(date, addedLoadKg);
+        }
+        break;
+      }
     }
   }
   return [...byDate.entries()]
@@ -169,8 +237,9 @@ export function metricSeries(
 }
 
 export interface ExtendedSummary extends ExerciseSummary {
-  /** Sum of weight × reps over the period, kg. */
-  totalVolumeKg: number;
+  /** Sum of weight × reps over the period, kg. Null for body-weight exercises:
+   * total effective load is not comparable to external-load volume. */
+  totalVolumeKg: number | null;
   /** Share of sets marked "to failure", 0..1. */
   failureRate: number;
   /** Average sessions per week over the active span; null with no sessions. */
@@ -178,8 +247,11 @@ export interface ExtendedSummary extends ExerciseSummary {
   firstDate: string | null;
 }
 
-export function extendedSummary(records: ExerciseSetRecord[]): ExtendedSummary {
-  const base = exerciseSummary(records);
+export function extendedSummary(
+  records: ExerciseSetRecord[],
+  options: ExerciseStatsOptions = {},
+): ExtendedSummary {
+  const base = exerciseSummary(records, options);
   const dates = [...new Set(records.map((r) => r.workoutDate))].sort();
   const firstDate = dates[0] ?? null;
 
@@ -206,7 +278,8 @@ export function extendedSummary(records: ExerciseSetRecord[]): ExtendedSummary {
 
   return {
     ...base,
-    totalVolumeKg,
+    totalVolumeKg:
+      options.loadMode === "bodyweight" ? null : totalVolumeKg,
     failureRate: records.length ? failures / records.length : 0,
     perWeek,
     firstDate,

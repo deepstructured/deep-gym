@@ -7,6 +7,8 @@ import styles from "./progress-chart.module.scss";
 interface ProgressChartProps {
   points: { date: string; value: number }[];
   unit: string;
+  /** Prefix non-negative values with + for signed added-load charts. */
+  signed?: boolean;
 }
 
 const W = 320;
@@ -38,7 +40,7 @@ function curvedPath(points: ChartPoint[]): string {
 }
 
 /** Dotted, depth-treated chart in the reference's dot-matrix style. */
-export function ProgressChart({ points, unit }: ProgressChartProps) {
+export function ProgressChart({ points, unit, signed = false }: ProgressChartProps) {
   const areaGradientId = `progress-area-${useId().replace(/:/g, "")}`;
   if (points.length === 0) return null;
 
@@ -74,7 +76,7 @@ export function ProgressChart({ points, unit }: ProgressChartProps) {
         viewBox={`0 0 ${W} ${H}`}
         className={styles.svg}
         role="img"
-        aria-label={`Progress from ${first.value} to ${last.value} ${unit}`}
+        aria-label={`Progress from ${formatChartValue(first.value, signed)} to ${formatChartValue(last.value, signed)} ${unit}`}
       >
         <defs>
           <linearGradient
@@ -175,7 +177,7 @@ export function ProgressChart({ points, unit }: ProgressChartProps) {
           fontSize="10"
           fontFamily="var(--font-dot)"
         >
-          {max} {unit}
+          {formatChartValue(max, signed)} {unit}
         </text>
         <text
           x={PAD_X}
@@ -185,7 +187,7 @@ export function ProgressChart({ points, unit }: ProgressChartProps) {
           fontSize="10"
           fontFamily="var(--font-dot)"
         >
-          {min} {unit}
+          {formatChartValue(min, signed)} {unit}
         </text>
       </svg>
       <div className={styles.axisLabels}>
@@ -194,4 +196,9 @@ export function ProgressChart({ points, unit }: ProgressChartProps) {
       </div>
     </div>
   );
+}
+
+function formatChartValue(value: number, signed: boolean) {
+  const normalized = Object.is(value, -0) ? 0 : value;
+  return signed && normalized >= 0 ? `+${normalized}` : String(normalized);
 }

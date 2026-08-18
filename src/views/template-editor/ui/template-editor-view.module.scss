@@ -1,0 +1,166 @@
+@use "../../../shared/styles/palette" as *;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.typeRow,
+.filterRow {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+}
+
+.typeRow {
+  margin: 0 -1.25rem;
+  padding: 0 1.25rem;
+}
+
+.sectionHead {
+  margin-bottom: 0.625rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.sectionTitle {
+  @include micro-label;
+}
+
+.count {
+  font-family: $font-dot;
+  font-size: 0.75rem;
+  color: $faint;
+}
+
+.exerciseList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.exerciseRow {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  border: 1px solid $line;
+  border-radius: $radius-tile;
+  background: $surface;
+  padding: 0.75rem 0.75rem 0.75rem 0.875rem;
+}
+
+.position {
+  flex-shrink: 0;
+  font-family: $font-dot;
+  color: $lime;
+}
+
+.exerciseText,
+.pickerText {
+  min-width: 0;
+  flex: 1;
+}
+
+.exerciseName,
+.pickerName {
+  @include truncate;
+  display: block;
+  font-weight: 500;
+}
+
+.exerciseMeta,
+.pickerMeta {
+  @include truncate;
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: $muted;
+}
+
+.rowActions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.25rem;
+}
+
+.move,
+.remove {
+  @include icon-circle(2rem);
+  color: $muted;
+
+  &:disabled {
+    opacity: 0.25;
+  }
+}
+
+.moveUp svg {
+  transform: rotate(180deg);
+}
+
+.remove {
+  color: $flame-text;
+}
+
+.emptyExercises {
+  border: 1px dashed $line;
+  border-radius: $radius-tile;
+  padding: 1rem;
+  text-align: center;
+  color: $muted;
+  font-size: 0.875rem;
+}
+
+.addExercise {
+  margin-top: 0.625rem;
+}
+
+.pickerSheet {
+  min-height: 70dvh;
+}
+
+.pickerStack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.filterRow {
+  margin: 0 -1.25rem;
+  padding: 0 1.25rem;
+}
+
+.pickerList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pickerItem {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  border: 1px solid $line;
+  border-radius: $radius-tile;
+  background: $raised;
+  padding: 0.875rem 1rem;
+  text-align: left;
+
+  &:active {
+    background: rgba($line, 0.5);
+  }
+}
+
+.pickerPlus {
+  flex-shrink: 0;
+  color: $lime;
+}
+
+.pickerEmpty {
+  padding: 1.5rem 0;
+  text-align: center;
+  color: $muted;
+  font-size: 0.875rem;
+}
