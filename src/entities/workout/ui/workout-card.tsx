@@ -1,5 +1,6 @@
 'use client'
 
+import { isWarmupSet } from '@/shared/config/workout'
 import { useI18n } from '@/shared/i18n'
 import { formatDay } from '@/shared/lib/dates'
 import {
@@ -40,8 +41,9 @@ export function WorkoutCard({
   onEdit,
 }: WorkoutCardProps) {
   const { t, tn } = useI18n()
+  // Warm-ups are listed but not counted as sets of the workout.
   const totalSets = workout.workout_exercises.reduce(
-    (sum, we) => sum + we.sets.length,
+    (sum, we) => sum + we.sets.filter((set) => !isWarmupSet(set)).length,
     0,
   )
 
@@ -91,8 +93,17 @@ export function WorkoutCard({
                     workout.body_weight_kg != null &&
                     set.weight_kg != null
 
+                  const warmup = isWarmupSet(set)
                   return (
-                    <span key={set.id} className={s.set}>
+                    <span
+                      key={set.id}
+                      className={clsx(s.set, warmup && s.setWarmup)}
+                    >
+                      {warmup && (
+                        <span className={s.warmupMark}>
+                          {t('set.warmupShort')}
+                        </span>
+                      )}
                       {showBodyweightBreakdown ? (
                         <>
                           <span className={s.setValue}>

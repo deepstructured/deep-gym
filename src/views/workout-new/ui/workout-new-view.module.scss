@@ -6,13 +6,22 @@
   gap: 1.25rem;
 }
 
-.discard {
-  width: 100%;
-  padding-bottom: 0.5rem;
-  text-align: center;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  color: $faint;
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Discarding is destructive — a quiet icon that turns flame on press and
+   always asks for confirmation. */
+.discardButton {
+  @include icon-circle(2.25rem);
+  color: $muted;
+  transition: color $tr;
+
+  &:active {
+    color: $flame-text;
+  }
 
   &:disabled {
     opacity: 0.45;

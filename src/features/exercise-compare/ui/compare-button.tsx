@@ -46,6 +46,7 @@ interface SetChipValue {
   weight: string;
   reps: string;
   toFailure: boolean;
+  warmup?: boolean;
   bodyweight?: BodyweightChipValues;
 }
 
@@ -79,6 +80,7 @@ export interface CompareCurrentSet {
   addedWeight?: string;
   reps: string;
   toFailure: boolean;
+  warmup?: boolean;
 }
 
 interface CompareButtonProps {
@@ -227,6 +229,7 @@ function CompareSheet({
                     weight: s.weight.trim() || "—",
                     reps: s.reps.trim() || "—",
                     toFailure: s.toFailure,
+                    warmup: s.warmup,
                     bodyweight:
                       profileMatchesDraft
                         ? bodyweightChip(
@@ -287,6 +290,7 @@ function CompareSheet({
                           : "—",
                       reps: s.reps != null ? String(s.reps) : "—",
                       toFailure: s.to_failure,
+                      warmup: s.set_type === "warmup",
                       bodyweight:
                         isBodyweight &&
                         bodyWeightKg != null &&
@@ -319,13 +323,18 @@ function SetChips({
 }: {
   sets: SetChipValue[];
 }) {
+  const { t } = useI18n();
+  const warmupLabel = t("set.warmupShort");
   return (
     <div className={styles.chips}>
       {sets.map((set, i) => (
         <span
           key={i}
-          className={styles.chip}
+          className={cn(styles.chip, set.warmup && styles.chipWarmup)}
         >
+          {set.warmup && (
+            <span className={styles.warmupMark}>{warmupLabel}</span>
+          )}
           {set.bodyweight ? (
             <>
               <span className={styles.chipValue}>{set.bodyweight.base}</span>

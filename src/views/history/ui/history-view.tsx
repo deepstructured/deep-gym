@@ -109,7 +109,7 @@ export function HistoryView() {
   }
 
   return (
-    <AppShell title={t('history.title')}>
+    <AppShell title={t('history.title')} account>
       <Segmented
         className={styles.modeSwitch}
         value={mode}

@@ -25,6 +25,15 @@ export function equipmentLoadMode(equipment: Equipment): ExerciseLoadMode {
   return equipment === "bodyweight" ? "bodyweight" : "external";
 }
 
+/** Kind of logged set. Warm-ups are stored and shown with the workout but
+ * never count toward progress statistics. */
+export type SetType = "working" | "warmup";
+
+/** Rows written before migration 0008 have no set_type — they are working. */
+export function isWarmupSet(set: { set_type?: string | null }): boolean {
+  return set.set_type === "warmup";
+}
+
 export const DEFAULT_PLATES_KG = [30, 25, 20, 15, 10, 5, 2.5, 2, 1.25];
 export const DEFAULT_BAR_KG = 20;
 export const DEFAULT_PLATES_LB = [45, 35, 25, 10, 5, 2.5];

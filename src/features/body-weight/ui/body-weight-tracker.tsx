@@ -27,6 +27,8 @@ export interface BodyWeightTrackerProps {
   initialWeightKg?: number | null;
   onLogged?: (measurement: BodyWeightMeasurement) => void;
   onPendingChange?: (pending: boolean) => void;
+  /** Render without the card chrome (e.g. inside a sheet). */
+  bare?: boolean;
   className?: string;
 }
 
@@ -64,6 +66,7 @@ export function BodyWeightTracker({
   initialWeightKg,
   onLogged,
   onPendingChange,
+  bare = false,
   className,
 }: BodyWeightTrackerProps) {
   const { t } = useI18n();
@@ -136,8 +139,9 @@ export function BodyWeightTracker({
     );
   }
 
+  const Wrapper = bare ? "div" : Card;
   return (
-    <Card variant="surface" className={`${styles.tracker} ${className ?? ""}`}>
+    <Wrapper className={`${styles.tracker} ${className ?? ""}`}>
       <div className={styles.headingRow}>
         <div>
           <p className={styles.title}>{t("bodyWeight.title")}</p>
@@ -197,6 +201,6 @@ export function BodyWeightTracker({
 
       {saved && <p className={styles.success}>{t("bodyWeight.saved")}</p>}
       {error && <ErrorNote message={error} />}
-    </Card>
+    </Wrapper>
   );
 }

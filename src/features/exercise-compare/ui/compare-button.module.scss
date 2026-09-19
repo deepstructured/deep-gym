@@ -107,6 +107,18 @@
   line-height: 1rem;
 }
 
+.chipWarmup {
+  border-color: rgba($indigo-bright, 0.3);
+  background: rgba($indigo, 0.2);
+  color: rgba(#fff, 0.75);
+}
+
+.warmupMark {
+  font-size: 10px;
+  font-weight: 700;
+  color: #aeb8ff;
+}
+
 .chipValue {
   font-family: $font-dot;
 }

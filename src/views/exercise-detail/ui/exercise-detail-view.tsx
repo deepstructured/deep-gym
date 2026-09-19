@@ -15,13 +15,10 @@ import {
   type ExerciseSetRecord,
 } from "@/entities/workout";
 import {
-  ProgressChart,
+  ExerciseProgressPanel,
   RepsByWeightTable,
   exerciseSummary,
-  metricSeries,
-  progressSeries,
   repStatsByWeight,
-  seriesToUnit,
 } from "@/features/exercise-stats";
 import { MachineInfoButton } from "@/features/machine-info";
 import { PlateSheet } from "@/features/plate-calculator";
@@ -81,22 +78,6 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
   const repStats = useMemo(
     () => repStatsByWeight(history ?? [], { loadMode }),
     [history, loadMode],
-  );
-  const chartPoints = useMemo(
-    () => seriesToUnit(progressSeries(history ?? []), unit),
-    [history, unit],
-  );
-  const repsChartPoints = useMemo(
-    () =>
-      metricSeries(history ?? [], "reps").map((point) => ({
-        date: point.date,
-        value: point.valueKg,
-      })),
-    [history],
-  );
-  const addedLoadChartPoints = useMemo(
-    () => seriesToUnit(metricSeries(history ?? [], "addedLoad"), unit),
-    [history, unit],
   );
 
   const recent = useMemo(() => {
@@ -257,25 +238,17 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
           )}
         </div>
 
-        {/* Progress */}
-        {!isBodyweight && chartPoints.length > 1 && (
-          <Card variant="indigo" className={styles.chartCard}>
-            <p className={styles.cardLabelOnGradient}>{t("detail.topSet")}</p>
-            <ProgressChart points={chartPoints} unit={unit} />
-          </Card>
-        )}
-        {isBodyweight && repsChartPoints.length > 1 && (
-          <Card variant="indigo" className={styles.chartCard}>
-            <p className={styles.cardLabelOnGradient}>{t("stats.reps")}</p>
-            <ProgressChart points={repsChartPoints} unit="" />
-          </Card>
-        )}
-        {isBodyweight && addedLoadChartPoints.length > 1 && (
-          <Card variant="indigo" className={styles.chartCard}>
-            <p className={styles.cardLabelOnGradient}>
-              {t("detail.addedLoadProgress")}
-            </p>
-            <ProgressChart points={addedLoadChartPoints} unit={unit} signed />
+        {/* Progress — interactive chart with periods and full screen */}
+        {summary.sessions > 0 && (
+          <Card variant="surface" className={styles.progressCard}>
+            <p className={styles.cardLabel}>{t("home.progress")}</p>
+            <ExerciseProgressPanel
+              records={history}
+              unit={unit}
+              bodyweight={isBodyweight}
+              exerciseName={exercise.name}
+              subtitle={groupName}
+            />
           </Card>
         )}
 
@@ -310,8 +283,16 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
                     {entry.sets!.map((set, i) => (
                       <span
                         key={i}
-                        className={styles.setChip}
+                        className={cn(
+                          styles.setChip,
+                          set.set_type === "warmup" && styles.setChipWarmup,
+                        )}
                       >
+                        {set.set_type === "warmup" && (
+                          <span className={styles.warmupMark}>
+                            {t("set.warmupShort")}
+                          </span>
+                        )}
                         <SetLoad
                           set={set}
                           unit={unit}

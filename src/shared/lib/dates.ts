@@ -55,3 +55,14 @@ export function formatShort(iso: string): string {
 export function formatMonthYear(date: Date): string {
   return format(date, "LLLL yyyy", { locale: getDateLocale() });
 }
+
+/** Chart date label: "d MMM", or month + year once the range spans ~a year. */
+export function formatAxisDate(iso: string, spanDays = 0): string {
+  const date = parseISO(iso);
+  if (spanDays > 300) {
+    return format(date, "LLL yy", { locale: getDateLocale() });
+  }
+  return format(date, dayFirst() ? "d MMM" : "MMM d", {
+    locale: getDateLocale(),
+  });
+}

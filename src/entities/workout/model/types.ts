@@ -1,5 +1,5 @@
 import type { Exercise } from "@/entities/exercise";
-import type { ExerciseLoadMode } from "@/shared/config/workout";
+import type { ExerciseLoadMode, SetType } from "@/shared/config/workout";
 
 export interface WorkoutSet {
   id: string;
@@ -8,6 +8,8 @@ export interface WorkoutSet {
   weight_kg: number | null;
   reps: number | null;
   to_failure: boolean;
+  /** Missing until migration 0008 is applied; treat as "working". */
+  set_type?: SetType;
 }
 
 export interface WorkoutExercise {
@@ -51,6 +53,7 @@ export interface WorkoutInput {
       weight_kg: number | null;
       reps: number | null;
       to_failure: boolean;
+      set_type: SetType;
     }[];
   }[];
 }

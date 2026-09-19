@@ -55,6 +55,8 @@ import {
   newSet,
   parseWeight,
   rebaseBodyweightExercises,
+  warmupRepsHint,
+  withWarmupSet,
   type DraftExercise,
   type DraftSet,
   type WorkoutDraft,
@@ -390,6 +392,9 @@ function ExerciseEditor({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+  // Working sets are numbered 1, 2, 3… while warm-ups show "W".
+  let workingCount = 0;
+  let warmupCount = 0;
 
   return (
     <div
@@ -474,110 +479,162 @@ function ExerciseEditor({
       </div>
 
       <div className={styles.setRows}>
-        {exercise.sets.map((set, setIndex) => (
-          <div key={set.key} className={styles.setRow}>
-            <span className={styles.setIndex}>{setIndex + 1}</span>
-
-            {exercise.equipment === "bodyweight" ? (
-              <BodyweightLoadInput
-                set={set}
-                unit={exercise.unit ?? unit}
-                bodyWeightKg={bodyWeightKg}
-                onChange={(addedWeight, totalWeight) =>
+        {exercise.sets.map((set) => {
+          if (set.warmup) warmupCount += 1;
+          else workingCount += 1;
+          const warmupIndex = warmupCount - 1;
+          return (
+            <div
+              key={set.key}
+              className={cn(styles.setRow, set.warmup && styles.setRowWarmup)}
+            >
+              {/* Tapping the number flips a set between working and warm-up. */}
+              <button
+                type="button"
+                aria-pressed={Boolean(set.warmup)}
+                aria-label={
+                  set.warmup ? t("set.markWorking") : t("set.markWarmup")
+                }
+                onClick={() =>
                   onPatchSet(set.key, {
-                    addedWeight,
-                    weight: totalWeight,
+                    warmup: !set.warmup,
+                    toFailure: false,
                   })
                 }
-              />
-            ) : (
-              <div className={styles.weightWrap}>
-                <Input
-                  value={set.weight}
-                  inputMode="decimal"
-                  placeholder="0"
-                  className={
-                    exercise.equipment === "crossover"
-                      ? styles.setInput
-                      : styles.setInputPadded
-                  }
-                  onChange={(e) =>
+                className={cn(
+                  styles.setIndex,
+                  set.warmup && styles.setIndexWarmup,
+                )}
+              >
+                {set.warmup ? t("set.warmupShort") : workingCount}
+              </button>
+
+              {exercise.equipment === "bodyweight" ? (
+                <BodyweightLoadInput
+                  set={set}
+                  unit={exercise.unit ?? unit}
+                  bodyWeightKg={bodyWeightKg}
+                  onChange={(addedWeight, totalWeight) =>
                     onPatchSet(set.key, {
-                      weight: e.target.value.replace(/[^\d.,]/g, ""),
+                      addedWeight,
+                      weight: totalWeight,
                     })
                   }
                 />
-                {/* crossover is a cable stack — no plates to break down */}
-                {exercise.equipment !== "crossover" && (
-                  <button
-                    type="button"
-                    aria-label={t("set.plates")}
-                    onClick={() => onShowPlates(set.weight, exercise)}
-                    className={styles.platesButton}
-                  >
-                    <PlatesGlyph />
-                  </button>
-                )}
-              </div>
-            )}
-
-            <Input
-              value={set.reps}
-              inputMode="numeric"
-              placeholder="0"
-              className={styles.setInput}
-              onChange={(e) =>
-                onPatchSet(set.key, {
-                  reps: e.target.value.replace(/\D/g, ""),
-                })
-              }
-            />
-
-            <button
-              type="button"
-              role="switch"
-              aria-checked={set.toFailure}
-              aria-label={t("set.toFailure")}
-              onClick={() => onPatchSet(set.key, { toFailure: !set.toFailure })}
-              className={cn(
-                styles.failButton,
-                set.toFailure && styles.failActive,
+              ) : (
+                <div className={styles.weightWrap}>
+                  <Input
+                    value={set.weight}
+                    inputMode="decimal"
+                    placeholder="0"
+                    className={
+                      exercise.equipment === "crossover"
+                        ? styles.setInput
+                        : styles.setInputPadded
+                    }
+                    onChange={(e) =>
+                      onPatchSet(set.key, {
+                        weight: e.target.value.replace(/[^\d.,]/g, ""),
+                      })
+                    }
+                  />
+                  {/* crossover is a cable stack — no plates to break down */}
+                  {exercise.equipment !== "crossover" && (
+                    <button
+                      type="button"
+                      aria-label={t("set.plates")}
+                      onClick={() => onShowPlates(set.weight, exercise)}
+                      className={styles.platesButton}
+                    >
+                      <PlatesGlyph />
+                    </button>
+                  )}
+                </div>
               )}
-            >
-              <IconFlame size={17} />
-            </button>
 
-            <button
-              type="button"
-              aria-label={t("set.removeSet")}
-              onClick={() =>
-                onPatch({
-                  sets: exercise.sets.filter((s) => s.key !== set.key),
-                })
-              }
-              disabled={exercise.sets.length === 1}
-              className={styles.removeSet}
-            >
-              <IconClose size={16} />
-            </button>
-          </div>
-        ))}
+              <Input
+                value={set.reps}
+                inputMode="numeric"
+                placeholder={
+                  set.warmup ? String(warmupRepsHint(warmupIndex)) : "0"
+                }
+                className={styles.setInput}
+                onChange={(e) =>
+                  onPatchSet(set.key, {
+                    reps: e.target.value.replace(/\D/g, ""),
+                  })
+                }
+              />
+
+              {set.warmup ? (
+                <span aria-hidden="true" className={styles.warmupSpacer} />
+              ) : (
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={set.toFailure}
+                  aria-label={t("set.toFailure")}
+                  onClick={() =>
+                    onPatchSet(set.key, { toFailure: !set.toFailure })
+                  }
+                  className={cn(
+                    styles.failButton,
+                    set.toFailure && styles.failActive,
+                  )}
+                >
+                  <IconFlame size={17} />
+                </button>
+              )}
+
+              <button
+                type="button"
+                aria-label={t("set.removeSet")}
+                onClick={() =>
+                  onPatch({
+                    sets: exercise.sets.filter((s) => s.key !== set.key),
+                  })
+                }
+                disabled={exercise.sets.length === 1}
+                className={styles.removeSet}
+              >
+                <IconClose size={16} />
+              </button>
+            </div>
+          );
+        })}
       </div>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        tone="lime"
-        className={styles.addSet}
-        onClick={() =>
-          onPatch({
-            sets: [...exercise.sets, newSet(exercise.sets.at(-1))],
-          })
-        }
-      >
-        <IconPlus size={16} />
-        {t("set.addSet")}
-      </Button>
+      <div className={styles.setActions}>
+        <Button
+          variant="ghost"
+          size="sm"
+          tone="lime"
+          onClick={() =>
+            onPatch({
+              sets: [
+                ...exercise.sets,
+                newSet(
+                  exercise.sets.findLast((set) => !set.warmup) ??
+                    exercise.sets.at(-1),
+                ),
+              ],
+            })
+          }
+        >
+          <IconPlus size={16} />
+          {t("set.addSet")}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          tone="faint"
+          className={styles.addWarmup}
+          onClick={() => onPatch({ sets: withWarmupSet(exercise) })}
+        >
+          <IconPlus size={15} />
+          {t("set.addWarmup")}
+        </Button>
+      </div>
 
       {exercise.showNotes && (
         <TextArea

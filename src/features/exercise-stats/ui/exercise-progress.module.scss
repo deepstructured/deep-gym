@@ -1,0 +1,417 @@
+@use "../../../shared/styles/palette" as *;
+
+.panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.metrics {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  gap: 0.25rem;
+  overflow-x: auto;
+}
+
+.metricButton {
+  height: 1.75rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  border: 1px solid rgba(#fff, 0.05);
+  background: rgba(#fff, 0.035);
+  padding: 0 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  color: $muted;
+  transition:
+    background-color $tr,
+    color $tr;
+}
+
+.metricButtonActive {
+  border-color: transparent;
+  background: #fff;
+  color: #000;
+  box-shadow: 0 4px 18px -8px rgba(255, 255, 255, 0.8);
+}
+
+.iconButton {
+  @include icon-circle(1.875rem);
+  color: $muted;
+
+  &:active {
+    color: $lime;
+  }
+}
+
+.iconButtonLarge {
+  @include icon-circle(2.5rem);
+  color: $muted;
+}
+
+.caption {
+  margin-top: -0.25rem;
+  padding: 0 0.125rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: $faint;
+}
+
+/* ── Readout ─────────────────────────────────────────────────────── */
+
+.readout {
+  display: flex;
+  min-height: 3.5rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0 0.25rem;
+}
+
+.readoutCompact {
+  min-height: 2.75rem;
+}
+
+.readoutMain {
+  min-width: 0;
+}
+
+.value {
+  font-size: 2.25rem;
+  line-height: 1;
+  color: #fff;
+}
+
+.valueCompact {
+  font-size: 1.75rem;
+}
+
+.valueSuffix {
+  color: rgba(#fff, 0.4);
+}
+
+.readoutMeta {
+  margin-top: 0.375rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: $muted;
+}
+
+.prBadge {
+  margin-left: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border-radius: 9999px;
+  background: rgba($lime, 0.14);
+  padding: 0 0.4rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: $lime;
+}
+
+.delta {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.125rem;
+  padding-bottom: 0.125rem;
+  color: $muted;
+}
+
+.deltaValue {
+  font-family: $font-dot;
+  font-size: 1rem;
+  color: #fff;
+
+  small {
+    font-family: $font-sans;
+    font-size: 0.6875rem;
+    color: $muted;
+  }
+}
+
+.deltaUp .deltaValue {
+  color: $lime;
+}
+
+.deltaDown .deltaValue {
+  color: $flame-text;
+}
+
+.deltaMeta {
+  font-size: 0.6875rem;
+  color: $faint;
+}
+
+/* ── Empty period ────────────────────────────────────────────────── */
+
+.emptyPeriod {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 1.4rem;
+  border: 1px dashed $line;
+  padding: 0 1.5rem;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: $muted;
+}
+
+.showAll {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $lime;
+}
+
+/* ── Summary row ─────────────────────────────────────────────────── */
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.375rem;
+}
+
+.summaryWide {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.summaryCell {
+  min-width: 0;
+  border-radius: 0.875rem;
+  background: rgba(#fff, 0.035);
+  padding: 0.5rem 0.625rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.summaryLabel {
+  @include truncate;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: $faint;
+}
+
+.summaryValue {
+  @include truncate;
+  margin-top: 0.125rem;
+  font-family: $font-dot;
+  font-size: 0.9375rem;
+
+  small {
+    font-family: $font-sans;
+    font-size: 0.625rem;
+    color: $muted;
+  }
+}
+
+/* ── Full screen ─────────────────────────────────────────────────── */
+
+.fullscreen {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.tool {
+  display: inline-flex;
+  height: 2rem;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  border: 1px solid $line;
+  background: transparent;
+  padding: 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: $faint;
+  transition:
+    color $tr,
+    border-color $tr,
+    background-color $tr;
+}
+
+.toolOn {
+  border-color: rgba(#fff, 0.14);
+  background: $raised;
+  color: $text;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.875rem;
+  height: 0;
+  border-top: 2px dashed currentColor;
+}
+
+.swatch_trend {
+  border-top-color: #8c9bff;
+}
+
+.swatch_average {
+  border-top: 2px dotted $lime;
+}
+
+.swatch_records {
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 1.5px solid $lime;
+  border-radius: 9999px;
+}
+
+.sessionsTitle {
+  margin-bottom: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $muted;
+}
+
+.sessions {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: $radius-tile;
+  border: 1px solid $line;
+  background: $surface;
+}
+
+.session {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  border-top: 1px solid rgba($line, 0.7);
+  padding: 0.625rem 0.875rem;
+  text-align: left;
+  transition: background-color $tr;
+
+  &:first-child {
+    border-top: 0;
+  }
+
+  &:active {
+    background: $raised;
+  }
+}
+
+.sessionActive {
+  background: rgba($lime, 0.06);
+}
+
+.sessionDate {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  font-size: 0.8125rem;
+  font-weight: 500;
+
+  small {
+    font-size: 0.6875rem;
+    font-weight: 400;
+    color: $faint;
+  }
+}
+
+.sessionPr {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border-radius: 9999px;
+  background: rgba($lime, 0.14);
+  padding: 0.05rem 0.4rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: $lime;
+}
+
+.sessionValue {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: $font-dot;
+  font-size: 0.9375rem;
+
+  small {
+    font-family: $font-sans;
+    font-size: 0.625rem;
+    color: $muted;
+  }
+
+  em {
+    font-style: normal;
+    font-size: 0.6875rem;
+  }
+}
+
+.diffUp {
+  color: $lime;
+}
+
+.diffDown {
+  color: $flame-text;
+}
+
+/* ── Load filter ─────────────────────────────────────────────────── */
+
+.filters {
+  margin-top: -0.25rem;
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+}
+
+.filterChip {
+  height: 1.625rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  border: 1px dashed rgba(#fff, 0.12);
+  padding: 0 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: $faint;
+  transition:
+    color $tr,
+    border-color $tr,
+    background-color $tr;
+}
+
+/* Specific loads start after a little gap from the two modes. */
+.filterChipSeparated {
+  margin-left: 0.375rem;
+}
+
+.filterChipActive {
+  border-style: solid;
+  border-color: rgba($lime, 0.45);
+  background: rgba($lime, 0.1);
+  color: $lime;
+}
+
+.swatch_smoothing {
+  border-top: 2px solid $pink;
+}

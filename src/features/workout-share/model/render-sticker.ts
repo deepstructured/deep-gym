@@ -1,4 +1,5 @@
 import type { Workout } from "@/entities/workout";
+import { isWarmupSet } from "@/shared/config/workout";
 import { kgToUnit, type Unit } from "@/shared/lib/weight";
 
 /** Sticker card geometry (canvas pixels). The canvas itself is transparent —
@@ -99,6 +100,7 @@ export async function renderWorkoutSticker(
     // sticker's session total.
     if (we.exercise?.equipment === "bodyweight") continue;
     for (const set of we.sets) {
+      if (isWarmupSet(set)) continue;
       if (set.weight_kg != null && set.reps != null) {
         totalVolumeKg += set.weight_kg * set.reps;
       }

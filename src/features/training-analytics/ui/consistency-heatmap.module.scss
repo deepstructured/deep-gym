@@ -1,0 +1,55 @@
+@use "../../../shared/styles/palette" as *;
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.months {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.month {
+  overflow: visible;
+  white-space: nowrap;
+  font-size: 9px;
+  text-transform: capitalize;
+  color: $faint;
+}
+
+.grid {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.column {
+  display: grid;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 0.2rem;
+}
+
+.cell {
+  aspect-ratio: 1;
+  border-radius: 0.2rem;
+  background: rgba(#fff, 0.06);
+}
+
+.level1 {
+  background: rgba($lime, 0.55);
+}
+
+.level2 {
+  background: $lime;
+  box-shadow: 0 0 6px rgba($lime, 0.4);
+}
+
+.today {
+  outline: 1px solid rgba(#fff, 0.6);
+  outline-offset: 1px;
+}
+
+.future {
+  opacity: 0.35;
+}

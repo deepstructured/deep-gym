@@ -1,0 +1,56 @@
+@use "../../../shared/styles/palette" as *;
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.625rem;
+}
+
+.tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border-radius: $radius-tile;
+  border: 1px solid transparent;
+  padding: 0.875rem 1rem;
+}
+
+.label {
+  @include truncate;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: $muted;
+}
+
+.value {
+  margin-top: 0.5rem;
+  font-size: 1.75rem;
+}
+
+.suffix {
+  color: rgba(#fff, 0.45);
+}
+
+.delta {
+  @include truncate;
+  margin-top: 0.25rem;
+  font-family: $font-dot;
+  font-size: 0.75rem;
+  color: $muted;
+}
+
+.up {
+  color: $lime;
+}
+
+.down {
+  color: $flame-text;
+}
+
+.deltaLabel {
+  font-family: $font-sans;
+  font-size: 0.6875rem;
+  color: $faint;
+}

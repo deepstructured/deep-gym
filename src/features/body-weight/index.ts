@@ -10,3 +10,4 @@ export {
   BodyWeightTracker,
   type BodyWeightTrackerProps,
 } from "./ui/body-weight-tracker";
+export { BodyWeightTrend } from "./ui/body-weight-trend";

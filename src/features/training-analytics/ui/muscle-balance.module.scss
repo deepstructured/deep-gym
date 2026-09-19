@@ -1,0 +1,74 @@
+@use "../../../shared/styles/palette" as *;
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.compact {
+  gap: 0.4rem;
+}
+
+.row {
+  min-width: 0;
+}
+
+.head {
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.name {
+  @include truncate;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.compact .name {
+  font-size: 0.75rem;
+}
+
+.count {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  color: $muted;
+
+  em {
+    margin-left: 0.375rem;
+    font-family: $font-dot;
+    font-style: normal;
+    color: $faint;
+  }
+}
+
+.track {
+  height: 0.375rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: rgba(#fff, 0.06);
+}
+
+.compact .track {
+  height: 0.3rem;
+}
+
+.bar {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #4054d6, #8c9bff);
+  transition: width 400ms $ease;
+}
+
+.barTop {
+  background: linear-gradient(90deg, rgba($lime, 0.7), $lime);
+}
+
+.empty {
+  font-size: 0.8125rem;
+  color: $muted;
+}

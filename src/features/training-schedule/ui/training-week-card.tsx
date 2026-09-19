@@ -16,8 +16,13 @@ import { TrainingWeekEditor } from "./training-week-editor";
 
 export function TrainingWeekCard({
   value,
+  bare = false,
+  onSaved,
 }: {
   value: TrainingSchedule | null | undefined;
+  /** Without card chrome and title — for hosts such as a sheet. */
+  bare?: boolean;
+  onSaved?: () => void;
 }) {
   const { t } = useI18n();
   const updateProfile = useUpdateProfile();
@@ -45,19 +50,25 @@ export function TrainingWeekCard({
     updateProfile.mutate(
       { training_schedule: scheduleForStorage(draft) },
       {
-        onSuccess: () => setSaved(true),
+        onSuccess: () => {
+          setSaved(true);
+          onSaved?.();
+        },
         onError: (cause) => setError((cause as Error).message),
       },
     );
   }
 
+  const Wrapper = bare ? "div" : Card;
   return (
-    <Card variant="surface" className={styles.card}>
+    <Wrapper className={bare ? styles.bare : styles.card}>
       <div>
-        <div className={styles.titleRow}>
-          <span className={styles.dot} />
-          <p className={styles.title}>{t("settings.trainingWeek")}</p>
-        </div>
+        {!bare && (
+          <div className={styles.titleRow}>
+            <span className={styles.dot} />
+            <p className={styles.title}>{t("settings.trainingWeek")}</p>
+          </div>
+        )}
         <p className={styles.hint}>{t("settings.trainingWeekHint")}</p>
       </div>
 
@@ -77,6 +88,6 @@ export function TrainingWeekCard({
       >
         {t("settings.saveSchedule")}
       </Button>
-    </Card>
+    </Wrapper>
   );
 }

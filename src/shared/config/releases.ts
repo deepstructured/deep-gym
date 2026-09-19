@@ -6,6 +6,6 @@ export const CURRENT_ONBOARDING_VERSION = 1;
  * `label` is the human-facing product version displayed in release notes.
  */
 export const CURRENT_RELEASE = {
-  sequence: 3,
-  label: "1.5.0",
+  sequence: 4,
+  label: "1.6.0",
 } as const;

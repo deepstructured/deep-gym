@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useMuscleGroups } from "@/entities/muscle-group";
 import { useProfile } from "@/entities/user";
 import {
+  isWarmupsUnsupportedError,
   isWorkoutLoadModeMismatchError,
   useDeleteWorkout,
   useUpdateWorkout,
@@ -72,7 +73,9 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
           setError(
             isWorkoutLoadModeMismatchError(e)
               ? t("workout.staleExerciseMode")
-              : (e as Error).message,
+              : isWarmupsUnsupportedError(e)
+                ? t("workout.warmupsUnsupported")
+                : (e as Error).message,
           ),
       },
     );

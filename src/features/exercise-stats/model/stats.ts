@@ -3,6 +3,13 @@ import { bodyweightLoadFromTotal } from "@/entities/body-weight";
 import type { ExerciseSetRecord } from "@/entities/workout";
 import { kgToUnit, roundWeight, type Unit } from "@/shared/lib/weight";
 
+/** Warm-ups are logged for the record but never count as progress. */
+export function isWorkingRecord(
+  record: Pick<ExerciseSetRecord, "set_type">,
+): boolean {
+  return record.set_type !== "warmup";
+}
+
 export interface WeightRepStats {
   weightKg: number;
   setCount: number;
@@ -73,7 +80,7 @@ export function repStatsByWeight(
   options: ExerciseStatsOptions = {},
 ): WeightRepStats[] {
   const groups = new Map<number, ExerciseSetRecord[]>();
-  for (const record of records) {
+  for (const record of records.filter(isWorkingRecord)) {
     if (record.reps == null) continue;
     const loadKg =
       options.loadMode === "bodyweight"
@@ -100,9 +107,10 @@ export function repStatsByWeight(
 }
 
 export function exerciseSummary(
-  records: ExerciseSetRecord[],
+  allRecords: ExerciseSetRecord[],
   options: ExerciseStatsOptions = {},
 ): ExerciseSummary {
+  const records = allRecords.filter(isWorkingRecord);
   const dates = new Set(records.map((r) => r.workoutDate));
   const isBodyweight = options.loadMode === "bodyweight";
   const weighted = isBodyweight
@@ -138,41 +146,6 @@ export function exerciseSummary(
   };
 }
 
-export interface ProgressPoint {
-  date: string;
-  valueKg: number;
-}
-
-/** Top-set total weight, or signed added load for body-weight exercises, per
- * workout date. Legacy body-weight records without snapshots are omitted. */
-export function progressSeries(
-  records: ExerciseSetRecord[],
-  options: ExerciseStatsOptions = {},
-): ProgressPoint[] {
-  const byDate = new Map<string, number>();
-  for (const record of records) {
-    const loadKg =
-      options.loadMode === "bodyweight"
-        ? addedLoadForRecord(record)
-        : record.weight_kg;
-    if (loadKg == null) continue;
-    const current = byDate.get(record.workoutDate);
-    if (current == null || loadKg > current) {
-      byDate.set(record.workoutDate, loadKg);
-    }
-  }
-  return [...byDate.entries()]
-    .map(([date, valueKg]) => ({ date, valueKg }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-}
-
-export function seriesToUnit(series: ProgressPoint[], unit: Unit) {
-  return series.map((point) => ({
-    date: point.date,
-    value: roundWeight(kgToUnit(point.valueKg, unit)),
-  }));
-}
-
 /** What the progress chart plots per session. */
 export type ProgressMetric =
   | "topSet"
@@ -181,59 +154,262 @@ export type ProgressMetric =
   | "reps"
   | "addedLoad";
 
-/** Per-session series for a metric. Values are kg for weight metrics and
- *  plain counts for "reps" — the caller converts units where relevant. */
+/** Which working sets a progress view counts. */
+export type LoadFilter =
+  | { mode: "all" }
+  /** Sets near the working weight *at that time* (see filterByLoad). */
+  | { mode: "working" }
+  /** Only sets at exactly this load. */
+  | { mode: "weight"; weightKg: number };
+
+export type LoadFilterMode = "all" | "working";
+
+/** A set counts as working at ≥ 85% of the heaviest load of the last five
+ *  sessions (including the current one). */
+const WORKING_SHARE = 0.85;
+const WORKING_LOOKBACK = 5;
+
+/**
+ * Working sets under a load filter, warm-ups always excluded.
+ *
+ * "working" drops light days and back-off sets — e.g. a pump session at
+ * 20 kg × 24 while the working weight is 27.5 kg — which would otherwise
+ * spike volume and reps. The reference follows history, so older sessions
+ * are judged against the weight that was working back then.
+ */
+export function filterByLoad(
+  records: ExerciseSetRecord[],
+  filter: LoadFilter,
+): ExerciseSetRecord[] {
+  const working = records.filter(isWorkingRecord);
+  if (filter.mode === "all") return working;
+  if (filter.mode === "weight") {
+    return working.filter(
+      (record) =>
+        record.weight_kg != null &&
+        Math.abs(record.weight_kg - filter.weightKg) < 0.05,
+    );
+  }
+
+  const topByDate = new Map<string, number>();
+  for (const record of working) {
+    if (record.weight_kg == null) continue;
+    const top = topByDate.get(record.workoutDate);
+    if (top == null || record.weight_kg > top) {
+      topByDate.set(record.workoutDate, record.weight_kg);
+    }
+  }
+  const dates = [...topByDate.keys()].sort();
+  const thresholdByDate = new Map<string, number>();
+  dates.forEach((date, index) => {
+    const window = dates.slice(
+      Math.max(0, index - WORKING_LOOKBACK + 1),
+      index + 1,
+    );
+    const reference = Math.max(...window.map((day) => topByDate.get(day)!));
+    thresholdByDate.set(date, reference * WORKING_SHARE);
+  });
+  return working.filter(
+    (record) =>
+      record.weight_kg != null &&
+      record.weight_kg >= thresholdByDate.get(record.workoutDate)! - 1e-9,
+  );
+}
+
+export interface LoadOption {
+  weightKg: number;
+  sets: number;
+}
+
+/** The loads worth filtering by: the most used ones, heaviest first. */
+export function loadOptions(
+  records: ExerciseSetRecord[],
+  limit = 8,
+): LoadOption[] {
+  const counts = new Map<number, number>();
+  for (const record of records) {
+    if (!isWorkingRecord(record) || record.weight_kg == null) continue;
+    const key = Math.round(record.weight_kg * 100) / 100;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([weightKg, sets]) => ({ weightKg, sets }))
+    .sort((a, b) => b.sets - a.sets)
+    .slice(0, limit)
+    .sort((a, b) => b.weightKg - a.weightKg);
+}
+
+/** Trailing moving average over `window` sessions (fewer at the start). */
+export function movingAverage(values: number[], window = 3): number[] {
+  return values.map((_, index) => {
+    const slice = values.slice(Math.max(0, index - window + 1), index + 1);
+    return slice.reduce((sum, value) => sum + value, 0) / slice.length;
+  });
+}
+
+export interface ProgressPoint {
+  date: string;
+  /** kg for weight metrics, a plain count for "reps". */
+  valueKg: number;
+  /** Working sets logged for the exercise that session. */
+  sets: number;
+  /** Total reps over those sets. */
+  reps: number;
+  /** The set behind the value — the top set, the best 1RM set or, for
+   *  session totals, the heaviest set. */
+  best: { weightKg: number | null; reps: number | null } | null;
+}
+
+function epley(weightKg: number, reps: number) {
+  return weightKg * (1 + reps / 30);
+}
+
+/** Per-session series for a metric, oldest first. Warm-ups are skipped. */
 export function metricSeries(
   records: ExerciseSetRecord[],
   metric: ProgressMetric,
 ): ProgressPoint[] {
-  const byDate = new Map<string, number>();
+  const byDate = new Map<string, ExerciseSetRecord[]>();
   for (const record of records) {
-    const date = record.workoutDate;
-    switch (metric) {
-      case "topSet": {
-        if (record.weight_kg == null) break;
-        const current = byDate.get(date);
-        if (current == null || record.weight_kg > current) {
-          byDate.set(date, record.weight_kg);
-        }
-        break;
-      }
-      case "oneRm": {
-        if (record.weight_kg == null || record.reps == null || record.reps <= 0)
+    if (!isWorkingRecord(record)) continue;
+    const list = byDate.get(record.workoutDate);
+    if (list) list.push(record);
+    else byDate.set(record.workoutDate, [record]);
+  }
+
+  const points: ProgressPoint[] = [];
+  for (const [date, sets] of byDate) {
+    let value: number | null = null;
+    let best: ExerciseSetRecord | null = null;
+    const reps = sets.reduce((sum, set) => sum + (set.reps ?? 0), 0);
+    const heaviest = sets.reduce<ExerciseSetRecord | null>(
+      (top, set) =>
+        set.weight_kg != null &&
+        (top?.weight_kg == null || set.weight_kg > top.weight_kg)
+          ? set
+          : top,
+      null,
+    );
+
+    for (const set of sets) {
+      switch (metric) {
+        case "topSet":
+          if (
+            set.weight_kg != null &&
+            (value == null ||
+              set.weight_kg > value ||
+              (set.weight_kg === value && (set.reps ?? 0) > (best?.reps ?? 0)))
+          ) {
+            value = set.weight_kg;
+            best = set;
+          }
           break;
-        const est = record.weight_kg * (1 + record.reps / 30); // Epley
-        const current = byDate.get(date);
-        if (current == null || est > current) byDate.set(date, est);
-        break;
-      }
-      case "volume": {
-        if (record.weight_kg == null || record.reps == null) break;
-        byDate.set(
-          date,
-          (byDate.get(date) ?? 0) + record.weight_kg * record.reps,
-        );
-        break;
-      }
-      case "reps": {
-        if (record.reps == null) break;
-        byDate.set(date, (byDate.get(date) ?? 0) + record.reps);
-        break;
-      }
-      case "addedLoad": {
-        const addedLoadKg = addedLoadForRecord(record);
-        if (addedLoadKg == null) break;
-        const current = byDate.get(date);
-        if (current == null || addedLoadKg > current) {
-          byDate.set(date, addedLoadKg);
+        case "oneRm":
+          if (set.weight_kg != null && set.reps != null && set.reps > 0) {
+            const estimate = epley(set.weight_kg, set.reps);
+            if (value == null || estimate > value) {
+              value = estimate;
+              best = set;
+            }
+          }
+          break;
+        case "volume":
+          if (set.weight_kg != null && set.reps != null) {
+            value = (value ?? 0) + set.weight_kg * set.reps;
+            best = heaviest;
+          }
+          break;
+        case "reps":
+          if (set.reps != null) {
+            value = (value ?? 0) + set.reps;
+            if (best == null || set.reps > (best.reps ?? 0)) best = set;
+          }
+          break;
+        case "addedLoad": {
+          const added = addedLoadForRecord(set);
+          if (added != null && (value == null || added > value)) {
+            value = added;
+            best = set;
+          }
+          break;
         }
-        break;
       }
     }
+
+    if (value != null) {
+      points.push({
+        date,
+        valueKg: value,
+        sets: sets.length,
+        reps,
+        best: best ? { weightKg: best.weight_kg, reps: best.reps } : null,
+      });
+    }
   }
-  return [...byDate.entries()]
-    .map(([date, valueKg]) => ({ date, valueKg }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  return points.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** Indices of sessions that beat every earlier session (all-time PRs). The
+ *  first session only sets the baseline. */
+export function recordIndices(values: number[]): Set<number> {
+  const result = new Set<number>();
+  let max = -Infinity;
+  values.forEach((value, index) => {
+    if (index > 0 && value > max + 1e-9) result.add(index);
+    max = Math.max(max, value);
+  });
+  return result;
+}
+
+export interface SeriesSummary {
+  first: number;
+  last: number;
+  change: number;
+  /** Relative change vs the first value; null when it started at zero. */
+  changePct: number | null;
+  best: number;
+  average: number;
+  /** Least-squares slope expressed per 30 days; null under two sessions. */
+  perMonth: number | null;
+  sessions: number;
+}
+
+/** Headline numbers of a (period-filtered) display-unit series. */
+export function summarizeSeries(
+  points: { date: string; value: number }[],
+): SeriesSummary | null {
+  if (points.length === 0) return null;
+  const values = points.map((point) => point.value);
+  const first = values[0];
+  const last = values[values.length - 1];
+  const change = last - first;
+
+  let perMonth: number | null = null;
+  if (points.length >= 2) {
+    const t = points.map(
+      (point) => new Date(point.date).getTime() / 86_400_000,
+    );
+    const meanT = t.reduce((sum, value) => sum + value, 0) / t.length;
+    const meanV = values.reduce((sum, value) => sum + value, 0) / values.length;
+    let num = 0;
+    let den = 0;
+    t.forEach((time, index) => {
+      num += (time - meanT) * (values[index] - meanV);
+      den += (time - meanT) ** 2;
+    });
+    perMonth = den > 0 ? (num / den) * 30 : null;
+  }
+
+  return {
+    first,
+    last,
+    change,
+    changePct: first !== 0 ? (change / Math.abs(first)) * 100 : null,
+    best: Math.max(...values),
+    average: values.reduce((sum, value) => sum + value, 0) / values.length,
+    perMonth,
+    sessions: points.length,
+  };
 }
 
 export interface ExtendedSummary extends ExerciseSummary {
@@ -248,9 +424,10 @@ export interface ExtendedSummary extends ExerciseSummary {
 }
 
 export function extendedSummary(
-  records: ExerciseSetRecord[],
+  allRecords: ExerciseSetRecord[],
   options: ExerciseStatsOptions = {},
 ): ExtendedSummary {
+  const records = allRecords.filter(isWorkingRecord);
   const base = exerciseSummary(records, options);
   const dates = [...new Set(records.map((r) => r.workoutDate))].sort();
   const firstDate = dates[0] ?? null;

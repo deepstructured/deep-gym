@@ -1,0 +1,75 @@
+@use "../../styles/palette" as *;
+
+.screen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  outline: none;
+  background:
+    radial-gradient(
+      90% 32rem at 50% -14rem,
+      rgba(24, 39, 136, 0.28),
+      transparent 70%
+    ),
+    $bg;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0
+    env(safe-area-inset-left);
+  animation: fullscreen-in 0.24s cubic-bezier(0.32, 0.72, 0.2, 1);
+}
+
+.header {
+  margin: 0 auto;
+  display: flex;
+  width: 100%;
+  max-width: 48rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem 0.5rem;
+}
+
+.titles {
+  min-width: 0;
+  flex: 1;
+}
+
+.title {
+  @include truncate;
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
+
+.subtitle {
+  @include truncate;
+  font-size: 0.8125rem;
+  color: $muted;
+}
+
+.close {
+  @include icon-circle(2.5rem);
+  color: $muted;
+}
+
+.body {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 48rem;
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));
+}
+
+@keyframes fullscreen-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

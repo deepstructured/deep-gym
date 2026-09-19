@@ -20,7 +20,7 @@ for (const line of readFileSync(join(root, ".env.local"), "utf8").split("\n")) {
 
 const EMAIL = "demo@deepgym.app";
 const CURRENT_ONBOARDING_VERSION = 1;
-const CURRENT_RELEASE_SEQUENCE = 3;
+const CURRENT_RELEASE_SEQUENCE = 4;
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,

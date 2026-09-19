@@ -9,6 +9,8 @@ import {
   type WorkoutTemplate,
 } from "@/entities/workout-template";
 import {
+  getWorkout,
+  isWarmupsUnsupportedError,
   isWorkoutLoadModeMismatchError,
   useCreateWorkout,
 } from "@/entities/workout";
@@ -25,12 +27,22 @@ import {
   rebaseBodyweightExercises,
   useNewWorkoutDraft,
   useNewWorkoutDraftSync,
+  workoutToCopiedExercises,
+  type DraftExercise,
 } from "@/features/workout-form";
 import { useI18n } from "@/shared/i18n";
 import { kgToUnit, roundWeight } from "@/shared/lib/weight";
 import { AppShell } from "@/widgets/app-shell";
-import { Button, ConfirmSheet, ErrorNote, PageLoader } from "@/shared/ui";
+import {
+  Button,
+  ConfirmSheet,
+  ErrorNote,
+  IconTrash,
+  PageLoader,
+} from "@/shared/ui";
 import styles from "./workout-new-view.module.scss";
+
+const EMPTY_TEMPLATE = "EMPTY_TEMPLATE";
 
 export function WorkoutNewView() {
   const router = useRouter();
@@ -42,9 +54,14 @@ export function WorkoutNewView() {
   const [error, setError] = useState<string | null>(null);
   const [isFirstWorkout, setIsFirstWorkout] = useState(false);
   const [bodyWeightPending, setBodyWeightPending] = useState(false);
-  const [pendingTemplate, setPendingTemplate] =
-    useState<WorkoutTemplate | null>(null);
-  const handledTemplateId = useRef<string | null>(null);
+  // A template or "repeat workout" launch waiting for confirmation because
+  // it would replace a draft that already has content.
+  const [pendingReplace, setPendingReplace] = useState<{
+    type: string;
+    exercises: DraftExercise[];
+  } | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const handledLaunch = useRef<string | null>(null);
 
   // Renders a loader until the cloud draft pull settles — this both avoids
   // a hydration mismatch with the locally stored draft and stops a fresher
@@ -134,33 +151,59 @@ export function WorkoutNewView() {
     unit,
   ]);
 
-  // A template chosen from its detail page is an explicit launch intent. It
-  // is resolved after cloud-draft pull so remote persistence cannot overwrite
-  // it. Existing meaningful drafts require confirmation before replacement.
+  // A template (?template=) or a past workout (?repeat=) is an explicit
+  // launch intent. It is resolved after the cloud-draft pull so remote
+  // persistence cannot overwrite it. A meaningful draft needs confirmation.
   useEffect(() => {
     if (!ready || !profile || !groups) return;
     const params = new URLSearchParams(window.location.search);
     const templateId = params.get("template");
-    if (!templateId || handledTemplateId.current === templateId) return;
-    handledTemplateId.current = templateId;
+    const repeatId = params.get("repeat");
+    const launch = templateId
+      ? `template:${templateId}`
+      : repeatId
+        ? `repeat:${repeatId}`
+        : null;
+    if (!launch || handledLaunch.current === launch) return;
+    handledLaunch.current = launch;
 
-    void getWorkoutTemplate(templateId)
-      .then((template) => {
-        if (template.workout_template_exercises.length === 0) {
-          setError(t("templates.exercisesRequired"));
-          consumeTemplateParam();
-          return;
-        }
+    const groupNames = new Map(groups.map((group) => [group.id, group.name]));
+    const resolve: Promise<{ type: string; exercises: DraftExercise[] }> =
+      templateId
+        ? getWorkoutTemplate(templateId).then((template) => {
+            if (template.workout_template_exercises.length === 0) {
+              throw new Error(EMPTY_TEMPLATE);
+            }
+            return {
+              type: template.type,
+              exercises: templateExercises(template, groupNames),
+            };
+          })
+        : getWorkout(repeatId!).then((workout) => ({
+            type: workout.type,
+            exercises: workoutToCopiedExercises(
+              workout,
+              groupNames,
+              unit,
+              "full",
+            ),
+          }));
+
+    void resolve
+      .then((next) => {
         const current = useNewWorkoutDraft.getState().draft;
-        if (isDraftEmpty(current)) {
-          applyTemplate(template);
-        } else {
-          setPendingTemplate(template);
-        }
+        if (isDraftEmpty(current)) applyLaunch(next);
+        else setPendingReplace(next);
       })
-      .catch(() => {
-        setError(t("templates.notFound"));
-        consumeTemplateParam();
+      .catch((cause: Error) => {
+        setError(
+          cause.message === EMPTY_TEMPLATE
+            ? t("templates.exercisesRequired")
+            : templateId
+              ? t("templates.notFound")
+              : t("workout.notFound"),
+        );
+        consumeLaunchParams();
       });
   }, [groups, profile, ready, t]);
 
@@ -169,22 +212,26 @@ export function WorkoutNewView() {
     !createWorkout.isPending &&
     !bodyWeightPending;
 
-  function consumeTemplateParam() {
+  function consumeLaunchParams() {
     const url = new URL(window.location.href);
     url.searchParams.delete("template");
-    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    url.searchParams.delete("repeat");
+    window.history.replaceState(
+      null,
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
   }
 
-  function applyTemplate(template: WorkoutTemplate) {
-    const store = useNewWorkoutDraft.getState();
-    const current = store.draft;
-    const groupNames = new Map(
-      (groups ?? []).map((group) => [group.id, group.name]),
+  function templateExercises(
+    template: WorkoutTemplate,
+    groupNames: Map<string, string>,
+  ): DraftExercise[] {
+    const bodyWeightKg = draftBodyWeightKg(
+      useNewWorkoutDraft.getState().draft,
+      unit,
     );
-    const bodyWeightKg = draftBodyWeightKg(current, unit);
-    const params = new URLSearchParams(window.location.search);
-    const explicitType = params.get("type");
-    const exercises = template.workout_template_exercises.map((item) =>
+    return template.workout_template_exercises.map((item) =>
       exerciseToDraft(
         item.exercise,
         groupNames.get(item.exercise.muscle_group_id) ?? "",
@@ -192,15 +239,32 @@ export function WorkoutNewView() {
         bodyWeightKg,
       ),
     );
+  }
+
+  function applyLaunch(next: { type: string; exercises: DraftExercise[] }) {
+    const store = useNewWorkoutDraft.getState();
+    const current = store.draft;
+    const explicitType = new URLSearchParams(window.location.search).get(
+      "type",
+    );
     store.setDraft({
       ...current,
-      type: explicitType || template.type,
+      type: explicitType || next.type,
       notes: "",
       showNotes: false,
-      exercises,
+      exercises: rebaseBodyweightExercises(
+        next.exercises,
+        draftBodyWeightKg(current, unit),
+      ),
     });
-    setPendingTemplate(null);
-    consumeTemplateParam();
+    setPendingReplace(null);
+    consumeLaunchParams();
+  }
+
+  function discard() {
+    reset();
+    setError(null);
+    setConfirmDiscard(false);
   }
 
   function save() {
@@ -228,7 +292,9 @@ export function WorkoutNewView() {
         setError(
           isWorkoutLoadModeMismatchError(e)
             ? t("workout.staleExerciseMode")
-            : (e as Error).message,
+            : isWarmupsUnsupportedError(e)
+              ? t("workout.warmupsUnsupported")
+              : (e as Error).message,
         ),
     });
   }
@@ -238,15 +304,28 @@ export function WorkoutNewView() {
       title={t("workout.new")}
       back
       action={
-        <Button
-          variant="lime"
-          size="sm"
-          onClick={save}
-          disabled={!canSave}
-          loading={createWorkout.isPending}
-        >
-          {t("common.save")}
-        </Button>
+        <div className={styles.headerActions}>
+          {ready && !isDraftEmpty(draft) && (
+            <button
+              type="button"
+              aria-label={t("workout.discard")}
+              onClick={() => setConfirmDiscard(true)}
+              disabled={bodyWeightPending || createWorkout.isPending}
+              className={styles.discardButton}
+            >
+              <IconTrash size={17} />
+            </button>
+          )}
+          <Button
+            variant="lime"
+            size="sm"
+            onClick={save}
+            disabled={!canSave}
+            loading={createWorkout.isPending}
+          >
+            {t("common.save")}
+          </Button>
+        </div>
       }
     >
       {!ready ? (
@@ -299,30 +378,28 @@ export function WorkoutNewView() {
               {t("workout.save")}
             </Button>
           )}
-
-          {(draft.exercises.length > 0 || draft.notes) && (
-            <button
-              type="button"
-              className={styles.discard}
-              onClick={reset}
-              disabled={bodyWeightPending || createWorkout.isPending}
-            >
-              {t("workout.discard")}
-            </button>
-          )}
         </div>
       )}
 
       <ConfirmSheet
-        open={pendingTemplate != null}
+        open={pendingReplace != null}
         onClose={() => {
-          setPendingTemplate(null);
-          consumeTemplateParam();
+          setPendingReplace(null);
+          consumeLaunchParams();
         }}
         title={t("workout.templateReplaceTitle")}
         message={t("workout.templateReplaceMessage")}
         confirmLabel={t("workout.templateReplaceConfirm")}
-        onConfirm={() => pendingTemplate && applyTemplate(pendingTemplate)}
+        onConfirm={() => pendingReplace && applyLaunch(pendingReplace)}
+      />
+
+      <ConfirmSheet
+        open={confirmDiscard}
+        onClose={() => setConfirmDiscard(false)}
+        title={t("workout.discardTitle")}
+        message={t("workout.discardMessage")}
+        confirmLabel={t("workout.discard")}
+        onConfirm={discard}
       />
     </AppShell>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { SetType } from "@/shared/config/workout";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
 
 export interface ExerciseSetRecord {
@@ -10,6 +11,8 @@ export interface ExerciseSetRecord {
   body_weight_kg: number | null;
   reps: number | null;
   to_failure: boolean;
+  /** Warm-ups are shown in history but excluded from statistics. */
+  set_type: SetType;
   position: number;
   workoutId: string;
   workoutDate: string;
@@ -21,6 +24,7 @@ interface RawRow {
   weight_kg: number | null;
   reps: number | null;
   to_failure: boolean;
+  set_type?: SetType;
   position: number;
   workout_exercise: {
     exercise_id: string;
@@ -34,7 +38,8 @@ interface RawRow {
   };
 }
 
-/** Every logged set of one exercise across all workouts, oldest first. */
+/** Every logged set (warm-ups included) of one exercise across all
+ *  workouts, oldest first. */
 export function useExerciseHistory(exerciseId: string) {
   return useQuery({
     queryKey: ["exercise-history", exerciseId],
@@ -42,8 +47,10 @@ export function useExerciseHistory(exerciseId: string) {
       const supabase = getSupabaseBrowser();
       const { data, error } = await supabase
         .from("sets")
+        // `*` rather than an explicit column list: set_type only exists once
+        // migration 0008 has been applied.
         .select(
-          `weight_kg, reps, to_failure, position,
+          `*,
            workout_exercise:workout_exercises!inner (
              exercise_id, notes,
              workout:workouts!inner (id, date, type, body_weight_kg)
@@ -52,17 +59,20 @@ export function useExerciseHistory(exerciseId: string) {
         .eq("workout_exercise.exercise_id", exerciseId);
       if (error) throw error;
 
-      const rows = (data as unknown as RawRow[]).map((row) => ({
-        weight_kg: row.weight_kg,
-        body_weight_kg: row.workout_exercise.workout.body_weight_kg,
-        reps: row.reps,
-        to_failure: row.to_failure,
-        position: row.position,
-        workoutId: row.workout_exercise.workout.id,
-        workoutDate: row.workout_exercise.workout.date,
-        workoutType: row.workout_exercise.workout.type,
-        exerciseNotes: row.workout_exercise.notes,
-      }));
+      const rows = (data as unknown as RawRow[]).map(
+        (row): ExerciseSetRecord => ({
+          weight_kg: row.weight_kg,
+          body_weight_kg: row.workout_exercise.workout.body_weight_kg,
+          reps: row.reps,
+          to_failure: row.to_failure,
+          set_type: row.set_type === "warmup" ? "warmup" : "working",
+          position: row.position,
+          workoutId: row.workout_exercise.workout.id,
+          workoutDate: row.workout_exercise.workout.date,
+          workoutType: row.workout_exercise.workout.type,
+          exerciseNotes: row.workout_exercise.notes,
+        }),
+      );
 
       rows.sort(
         (a, b) =>

@@ -1,289 +1,321 @@
 'use client'
 
+import { addDays, format } from 'date-fns'
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useMuscleGroups } from '@/entities/muscle-group'
 import {
-  useCreateMuscleGroup,
-  useDeleteMuscleGroup,
-  useMuscleGroups,
-} from '@/entities/muscle-group'
-import { useProfile, useUpdateProfile } from '@/entities/user'
-import {
-  AvatarPresetGrid,
-  useRemoveAvatar,
-  useSetPresetAvatar,
-  useUploadAvatar,
-} from '@/features/avatar'
+  normalizeTrainingSchedule,
+  useProfile,
+  useUpdateProfile,
+} from '@/entities/user'
 import { SignOutButton } from '@/features/auth'
-import { TrainingWeekCard } from '@/features/training-schedule'
 import { BodyWeightHistory, BodyWeightTracker } from '@/features/body-weight'
+import { TrainingWeekCard } from '@/features/training-schedule'
 import { WhatsNewSheet } from '@/features/whats-new'
 import { CURRENT_RELEASE } from '@/shared/config/releases'
 import { LANGUAGE_OPTIONS, useI18n, type Lang } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
-import {
-  kgToUnit,
-  parseWeight,
-  roundWeight,
-  unitToKg,
-  type Unit,
-} from '@/shared/lib/weight'
+import { getDateLocale } from '@/shared/lib/dates'
+import { kgToUnit, roundWeight, type Unit } from '@/shared/lib/weight'
 import { AppShell } from '@/widgets/app-shell'
 import {
   Avatar,
-  Button,
-  Card,
-  ConfirmSheet,
-  ErrorNote,
-  Field,
-  IconChevronDown,
+  IconCalendar,
+  IconCheck,
   IconChevronRight,
-  IconClose,
-  IconHistory,
+  IconGlobe,
   IconInfo,
-  IconPlus,
-  Input,
+  IconMuscle,
+  IconPlates,
+  IconScale,
+  IconSparkles,
+  IconWidgets,
   PageLoader,
-  Segmented,
-  Tag,
+  Sheet,
 } from '@/shared/ui'
+import {
+  AvatarEditor,
+  MuscleGroupsSettings,
+  PlatesSettings,
+  ProfileNameField,
+} from './settings-sections'
 import styles from './settings-view.module.scss'
 
+const SHEETS = [
+  'profile',
+  'weight',
+  'schedule',
+  'plates',
+  'groups',
+  'language',
+] as const
+type SheetKey = (typeof SHEETS)[number]
+
+function isSheetKey(value: unknown): value is SheetKey {
+  return typeof value === 'string' && SHEETS.includes(value as SheetKey)
+}
+
+const MONDAY = new Date(2024, 0, 1)
+
+/**
+ * Settings as a compact, grouped list: every row shows its current value and
+ * opens the full editor in a sheet, so the page itself never grows with the
+ * user's data. `?open=<section>` deep-links straight into a sheet.
+ */
 export function SettingsView() {
   const { t, lang, setLang } = useI18n()
   const { data: profile, isLoading } = useProfile()
+  const { data: groups } = useMuscleGroups()
   const updateProfile = useUpdateProfile()
-
-  const [name, setName] = useState('')
-  const [barWeight, setBarWeight] = useState('')
-  const [newPlate, setNewPlate] = useState('')
-  const [newPlateUnit, setNewPlateUnit] = useState<Unit>('kg')
+  const [sheet, setSheet] = useState<SheetKey | null>(null)
   const [whatsNewOpen, setWhatsNewOpen] = useState(false)
 
-  const unit: Unit = profile?.unit ?? 'kg'
-
   useEffect(() => {
-    if (profile) {
-      setName(profile.display_name ?? '')
-      setBarWeight(
-        String(roundWeight(kgToUnit(profile.bar_weight_kg, profile.unit))),
-      )
-    }
-  }, [profile])
+    const url = new URL(window.location.href)
+    const requested = url.searchParams.get('open')
+    if (!isSheetKey(requested)) return
+    setSheet(requested)
+    // One-shot: a reload should not reopen the sheet.
+    url.searchParams.delete('open')
+    window.history.replaceState(null, '', `${url.pathname}${url.search}`)
+  }, [])
 
   if (isLoading || !profile) {
     return (
-      <AppShell title={t('settings.title')}>
+      <AppShell title={t('settings.title')} back>
         <PageLoader />
       </AppShell>
     )
   }
 
-  // combined plate list, heaviest first, each in its native denomination
-  const plates: { value: number; unit: Unit; kg: number }[] = [
-    ...profile.plates_kg.map((value) => ({
-      value,
-      unit: 'kg' as Unit,
-      kg: value,
-    })),
-    ...(profile.plates_lb ?? []).map((value) => ({
-      value,
-      unit: 'lb' as Unit,
-      kg: unitToKg(value, 'lb'),
-    })),
-  ].sort((a, b) => b.kg - a.kg)
-
-  function saveName() {
-    if (name.trim() && name.trim() !== profile?.display_name) {
-      updateProfile.mutate({ display_name: name.trim() })
-    }
-  }
-
-  function saveBarWeight() {
-    const parsed = parseWeight(barWeight)
-    if (parsed != null) {
-      updateProfile.mutate({
-        bar_weight_kg: Math.round(unitToKg(parsed, unit) * 100) / 100,
-      })
-    }
-  }
+  const unit: Unit = profile.unit ?? 'kg'
+  const close = () => setSheet(null)
 
   function changeLanguage(next: Lang) {
     setLang(next)
     updateProfile.mutate({ language: next })
   }
 
-  function addPlate() {
-    const parsed = parseWeight(newPlate)
-    if (parsed == null) return
-    if (newPlateUnit === 'kg') {
-      if (!profile!.plates_kg.includes(parsed)) {
-        updateProfile.mutate({ plates_kg: [...profile!.plates_kg, parsed] })
-      }
-    } else {
-      const platesLb = profile!.plates_lb ?? []
-      if (!platesLb.includes(parsed)) {
-        updateProfile.mutate({ plates_lb: [...platesLb, parsed] })
-      }
-    }
-    setNewPlate('')
-  }
-
-  function removePlate(plate: { value: number; unit: Unit }) {
-    if (plate.unit === 'kg') {
-      updateProfile.mutate({
-        plates_kg: profile!.plates_kg.filter((p) => p !== plate.value),
-      })
-    } else {
-      updateProfile.mutate({
-        plates_lb: (profile!.plates_lb ?? []).filter((p) => p !== plate.value),
-      })
-    }
-  }
+  const scheduleDays = normalizeTrainingSchedule(profile.training_schedule)
+    .map((type, index) =>
+      type
+        ? format(addDays(MONDAY, index), 'EEEEEE', { locale: getDateLocale() })
+        : null,
+    )
+    .filter(Boolean)
+  const plateCount =
+    profile.plates_kg.length + (profile.plates_lb?.length ?? 0)
 
   return (
-    <AppShell title={t('settings.title')}>
+    <AppShell title={t('settings.title')} back>
       <div className={styles.stack}>
         {/* Profile */}
-        <Card variant="surface" className={styles.card}>
-          <p className={styles.cardTitle}>{t('settings.profile')}</p>
-
-          <AvatarEditor
-            avatarUrl={profile.avatar_url}
-            displayName={profile.display_name}
+        <button
+          type="button"
+          onClick={() => setSheet('profile')}
+          className={cn(styles.profile, 'surface-well')}
+        >
+          <Avatar
+            src={profile.avatar_url}
+            size={56}
+            alt={profile.display_name ?? ''}
           />
+          <span className={styles.profileText}>
+            <span className={styles.profileName}>
+              {profile.display_name || t('settings.yourName')}
+            </span>
+            <span className={styles.profileMeta}>
+              {profile.telegram_username
+                ? `@${profile.telegram_username}`
+                : t('settings.editProfile')}
+            </span>
+          </span>
+          <IconChevronRight size={18} className={styles.chevron} />
+        </button>
 
-          <Field label={t('settings.displayName')}>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={saveName}
-              placeholder={t('settings.yourName')}
-            />
-          </Field>
-          {profile.telegram_username && (
-            <p className={styles.telegramNote}>
-              Telegram: <Tag>@{profile.telegram_username}</Tag>
-            </p>
-          )}
-        </Card>
+        <Group title={t('settings.groupBody')}>
+          <Row
+            icon={<IconScale size={18} />}
+            tone="lime"
+            title={t('bodyWeight.title')}
+            value={
+              profile.body_weight_kg != null
+                ? `${roundWeight(kgToUnit(profile.body_weight_kg, unit))} ${unit}`
+                : t('settings.notSet')
+            }
+            onClick={() => setSheet('weight')}
+          />
+        </Group>
 
-        <BodyWeightTracker allowTimestampEdit />
-        <BodyWeightHistory queryLimit={90} maxRows={8} />
+        <Group title={t('settings.groupTraining')}>
+          <Row
+            icon={<IconCalendar size={18} />}
+            tone="cherry"
+            title={t('settings.trainingWeek')}
+            value={
+              scheduleDays.length > 0
+                ? scheduleDays.join(' · ')
+                : t('settings.flexible')
+            }
+            onClick={() => setSheet('schedule')}
+          />
+          <Row
+            icon={<IconPlates size={18} />}
+            tone="indigo"
+            title={t('settings.plateCalc')}
+            value={t('settings.platesSummary', {
+              bar: roundWeight(kgToUnit(profile.bar_weight_kg, unit)),
+              unit,
+              count: plateCount,
+            })}
+            onClick={() => setSheet('plates')}
+          />
+          <Row
+            icon={<IconMuscle size={18} />}
+            tone="pink"
+            title={t('settings.muscleGroups')}
+            value={String(groups?.length ?? '')}
+            onClick={() => setSheet('groups')}
+          />
+        </Group>
 
-        {/* Language & units */}
-        <Card variant="surface" className={styles.card}>
-          <div>
-            <p className={styles.groupLabel}>{t('settings.language')}</p>
-            <Segmented
-              value={lang}
-              onChange={changeLanguage}
-              options={LANGUAGE_OPTIONS}
-            />
-          </div>
-          <div>
-            <p className={styles.groupLabel}>{t('settings.weightUnit')}</p>
-            <Segmented
-              value={unit}
-              onChange={(next) => updateProfile.mutate({ unit: next })}
-              options={[
-                { value: 'kg', label: t('settings.kilograms') },
-                { value: 'lb', label: t('settings.pounds') },
-              ]}
-            />
-          </div>
-        </Card>
+        <Group title={t('settings.groupApp')}>
+          <Row
+            icon={<IconGlobe size={18} />}
+            title={t('settings.language')}
+            value={LANGUAGE_OPTIONS.find((o) => o.value === lang)?.label}
+            onClick={() => setSheet('language')}
+          />
+          <Row
+            icon={<IconScale size={18} />}
+            title={t('settings.weightUnit')}
+            trailing={
+              <div className={styles.unitSwitch}>
+                {(['kg', 'lb'] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={unit === option}
+                    onClick={() => updateProfile.mutate({ unit: option })}
+                    className={cn(
+                      styles.unitOption,
+                      unit === option && styles.unitOptionActive,
+                    )}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            }
+          />
+          <Row
+            icon={<IconWidgets size={18} />}
+            title={t('settings.homeScreen')}
+            value={t('settings.customize')}
+            href="/?edit=1"
+          />
+        </Group>
 
-        {/* Explicit weekly workout schedule */}
-        <TrainingWeekCard value={profile.training_schedule} />
-
-        {/* Plates */}
-        <Card variant="surface" className={styles.card}>
-          <div>
-            <p className={styles.cardTitle}>{t('settings.plateCalc')}</p>
-            <p className={styles.cardHint}>{t('settings.plateCalcHint')}</p>
-          </div>
-
-          <Field label={t('settings.barWeight', { unit })}>
-            <Input
-              value={barWeight}
-              onChange={(e) =>
-                setBarWeight(e.target.value.replace(/[^\d.,]/g, ''))
-              }
-              onBlur={saveBarWeight}
-              inputMode="decimal"
-              className={styles.barInput}
-            />
-          </Field>
-
-          <div className={styles.chipsWrap}>
-            {plates.map((plate) => (
-              <span
-                key={`${plate.unit}-${plate.value}`}
-                className={styles.plateChip}
-              >
-                <span className={styles.plateValue}>{plate.value}</span>
-                <span className={styles.plateUnit}>{plate.unit}</span>
-                <button
-                  type="button"
-                  aria-label={t('settings.removePlate', {
-                    plate: `${plate.value} ${plate.unit}`,
-                  })}
-                  onClick={() => removePlate(plate)}
-                  className={styles.chipRemove}
-                >
-                  <IconClose size={14} />
-                </button>
-              </span>
-            ))}
-          </div>
-
-          <div className={styles.addRow}>
-            <Input
-              value={newPlate}
-              onChange={(e) =>
-                setNewPlate(e.target.value.replace(/[^\d.,]/g, ''))
-              }
-              onKeyDown={(e) => e.key === 'Enter' && addPlate()}
-              inputMode="decimal"
-              placeholder={t('settings.plateWeight')}
-              className={styles.addInput}
-            />
-            <div className={styles.unitSwitch}>
-              {(['kg', 'lb'] as const).map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setNewPlateUnit(option)}
-                  className={cn(
-                    styles.unitOption,
-                    newPlateUnit === option && styles.unitOptionActive,
-                  )}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-            <Button
-              variant="surface"
-              size="compact"
-              onClick={addPlate}
-            >
-              <IconPlus size={16} />
-              {t('common.add')}
-            </Button>
-          </div>
-        </Card>
-
-        {/* Muscle groups */}
-        <MuscleGroupsCard />
-
-        <HelpUpdatesCard onOpenWhatsNew={() => setWhatsNewOpen(true)} />
+        <Group title={t('settings.groupHelp')}>
+          <Row
+            icon={<IconInfo size={18} />}
+            title={t('settings.appGuide')}
+            href="/onboarding?replay=1"
+          />
+          <Row
+            icon={<IconSparkles size={18} />}
+            title={t('settings.whatsNew')}
+            value={CURRENT_RELEASE.label}
+            onClick={() => setWhatsNewOpen(true)}
+          />
+        </Group>
 
         <SignOutButton />
 
         <p className={styles.installNote}>{t('settings.install')}</p>
       </div>
+
+      <Sheet
+        open={sheet === 'profile'}
+        onClose={close}
+        title={t('settings.profile')}
+      >
+        <div className={styles.sheetStack}>
+          <AvatarEditor
+            avatarUrl={profile.avatar_url}
+            displayName={profile.display_name}
+          />
+          <ProfileNameField value={profile.display_name ?? ''} />
+        </div>
+      </Sheet>
+
+      <Sheet
+        open={sheet === 'weight'}
+        onClose={close}
+        title={t('bodyWeight.title')}
+      >
+        <div className={styles.sheetStack}>
+          <BodyWeightTracker bare allowTimestampEdit />
+          <div className={styles.sheetDivider} />
+          <BodyWeightHistory bare />
+        </div>
+      </Sheet>
+
+      <Sheet
+        open={sheet === 'schedule'}
+        onClose={close}
+        title={t('settings.trainingWeek')}
+      >
+        <TrainingWeekCard
+          bare
+          value={profile.training_schedule}
+          onSaved={close}
+        />
+      </Sheet>
+
+      <Sheet
+        open={sheet === 'plates'}
+        onClose={close}
+        title={t('settings.plateCalc')}
+      >
+        <PlatesSettings />
+      </Sheet>
+
+      <Sheet
+        open={sheet === 'groups'}
+        onClose={close}
+        title={t('settings.muscleGroups')}
+      >
+        <MuscleGroupsSettings />
+      </Sheet>
+
+      <Sheet
+        open={sheet === 'language'}
+        onClose={close}
+        title={t('settings.language')}
+      >
+        <div className={styles.options}>
+          {LANGUAGE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={option.value === lang}
+              onClick={() => {
+                changeLanguage(option.value)
+                close()
+              }}
+              className={cn(
+                styles.option,
+                option.value === lang && styles.optionActive,
+              )}
+            >
+              {option.label}
+              {option.value === lang && <IconCheck size={18} />}
+            </button>
+          ))}
+        </div>
+      </Sheet>
 
       <WhatsNewSheet
         open={whatsNewOpen}
@@ -293,249 +325,69 @@ export function SettingsView() {
   )
 }
 
-function HelpUpdatesCard({
-  onOpenWhatsNew,
+function Group({
+  title,
+  children,
 }: {
-  onOpenWhatsNew: () => void
+  title: string
+  children: React.ReactNode
 }) {
-  const { t } = useI18n()
-
   return (
-    <Card variant="surface" className={styles.helpCard}>
-      <div className={styles.helpHead}>
-        <span className={styles.helpDot} />
-        <p className={styles.cardTitle}>{t('settings.helpUpdates')}</p>
-      </div>
-
-      <div className={styles.helpRows}>
-        <Link href="/onboarding?replay=1" className={styles.helpRow}>
-          <span className={cn(styles.helpIcon, styles.helpIconLime)}>
-            <IconInfo size={18} />
-          </span>
-          <span className={styles.helpText}>
-            <span className={styles.helpRowTitle}>
-              {t('settings.appGuide')}
-            </span>
-            <span className={styles.helpRowHint}>
-              {t('settings.appGuideHint')}
-            </span>
-          </span>
-          <IconChevronRight size={18} className={styles.helpChevron} />
-        </Link>
-
-        <button
-          type="button"
-          onClick={onOpenWhatsNew}
-          className={cn(styles.helpRow, styles.helpRowBorder)}
-        >
-          <span className={cn(styles.helpIcon, styles.helpIconIndigo)}>
-            <IconHistory size={18} />
-          </span>
-          <span className={styles.helpText}>
-            <span className={styles.helpRowTitle}>
-              {t('settings.whatsNew')}
-            </span>
-            <span className={styles.helpRowHint}>
-              {t('settings.whatsNewHint', {
-                version: CURRENT_RELEASE.label,
-              })}
-            </span>
-          </span>
-          <IconChevronRight size={18} className={styles.helpChevron} />
-        </button>
-      </div>
-    </Card>
+    <section>
+      <h2 className={styles.groupTitle}>{title}</h2>
+      <div className={cn(styles.group, 'surface-well')}>{children}</div>
+    </section>
   )
 }
 
-function AvatarEditor({
-  avatarUrl,
-  displayName,
+type RowTone = 'lime' | 'indigo' | 'cherry' | 'pink' | 'neutral'
+
+function Row({
+  icon,
+  tone = 'neutral',
+  title,
+  value,
+  trailing,
+  onClick,
+  href,
 }: {
-  avatarUrl: string | null
-  displayName: string | null
+  icon: React.ReactNode
+  tone?: RowTone
+  title: string
+  value?: string
+  /** Inline control instead of a value + chevron. */
+  trailing?: React.ReactNode
+  onClick?: () => void
+  href?: string
 }) {
-  const { t } = useI18n()
-  const upload = useUploadAvatar()
-  const removeAvatar = useRemoveAvatar()
-  const setPreset = useSetPresetAvatar()
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [showPresets, setShowPresets] = useState(false)
-
-  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = '' // allow re-picking the same file
-    if (!file) return
-    setError(null)
-    upload.mutate(file, {
-      onError: (err) => setError((err as Error).message),
-    })
-  }
-
-  const busy =
-    upload.isPending || removeAvatar.isPending || setPreset.isPending
-
-  return (
-    <div className={styles.avatarEditor}>
-      <div className={styles.avatarRow}>
-        <Avatar src={avatarUrl} size={72} alt={displayName ?? ''} />
-        <div className={styles.avatarActions}>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className={styles.fileInput}
-            onChange={onFileChange}
-          />
-          <Button
-            variant="surface"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            loading={upload.isPending}
-            disabled={busy}
-          >
-            {t('settings.uploadPhoto')}
-          </Button>
-          {avatarUrl != null && (
-            <button
-              type="button"
-              className={styles.useDefault}
-              disabled={busy}
-              onClick={() => {
-                setError(null)
-                removeAvatar.mutate(undefined, {
-                  onError: (err) => setError((err as Error).message),
-                })
-              }}
-            >
-              {t('settings.useDefault')}
-            </button>
-          )}
-          <p className={styles.avatarHint}>{t('settings.avatarHint')}</p>
-        </div>
-      </div>
-
-      <div>
-        <button
-          type="button"
-          aria-expanded={showPresets}
-          onClick={() => setShowPresets((value) => !value)}
-          className={styles.presetsToggle}
-        >
-          {t('settings.chooseAvatar')}
-          <IconChevronDown
-            size={16}
-            className={cn(
-              styles.presetsChevron,
-              showPresets && styles.presetsChevronOpen,
-            )}
-          />
-        </button>
-
-        {showPresets && (
-          <AvatarPresetGrid
-            value={avatarUrl}
-            disabled={busy}
-            className={styles.presetsGrid}
-            onSelect={(url) => {
-              setError(null)
-              if (url === null) {
-                removeAvatar.mutate(undefined, {
-                  onError: (err) => setError((err as Error).message),
-                })
-              } else {
-                setPreset.mutate(url, {
-                  onError: (err) => setError((err as Error).message),
-                })
-              }
-            }}
-          />
-        )}
-      </div>
-
-      {error && <ErrorNote message={error} />}
-    </div>
+  const content = (
+    <>
+      <span className={cn(styles.rowIcon, styles[`tone_${tone}`])}>
+        {icon}
+      </span>
+      <span className={styles.rowTitle}>{title}</span>
+      {trailing ?? (
+        <>
+          {value && <span className={styles.rowValue}>{value}</span>}
+          <IconChevronRight size={17} className={styles.chevron} />
+        </>
+      )}
+    </>
   )
-}
 
-function MuscleGroupsCard() {
-  const { t } = useI18n()
-  const { data: groups } = useMuscleGroups()
-  const createGroup = useCreateMuscleGroup()
-  const deleteGroup = useDeleteMuscleGroup()
-  const [newGroup, setNewGroup] = useState('')
-  const [deleteId, setDeleteId] = useState<string | null>(null)
-
-  function add() {
-    const name = newGroup.trim()
-    if (!name) return
-    createGroup.mutate(name, { onSuccess: () => setNewGroup('') })
+  if (href) {
+    return (
+      <Link href={href} className={styles.row}>
+        {content}
+      </Link>
+    )
   }
-
-  const pending = groups?.find((g) => g.id === deleteId)
-
-  return (
-    <Card variant="surface" className={styles.card}>
-      <div>
-        <p className={styles.cardTitle}>{t('settings.muscleGroups')}</p>
-        <p className={styles.cardHint}>{t('settings.muscleGroupsHint')}</p>
-      </div>
-
-      <div className={styles.chipsWrap}>
-        {groups?.map((group) => (
-          <span
-            key={group.id}
-            className={styles.groupChip}
-          >
-            {group.name}
-            {group.user_id != null && (
-              <button
-                type="button"
-                aria-label={t('settings.deleteGroup', { name: group.name })}
-                onClick={() => setDeleteId(group.id)}
-                className={styles.chipRemove}
-              >
-                <IconClose size={14} />
-              </button>
-            )}
-          </span>
-        ))}
-      </div>
-
-      <div className={styles.addRow}>
-        <Input
-          value={newGroup}
-          onChange={(e) => setNewGroup(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && add()}
-          placeholder={t('settings.newGroup')}
-          className={styles.addInput}
-        />
-        <Button
-          variant="surface"
-          size="compact"
-          onClick={add}
-          loading={createGroup.isPending}
-        >
-          <IconPlus size={16} />
-          {t('common.add')}
-        </Button>
-      </div>
-
-      <ConfirmSheet
-        open={deleteId != null}
-        onClose={() => setDeleteId(null)}
-        title={t('settings.deleteGroup', { name: pending?.name ?? '' })}
-        message={t('settings.deleteGroupMessage')}
-        loading={deleteGroup.isPending}
-        onConfirm={() => {
-          if (!deleteId) return
-          deleteGroup.mutate(deleteId, {
-            onSuccess: () => setDeleteId(null),
-            onError: () => setDeleteId(null),
-          })
-        }}
-      />
-    </Card>
-  )
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={styles.row}>
+        {content}
+      </button>
+    )
+  }
+  return <div className={cn(styles.row, styles.rowStatic)}>{content}</div>
 }

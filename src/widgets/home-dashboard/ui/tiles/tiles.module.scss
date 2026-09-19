@@ -1,0 +1,686 @@
+@use "../../../../shared/styles/palette" as *;
+
+/* ── Shell ───────────────────────────────────────────────────────── */
+
+.hit {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: $radius-tile;
+  text-align: left;
+  transition: transform $tr;
+
+  &:active {
+    transform: scale(0.985);
+  }
+}
+
+/* Doubled: tiles reshape the Card base (radius, padding, layout). */
+.tile.tile {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  border-radius: $radius-tile;
+  padding: 0.875rem 1rem;
+}
+
+.head {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.label {
+  min-width: 0;
+  flex: 1;
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: $muted;
+}
+
+.labelOnGradient {
+  color: rgba(#fff, 0.62);
+}
+
+.badge {
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(#fff, 0.08);
+  background: rgba(#fff, 0.05);
+  color: rgba(#fff, 0.6);
+}
+
+.badge_lime {
+  border-color: rgba($lime, 0.2);
+  background: rgba($lime, 0.1);
+  color: $lime;
+}
+
+.badge_indigo {
+  border-color: rgba($indigo-bright, 0.3);
+  background: rgba($indigo, 0.35);
+  color: #aeb8ff;
+}
+
+.badge_flame {
+  border-color: rgba(#fff, 0.12);
+  background: rgba(#fff, 0.08);
+  color: rgba(#fff, 0.85);
+}
+
+.badge_pink {
+  border-color: rgba($pink, 0.25);
+  background: rgba($pink, 0.12);
+  color: $pink;
+}
+
+.headLink {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.125rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: $muted;
+}
+
+.value {
+  margin-top: auto;
+  font-size: 30px;
+}
+
+.valueXl {
+  font-size: 44px;
+}
+
+.valueLime {
+  color: $lime;
+}
+
+.suffix {
+  color: rgba(#fff, 0.5);
+}
+
+.meta {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: $muted;
+}
+
+.metaFaint {
+  font-size: 0.6875rem;
+  color: $faint;
+}
+
+.bottom {
+  margin-top: auto;
+}
+
+.row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.grow {
+  min-width: 0;
+  flex: 1;
+}
+
+.empty {
+  margin: auto 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: $muted;
+}
+
+/* ── Start / resume ──────────────────────────────────────────────── */
+
+.startDots {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.25;
+}
+
+.startTitle {
+  position: relative;
+  font-size: 1.25rem;
+  line-height: 1.6rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.startSub {
+  position: relative;
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  color: rgba(#fff, 0.7);
+}
+
+.startPlus {
+  position: relative;
+  display: flex;
+  height: 3rem;
+  width: 3rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(#fff, 0.2);
+  color: #fff;
+}
+
+.startSmall {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Live draft */
+.live.live {
+  border: 1px solid rgba($lime, 0.35);
+  background:
+    radial-gradient(
+      120% 90% at 0% 0%,
+      rgba($lime, 0.14),
+      transparent 60%
+    ),
+    $surface;
+}
+
+.liveBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: $lime;
+}
+
+.liveDot {
+  height: 0.5rem;
+  width: 0.5rem;
+  border-radius: 9999px;
+  background: $lime;
+  box-shadow: 0 0 0 0 rgba($lime, 0.6);
+  animation: pulse 1.8s $ease infinite;
+}
+
+.liveType {
+  @include truncate;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.liveContinue {
+  display: inline-flex;
+  height: 2.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  background: $lime;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #000;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba($lime, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba($lime, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba($lime, 0);
+  }
+}
+
+/* ── Week bars ───────────────────────────────────────────────────── */
+
+.weekBars {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  align-items: end;
+  gap: 0.25rem;
+  padding-top: 0.75rem;
+}
+
+.weekDay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.weekBar {
+  width: 0.25rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: rgba(#fff, 0.12);
+}
+
+.weekBarWide {
+  width: 0.5rem;
+}
+
+.weekBarPlanned {
+  background: rgba(#fff, 0.28);
+  outline: 1px dashed rgba(#fff, 0.25);
+  outline-offset: 2px;
+}
+
+.weekBarActive {
+  height: 1rem;
+  background: $lime;
+  box-shadow: 0 0 12px rgba($lime, 0.45);
+}
+
+.weekBarToday {
+  background: rgba(#fff, 0.35);
+}
+
+.weekLetter {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  color: $faint;
+}
+
+.weekLetterToday {
+  color: $text;
+}
+
+/* ── Goal ring ───────────────────────────────────────────────────── */
+
+.ring {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ringText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: $font-dot;
+  font-size: 1.125rem;
+
+  small {
+    font-size: 0.75rem;
+    color: $muted;
+  }
+}
+
+.ringCenter {
+  margin: auto;
+}
+
+/* ── Lists ───────────────────────────────────────────────────────── */
+
+.list {
+  margin-top: 0.625rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.listRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.625rem;
+  border-top: 1px solid rgba($line, 0.6);
+  padding: 0.5rem 0;
+
+  &:first-child {
+    border-top: 0;
+    padding-top: 0.125rem;
+  }
+}
+
+.listText {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.listTitle {
+  @include truncate;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.listMeta {
+  @include truncate;
+  font-size: 0.6875rem;
+  color: $faint;
+}
+
+.listValue {
+  flex-shrink: 0;
+  font-family: $font-dot;
+  font-size: 0.9375rem;
+
+  small {
+    font-family: $font-sans;
+    font-size: 0.625rem;
+    color: $muted;
+  }
+}
+
+/* ── Chips / actions ─────────────────────────────────────────────── */
+
+.chips {
+  margin: 0.625rem -1rem 0;
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0 1rem;
+}
+
+.startChip {
+  display: inline-flex;
+  height: 2.5rem;
+  max-width: 14rem;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid $line;
+  background: $raised;
+  padding: 0 0.875rem 0 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+
+  span:last-child {
+    @include truncate;
+  }
+
+  &:active {
+    background: $line;
+  }
+}
+
+.playDot {
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: $lime;
+  color: #000;
+}
+
+.newChip {
+  border-style: dashed;
+  color: $muted;
+}
+
+.startButton {
+  display: inline-flex;
+  height: 2rem;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  background: $lime;
+  padding: 0 0.75rem 0 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #000;
+}
+
+.actions {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.action {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: $muted;
+  text-align: center;
+
+  span:last-child {
+    @include truncate;
+    max-width: 100%;
+  }
+
+  &:active .actionIcon {
+    transform: scale(0.94);
+  }
+}
+
+.actionIcon {
+  display: flex;
+  height: 3rem;
+  width: 3rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  border: 1px solid rgba(#fff, 0.07);
+  background: $raised;
+  color: $text;
+  transition: transform $tr;
+}
+
+.actionPrimary {
+  border-color: transparent;
+  background: $lime;
+  color: #000;
+}
+
+/* ── Stats trio ──────────────────────────────────────────────────── */
+
+.trio {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.trioCell {
+  min-width: 0;
+}
+
+.trioValue {
+  font-size: 1.375rem;
+}
+
+.delta {
+  font-family: $font-dot;
+  font-size: 0.6875rem;
+  color: $muted;
+}
+
+.up {
+  color: $lime;
+}
+
+.down {
+  color: $flame-text;
+}
+
+/* ── Exercise chart ──────────────────────────────────────────────── */
+
+.exerciseButton {
+  display: inline-flex;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+
+  span {
+    @include truncate;
+  }
+
+  svg {
+    flex-shrink: 0;
+    color: $faint;
+  }
+}
+
+.chartSlot {
+  margin-top: auto;
+}
+
+.pickerList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.pickerItem {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-radius: 1rem;
+  border: 1px solid $line;
+  background: $raised;
+  padding: 0.5rem 0.875rem;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 500;
+
+  small {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 400;
+    color: $faint;
+  }
+}
+
+.pickerItemActive {
+  border-color: rgba($lime, 0.5);
+  color: $lime;
+}
+
+/* ── Recent slider ───────────────────────────────────────────────── */
+
+.slider {
+  margin: 0.75rem -1rem 0;
+  display: flex;
+  align-items: stretch;
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 0 1rem;
+}
+
+.slide {
+  flex-shrink: 0;
+  width: 88%;
+  scroll-snap-align: center;
+}
+
+.slideFull {
+  width: 100%;
+}
+
+.slideCard {
+  height: 100%;
+}
+
+.sliderDots {
+  margin-top: 0.625rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.375rem;
+}
+
+.sliderDot {
+  height: 0.375rem;
+  width: 0.375rem;
+  border-radius: 9999px;
+  background: $line;
+  transition: all 300ms $ease;
+}
+
+.sliderDotActive {
+  width: 1.25rem;
+  background: $lime;
+}
+
+/* A transparent tile hosting a card that brings its own chrome. */
+.bare.bare {
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+
+/* ── Layout helpers ──────────────────────────────────────────────── */
+
+.centered {
+  margin: auto 0;
+}
+
+.valueBlock {
+  margin-top: 0.375rem;
+}
+
+.trioSpaced {
+  margin-top: 1rem;
+}
+
+/* A card that brings its own chrome, stretched to the cell. */
+.fill {
+  height: 100%;
+
+  > a,
+  > a > div {
+    height: 100%;
+  }
+}
+
+/* Doubled: the recent slider keeps the card's horizontal padding. */
+.recent.recent {
+  padding-bottom: 0.75rem;
+}
+
+.listSlot {
+  margin-top: 0.75rem;
+}
+
+.sparkSmall {
+  margin-top: 0.25rem;
+}
+
+/* Doubled: the chart panel brings its own spacing. */
+.progressTile.progressTile {
+  gap: 0.75rem;
+}

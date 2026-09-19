@@ -1,0 +1,11 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Doubled: a smaller segmented control than the kit default. */
+.switch.switch button {
+  height: 2rem;
+  font-size: 0.75rem;
+}

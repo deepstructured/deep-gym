@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useWorkoutTemplates } from "@/entities/workout-template";
 import { useI18n } from "@/shared/i18n";
-import { AppShell } from "@/widgets/app-shell";
+import { AppShell, LibraryTabs } from "@/widgets/app-shell";
 import {
   Button,
   EmptyState,
   ErrorNote,
   IconChevronRight,
+  IconPlay,
   IconPlus,
   PageLoader,
   Tag,
@@ -25,17 +26,19 @@ export function TemplatesView() {
 
   return (
     <AppShell
-      title={t("templates.title")}
+      title={t("nav.library")}
+      account
+      subheader={<LibraryTabs />}
       action={
         <Button
           type="button"
-          size="compact"
+          size="sm"
           variant="lime"
           iconOnly
           aria-label={t("templates.new")}
           onClick={create}
         >
-          <IconPlus size={19} />
+          <IconPlus size={18} />
         </Button>
       }
     >
@@ -57,20 +60,32 @@ export function TemplatesView() {
       ) : (
         <div className={styles.list}>
           {templates.map((template) => (
-            <Link
-              key={template.id}
-              href={`/templates/${template.id}`}
-              className={styles.row}
-            >
-              <div className={styles.text}>
-                <p className={styles.name}>{template.name}</p>
-                <div className={styles.meta}>
-                  <Tag>{template.type}</Tag>
-                  <span>{tn("count.exercises", template.exerciseCount)}</span>
+            <div key={template.id} className={styles.row}>
+              <Link
+                href={`/templates/${template.id}`}
+                className={styles.rowLink}
+              >
+                <div className={styles.text}>
+                  <p className={styles.name}>{template.name}</p>
+                  <div className={styles.meta}>
+                    <Tag>{template.type}</Tag>
+                    <span>
+                      {tn("count.exercises", template.exerciseCount)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-              <IconChevronRight size={18} className={styles.chevron} />
-            </Link>
+                <IconChevronRight size={18} className={styles.chevron} />
+              </Link>
+              {/* One tap from the list straight into a prefilled workout. */}
+              <Link
+                href={`/workouts/new?template=${template.id}`}
+                aria-label={`${t("templates.startWorkout")}: ${template.name}`}
+                className={styles.start}
+              >
+                <IconPlay size={14} />
+                {t("templates.start")}
+              </Link>
+            </div>
           ))}
         </div>
       )}

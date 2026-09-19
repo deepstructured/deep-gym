@@ -66,51 +66,30 @@
   font-size: 0.78rem;
 }
 
-.chart {
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 1.25rem;
-  padding: 0.5rem 0.625rem;
-  background:
-    radial-gradient(
-      110% 90% at 50% 115%,
-      rgba(215, 246, 81, 0.12),
-      transparent 68%
-    ),
-    rgba(10, 10, 12, 0.28);
-}
-
-.chartSvg {
-  width: 100%;
-}
-
-.chartValue {
-  fill: currentColor;
-  font-family: var(--font-dot);
-  font-size: 10px;
-  opacity: 0.44;
-}
-
-.chartDates {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 0.125rem;
-  color: var(--color-muted);
-  font-size: 0.65rem;
-}
-
+/* Capped height with its own scroll: long histories never stretch the
+   page. A soft fade hints that the list continues. */
 .historyRows {
   display: flex;
+  max-height: 16.5rem;
   flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  mask-image: linear-gradient(180deg, #000 88%, transparent);
+  padding-bottom: 0.75rem;
+}
+
+.historyMain {
+  min-width: 0;
 }
 
 .historyRow {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   border-top: 1px solid var(--color-line);
-  padding: 0.75rem 0;
+  padding: 0.625rem 0;
 }
 
 .historyRow:first-child {
@@ -127,6 +106,20 @@
   color: var(--color-muted);
   font-family: var(--font-sans);
   font-size: 0.7rem;
+}
+
+.historyWeight em {
+  margin-left: 0.5rem;
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
+.diffUp {
+  color: var(--color-lime);
+}
+
+.diffDown {
+  color: #aeb8ff;
 }
 
 .historyDate {

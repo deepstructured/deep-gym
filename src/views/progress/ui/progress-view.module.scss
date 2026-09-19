@@ -1,0 +1,122 @@
+@use "../../../shared/styles/palette" as *;
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Muscle-group focus chips bleed to the screen edges. */
+.focus {
+  margin: -0.5rem -1.25rem 0;
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0 1.25rem;
+}
+
+/* Doubled: compact chip size overriding the kit Chip. */
+.focusChip.focusChip {
+  height: 2rem;
+  flex-shrink: 0;
+  padding: 0 0.875rem;
+  font-size: 13px;
+}
+
+.sectionHead {
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.sectionAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $lime;
+}
+
+/* Doubled so the tighter padding beats the Card base. */
+.card.card {
+  padding: 1rem;
+}
+
+.lifts {
+  display: flex;
+  flex-direction: column;
+}
+
+.lift {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-top: 1px solid rgba($line, 0.6);
+  padding: 0.625rem 0;
+
+  &:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.liftRank {
+  display: flex;
+  height: 1.75rem;
+  width: 1.75rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: $raised;
+  font-family: $font-dot;
+  font-size: 0.8125rem;
+  color: $muted;
+}
+
+.liftText {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.liftName {
+  @include truncate;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.liftMeta {
+  font-size: 0.6875rem;
+  color: $faint;
+}
+
+.liftValue {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: $font-dot;
+  font-size: 1rem;
+
+  em {
+    font-family: $font-sans;
+    font-style: normal;
+    font-size: 0.625rem;
+    letter-spacing: 0.06em;
+    color: $faint;
+  }
+}

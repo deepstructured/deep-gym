@@ -1,0 +1,29 @@
+@use "../../styles/palette" as *;
+
+.group {
+  display: flex;
+  gap: 0.125rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(#fff, 0.05);
+  background: rgba(#fff, 0.03);
+  padding: 0.1875rem;
+}
+
+.option {
+  height: 1.75rem;
+  min-width: 0;
+  flex: 1;
+  border-radius: 9999px;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: $muted;
+  transition:
+    background-color $tr,
+    color $tr;
+}
+
+.active {
+  background: rgba(#fff, 0.12);
+  color: #fff;
+}

@@ -44,19 +44,21 @@ src/app/
 
 src/views/
   полноценные экраны приложения:
-  home, login, onboarding, history, exercises,
+  home, login, onboarding, history, progress, exercises,
   exercise-detail, templates, template-detail, template-editor,
   workout-new, workout-edit, settings
 
 src/widgets/
   крупные сборные блоки интерфейса:
-  app-shell, bottom-nav, product-experience
+  app-shell (+ bottom-nav, library-tabs), home-dashboard,
+  product-experience
 
 src/features/
   пользовательские фичи:
   auth, avatar, first-workout, what's-new, workout-form, workout-share,
   training-schedule, next-workout, plate-calculator,
-  machine-info, exercise-stats, exercise-compare, body-weight
+  machine-info, exercise-stats, exercise-compare, body-weight,
+  training-analytics
 
 src/entities/
   предметные сущности и их запросы:
@@ -146,19 +148,20 @@ Middleware выполняется перед защищенными страни
 
 | URL | Файл route | View | Назначение |
 | --- | --- | --- | --- |
-| `/` | `app/page.tsx` | `HomeView` | Главная: CTA, статистика недели, серия, последние тренировки |
+| `/` | `app/page.tsx` | `HomeView` | Главная: настраиваемая сетка виджетов (`HomeDashboard`) |
 | `/login` | `app/login/page.tsx` | `LoginView` | Вход через Google или Telegram OTP |
 | `/onboarding` | `app/onboarding/page.tsx` | `OnboardingView` | Пятишаговая первоначальная настройка; требует авторизации |
 | `/history` | `app/history/page.tsx` | `HistoryView` | История тренировок: день, неделя, месяц |
-| `/exercises` | `app/exercises/page.tsx` | `ExercisesView` | Каталог упражнений по группам мышц |
+| `/progress` | `app/progress/page.tsx` | `ProgressView` | Прогресс за период: итоги, активность, упражнения, рекорды, группы мышц, вес тела |
+| `/exercises` | `app/exercises/page.tsx` | `ExercisesView` | Библиотека → упражнения по группам мышц |
 | `/exercises/[id]` | `app/exercises/[id]/page.tsx` | `ExerciseDetailView` | Детальная страница упражнения, аналитика, редактирование |
-| `/templates` | `app/templates/page.tsx` | `TemplatesView` | Список шаблонов тренировок |
+| `/templates` | `app/templates/page.tsx` | `TemplatesView` | Библиотека → шаблоны тренировок с быстрым стартом |
 | `/templates/new` | `app/templates/new/page.tsx` | `TemplateEditorView` | Создание шаблона |
 | `/templates/[id]` | `app/templates/[id]/page.tsx` | `TemplateDetailView` | Просмотр шаблона и запуск тренировки |
 | `/templates/[id]/edit` | `app/templates/[id]/edit/page.tsx` | `TemplateEditorView` | Редактирование шаблона |
 | `/workouts/new` | `app/workouts/new/page.tsx` | `WorkoutNewView` | Создание новой тренировки |
 | `/workouts/[id]/edit` | `app/workouts/[id]/edit/page.tsx` | `WorkoutEditView` | Редактирование тренировки |
-| `/settings` | `app/settings/page.tsx` | `SettingsView` | Профиль/аватар, язык, тренировочная неделя, единицы веса, блины, группы мышц, гайд, What's new и выход |
+| `/settings` | `app/settings/page.tsx` | `SettingsView` | Сгруппированный список: профиль, вес тела, неделя, блины, группы мышц, язык, единицы, главный экран, гайд, What's new, выход. `?open=<section>` открывает нужный sheet |
 | `/offline` | `app/offline/page.tsx` | inline page | Offline fallback page |
 
 API routes:
@@ -184,25 +187,40 @@ API routes:
 - может показывать sticky header;
 - умеет показывать back-кнопку;
 - принимает правый action;
+- `account` показывает аватар-ссылку на Settings (на вкладках History,
+  Progress, Library; на Home аватар стоит в приветствии);
+- `subheader` закрепляет под заголовком доп. контролы (переключатель
+  периода на Progress, `LibraryTabs` в библиотеке);
 - добавляет нижнюю навигацию, если `hideNav` не включен.
 
 ### `BottomNav`
 
 `src/widgets/app-shell/ui/bottom-nav.tsx`
 
-Нижние вкладки:
+Нижние вкладки (центральная кнопка всегда посередине):
 
 - Home -> `/`;
 - History -> `/history`;
 - центральная кнопка Add -> `/workouts/new`;
-- Exercises -> `/exercises`;
-- Settings -> `/settings`.
+- Progress -> `/progress`;
+- Library -> `/exercises` (активна и на `/templates*`).
 
-Активность вкладки определяется по текущему pathname.
+Settings больше не вкладка — вход через аватар. Активность вкладки
+определяется по pathname. Если есть незавершенный черновик тренировки
+(`useActiveWorkoutDraft`: локальный или облачный, last-write-wins), кнопка
+Add «дышит» и получает красную точку.
+
+### `LibraryTabs`
+
+`src/widgets/app-shell/ui/library-tabs.tsx` — сегмент Exercises ⇄ Templates
+вверху библиотеки. Ссылки делают `replace`, поэтому переключение не
+засоряет историю и назад всегда уводит из библиотеки.
 
 ## 7. База данных
 
-Схема находится в `supabase/migrations/0001_init.sql`–`0007_workout_templates.sql`.
+Схема находится в `supabase/migrations/0001_init.sql`–`0008_home_widgets_warmup_sets.sql`.
+Миграция 0008 добавляет `profiles.home_widgets` (раскладка главной) и
+`sets.set_type` (`working` / `warmup`).
 Миграции выполняются вручную в Supabase SQL Editor строго по номеру. Локальный
 `.env.local` подключен к production-проекту, поэтому для QA можно изменять
 только `demo@deepgym.app`.
@@ -240,6 +258,7 @@ erDiagram
     numeric_array plates_kg
     numeric_array plates_lb
     text_array training_schedule
+    jsonb home_widgets
     int onboarding_version
     timestamptz onboarding_completed_at
     int last_seen_release_version
@@ -296,6 +315,7 @@ erDiagram
     numeric weight_kg
     int reps
     boolean to_failure
+    text set_type
   }
 
   WORKOUT_DRAFTS {
@@ -787,23 +807,46 @@ sheet открывается, если `last_seen_release_version` меньше 
 
 ## 12. Главный экран
 
-`src/views/home/ui/home-view.tsx`
+`src/views/home/ui/home-view.tsx` — приветствие, аватар (вход в Settings),
+`FirstWorkoutGuideCard` при нуле тренировок и `HomeDashboard`.
 
-Что делает:
+### `HomeDashboard` — настраиваемая сетка виджетов
 
-- читает профиль;
-- читает тренировки за последние 180 дней;
-- определяет текущую единицу веса;
-- считает:
-  - сколько тренировок на текущей неделе;
-  - week streak;
-  - total за 180 дней;
-- показывает CTA `Start workout`;
-- при нуле тренировок показывает контекстный `FirstWorkoutGuideCard`;
-- показывает ближайшую тренировку из явно настроенной недели;
-- если сегодняшняя тренировка уже записана, выбирает следующий настроенный день;
-- показывает 3 последние тренировки;
-- позволяет перейти к редактированию или удалить тренировку.
+`src/widgets/home-dashboard/`
+
+- `model/layout.ts` — реестр 18 виджетов (`WIDGETS`: категория, допустимые
+  размеры; каждый виджет — в одном экземпляре, уже добавленные в галерее
+  неактивны), `DEFAULT_LAYOUT` (начать/продолжить, неделя, серия, следующая
+  тренировка, последние тренировки, график упражнения, вес тела, всего
+  тренировок, регулярность),
+  `normalizeLayout` (валидация сохраненного JSON) и `packLayout`;
+- `model/use-home-layout.ts` — раскладка хранится в `profiles.home_widgets`
+  (миграция 0008) и дублируется в localStorage по user id, поэтому работает
+  и до применения миграции; сохранение оптимистичное;
+- `ui/tiles/*` — сами виджеты; общие данные (тренировки за 180 дней,
+  профиль, счетчик) раздает `HomeDataProvider`.
+
+Размеры как в iOS: `s` — половина ширины, `m` — вся ширина, `l` — вся
+ширина и две строки (может расти по контенту). Ячейка — чуть сплюснутый
+квадрат половины ширины (`cqw`). `packLayout` не оставляет дыр: одиночный
+маленький виджет подтягивает следующий маленький к себе в ряд, а оставшийся
+в конце растягивается на всю ширину (виджет с размером `m` рисуется как `m`).
+
+Режим редактирования: иконка сетки в шапке главной (рядом с аватаром),
+долгое нажатие на виджет, кнопка «Настроить главную» внизу или `/?edit=1`
+(из Settings). Виджеты покачиваются; их можно перетаскивать
+(dnd-kit, живая перестановка без transform, `DragOverlay`), менять размер,
+удалять и добавлять из галереи по категориям. «Сбросить» возвращает
+`DEFAULT_LAYOUT`. Графики помечены `data-gesture`, чтобы удержание на них
+скрабило график, а не открывало редактирование.
+
+Виджеты: начать/продолжить тренировку (показывает живой черновик с
+таймером), быстрые действия, повтор последней тренировки
+(`/workouts/new?repeat=<id>`), неделя, серия, всего тренировок, цель недели
+(кольцо), регулярность (heatmap), объем недели, итоги месяца, график
+упражнения (упражнение и метрика хранятся в `config`),
+личные рекорды, сильнейшие подъемы (1ПМ), баланс групп мышц, следующая
+тренировка, шаблоны, последние тренировки, вес тела (тап → запись веса).
 
 Week streak считается по неделям с понедельника:
 
@@ -822,9 +865,14 @@ Week streak считается по неделям с понедельника:
 оба значения к черновику.
 Переход с first-workout guide добавляет `?first=1`: форма показывает подсказку,
 а после save открывает `/history?first=1` с success sheet.
-Переход с карточки шаблона передает `?template=<id>`. Параметр применяется
-только после завершения cloud pull. Пустой черновик заполняется сразу, а
-непустой заменяется только после подтверждения пользователя.
+Переход с карточки шаблона передает `?template=<id>`, виджет «Повторить» —
+`?repeat=<workoutId>` (полная копия подходов). Параметры применяются только
+после завершения cloud pull. Пустой черновик заполняется сразу, а непустой
+заменяется только после подтверждения пользователя.
+
+Удаление черновика — иконка корзины рядом с Save в шапке (только когда
+черновик непустой) с обязательным подтверждением. `WorkoutDraft.startedAt`
+ставится при первом содержимом и питает таймер «идет тренировка».
 
 ### Локальный черновик
 
@@ -953,7 +1001,10 @@ sequenceDiagram
 - добавляет ожидаемый `load_mode`, чтобы БД отклонила устаревший черновик;
 - округляет kg до двух знаков;
 - парсит reps;
-- оставляет `to_failure`.
+- оставляет `to_failure` (у разминки всегда `false`);
+- проставляет `set_type`: `warmup` или `working`. Колонка отправляется в
+  insert только если в тренировке есть разминка — обычные тренировки
+  сохраняются и на базе без миграции 0008.
 
 ## 14. Форма тренировки
 
@@ -979,7 +1030,18 @@ sequenceDiagram
   - повторы;
   - флаг `to failure`;
   - удаление подхода;
-  - добавление подхода.
+  - добавление подхода и необязательной разминки.
+
+Разминочные подходы (`DraftSet.warmup`):
+
+- кнопка «Разминка» вставляет подход после существующих разминок; вес —
+  лесенка ~50% / 70% / 85% от первого рабочего подхода, округленная до
+  2.5 kg / 5 lb; рекомендуемые повторы (10 / 5 / 3) — только плейсхолдер;
+- номер подхода у разминки заменен на «W»/«Р»; тап по номеру переключает
+  тип подхода; рабочие подходы нумеруются без учета разминок;
+- разминка хранится в `sets.set_type = 'warmup'`, видна в истории, карточках
+  и сравнении, но исключена из всей статистики (`isWorkingRecord`,
+  `workingSets`), объема стикера и счетчиков подходов.
 
 Типы тренировки:
 
@@ -1106,6 +1168,12 @@ sequenceDiagram
 - сортировка: сперва точность, потом меньшее число блинов;
 - если точного варианта нет, `calcPlatesGreedy` показывает ближайший greedy-вариант.
 
+«Следующий шаг» (сразу под весом): `nextPlateSteps` перебирает добавки из
+одного-двух блинов на сторону поверх текущей нагрузки и показывает самую
+легкую — какие блины добавить, итоговый вес и прирост в % к текущему, —
+плюс пару следующих вариантов. Для гантелей `nextDumbbellSteps` предлагает
+типичные шаги ряда (1 kg до 10 kg, затем 2 / 2.5 / 5 kg; 5 lb).
+
 ## 18. Настройки тренажера
 
 `src/features/machine-info/ui/machine-info.tsx`
@@ -1155,7 +1223,7 @@ sequenceDiagram
 - группирует упражнения по muscle group;
 - показывает working weight каждого упражнения;
 - позволяет создать упражнение, не начиная тренировку;
-- дает вход в раздел Templates;
+- переключается на шаблоны через `LibraryTabs`;
 - ведет на `/exercises/[id]`.
 
 Если у упражнения есть unit override, working weight показывается в unit упражнения.
@@ -1163,7 +1231,8 @@ sequenceDiagram
 
 ### Шаблоны тренировок
 
-Раздел `/templates` доступен из Exercises. Пользователь может создать,
+Раздел `/templates` — вторая вкладка библиотеки; у каждого шаблона есть
+кнопка «Старт» прямо в списке. Пользователь может создать,
 просмотреть, изменить и удалить шаблон. Редактор хранит обязательное имя,
 тип тренировки и порядок упражнений. Кнопка `Start workout` открывает новую
 тренировку на основе шаблона; тот же picker доступен в пустой форме тренировки.
@@ -1187,7 +1256,7 @@ sequenceDiagram
 - кнопку расчета блинов;
 - кнопку редактирования working weight;
 - summary tiles;
-- график прогресса;
+- `ExerciseProgressPanel` (интерактивный график, периоды, full screen);
 - таблицу reps by weight;
 - recent history;
 - edit exercise sheet;
@@ -1218,11 +1287,12 @@ Estimated 1RM считается формулой Epley:
 1RM = weight * (1 + reps / 30)
 ```
 
-`progressSeries`:
-
-- группирует по дате тренировки;
-- берет максимальный вес за дату;
-- возвращает точки для line chart.
+`metricSeries(records, metric)` — точка на тренировку: значение метрики
+(`topSet`, `oneRm`, `volume`, `reps`, `addedLoad`), число рабочих подходов,
+повторы и «лучший» подход (для подписи при скрабе). `recordIndices` —
+сессии, побившие все предыдущие (личные рекорды), `summarizeSeries` —
+первое/последнее значение, изменение и %, лучшее, среднее, тренд за 30 дней
+(наклон регрессии).
 
 `repStatsByWeight`:
 
@@ -1234,11 +1304,49 @@ Estimated 1RM считается формулой Epley:
   - mode reps;
   - failure rate.
 
-`ProgressChart`:
+`ExerciseProgressPanel` (`ui/exercise-progress.tsx`):
 
-- минимальный SVG-график;
-- показывает dotted guides;
-- подписывает min/max и даты.
+- переключатель метрик + подпись метрики + кнопка «?» (`MetricInfoSheet`
+  объясняет Weight, 1RM с формулой Эпли, Volume, Reps, Added load и фильтры);
+- фильтр подходов (`filterByLoad`, `ui/load-filter.tsx`): «Рабочие» — только
+  подходы от 85% рабочего веса на тот момент (максимум последних 5
+  тренировок), поэтому легкие/памп-дни и back-off подходы не дают ложных
+  скачков объема и повторов; «Все подходы»; или конкретный вес (например,
+  сколько повторов с 27.5 kg). Режим «Рабочие/Все» запоминается (по
+  умолчанию «Рабочие»), конкретный вес — только для текущего упражнения.
+  Для bodyweight фильтр скрыт;
+- readout: последнее значение и изменение за период; при скрабе — дата,
+  лучший подход, число подходов, отметка PR и изменение к началу периода;
+- `LineChart` из UI-kit: временная ось, monotone-кривая, оси, кольца
+  рекордов; удержание/ведение пальцем выбирает точку (вертикальный скролл
+  страницы сохраняется), выбор держится до тапа вне графика;
+- периоды 1М / 3М / 6М / 1Г / Всё (по умолчанию квартал; выбор общий для
+  всех графиков и запоминается в localStorage — `usePreferredPeriod`);
+- кнопка full screen: `Fullscreen` из UI-kit с большим графиком,
+  переключателями «Тренд / Среднее / Рекорды / Сглаживание» (скользящее
+  среднее по 3 тренировкам), фильтром подходов, сводкой и списком сессий
+  (тап по строке подсвечивает точку).
+
+## 21.1. Прогресс
+
+`src/views/progress/ui/progress-view.tsx` + `src/features/training-analytics/`
+
+Страница грузит всю историю один раз и режет ее по выбранному периоду
+(переключатель закреплен в шапке). Чипсы «Фокус на группе мышц» сужают всю
+страницу до одной группы (`workoutsForGroup`): итоги, активность, упражнения,
+рекорды и сильнейшие подъемы; баланс групп в фокусе скрыт.
+
+- `PeriodOverview` — тренировки, подходы, объем, в неделю + изменение к
+  предыдущему окну той же длины;
+- `WeeklyActivity` — столбцы по неделям (тренировки / подходы / объем);
+- `ProgressExplorer` — группа → упражнение → `ExerciseProgressPanel`,
+  плитки периода и reps by weight;
+- `RecordsList` — личные рекорды периода (вес, иначе расчетный 1ПМ; повторы
+  для bodyweight);
+- сильнейшие подъемы по расчетному 1ПМ;
+- `MuscleBalance` — рабочие подходы по группам мышц;
+- `BodyWeightTrend` — интерактивный график веса тела за период и запись
+  веса в sheet.
 
 ## 22. История тренировок
 
@@ -1279,27 +1387,26 @@ Month/week grids показывают сплошные точки по выпо�
 
 `src/views/settings/ui/settings-view.tsx`
 
-Экран настроек содержит:
+Экран — компактный сгруппированный список в стиле iOS. Каждая строка
+показывает текущее значение, а редактор открывается в sheet, поэтому
+страница не растет вместе с данными пользователя:
 
-- загрузку пользовательского фото и десять встроенных pixel-avatar presets;
-- display name;
-- Telegram username, если связан;
-- язык интерфейса en/ru/uk;
-- глобальную единицу веса kg/lb;
-- запись собственного веса с произвольным прошедшим timestamp;
-- график и последние измерения собственного веса;
-- тренировочную неделю Monday–Sunday;
-- включение тренировочного дня и обязательный выбор его типа;
-- вес грифа;
-- список доступных блинов;
-- добавление блина в kg или lb;
-- удаление блина;
-- список muscle groups;
-- добавление кастомной группы;
-- удаление кастомной группы;
-- повторный запуск App guide;
-- повторное открытие текущего What's new;
+- карточка профиля → sheet: фото/pixel-avatar presets, display name,
+  Telegram username;
+- «Тело»: вес тела → sheet с записью веса (произвольный timestamp),
+  интерактивным графиком и списком измерений с ограниченной высотой и
+  собственным скроллом;
+- «Тренировки»: неделя (сводка дней) → редактор недели; калькулятор
+  блинов (гриф и число блинов) → гриф, блины kg/lb; группы мышц → список,
+  добавление и удаление кастомных;
+- «Приложение»: язык → список языков; единица веса — переключатель прямо в
+  строке; главный экран → `/?edit=1`;
+- «Помощь»: App guide, What's new;
 - sign out.
+
+`?open=profile|weight|schedule|plates|groups|language` сразу открывает
+нужный sheet (например, виджет «Следующая тренировка» без расписания ведет
+на `?open=schedule`).
 
 Блины хранятся как два массива:
 
@@ -1502,11 +1609,12 @@ Zustand persist:
 ### Сценарий: анализ упражнения
 
 ```text
-1. Exercises -> выбирает упражнение.
-2. Открывается /exercises/[id].
-3. Приложение читает все sets этого упражнения.
+1. Progress или Library -> выбирает упражнение.
+2. Открывается /exercises/[id] (или панель на Progress).
+3. Приложение читает все sets этого упражнения (разминка не считается).
 4. Строит summary.
-5. Строит top-set progress.
+5. Строит график выбранной метрики за период; удержание на графике
+   показывает конкретную тренировку, full screen — тренд и рекорды.
 6. Группирует reps by weight.
 7. Показывает последние тренировки по этому упражнению.
 8. Пользователь может обновить working weight или настройки упражнения.
@@ -1625,7 +1733,12 @@ NEXT_PUBLIC_SITE_URL
 | Пятишаговый onboarding | `src/views/onboarding/ui/onboarding-view.tsx` |
 | Контекстный путь первой тренировки | `src/features/first-workout/` |
 | Versioned release sheet | `src/features/whats-new/ui/whats-new-sheet.tsx` |
-| Главная | `src/views/home/ui/home-view.tsx` |
+| Главная | `src/views/home/ui/home-view.tsx`, `src/widgets/home-dashboard/` |
+| Раскладка и упаковка виджетов | `src/widgets/home-dashboard/model/layout.ts` |
+| Страница прогресса | `src/views/progress/ui/progress-view.tsx`, `src/features/training-analytics/` |
+| Интерактивные графики, периоды, full screen | `src/shared/ui/line-chart/`, `src/shared/ui/bar-chart/`, `src/shared/ui/fullscreen/`, `src/shared/lib/period.ts` |
+| Навигация и библиотека | `src/widgets/app-shell/ui/bottom-nav.tsx`, `src/widgets/app-shell/ui/library-tabs.tsx` |
+| Индикатор незавершенной тренировки | `src/features/workout-form/model/active-draft.ts` |
 | История | `src/views/history/ui/history-view.tsx` |
 | Каталог упражнений | `src/views/exercises/ui/exercises-view.tsx` |
 | Детали упражнения | `src/views/exercise-detail/ui/exercise-detail-view.tsx` |
@@ -1643,7 +1756,7 @@ NEXT_PUBLIC_SITE_URL
 | Настройки тренажера | `src/features/machine-info/ui/machine-info.tsx` |
 | Тренировочная неделя | `src/features/training-schedule/ui/training-week-card.tsx`, `src/features/next-workout/model/predict.ts` |
 | Сравнение с прошлым результатом | `src/features/exercise-compare/ui/compare-button.tsx` |
-| Статистика упражнения | `src/features/exercise-stats/model/stats.ts` |
+| Статистика упражнения | `src/features/exercise-stats/model/stats.ts`, `src/features/exercise-stats/ui/exercise-progress.tsx` |
 | Google/Telegram login UI | `src/features/auth/ui/*` |
 | Supabase CRUD hooks | `src/entities/*/api/queries.ts` |
 | Типы предметных сущностей | `src/entities/*/model/types.ts` |

@@ -9,9 +9,10 @@ import {
   BrandMark,
   Button,
   ErrorNote,
-  IconCalendar,
-  IconDumbbell,
-  IconHistory,
+  IconChart,
+  IconFlame,
+  IconLibrary,
+  IconWidgets,
   Sheet,
 } from "@/shared/ui";
 import styles from "./whats-new-sheet.module.scss";
@@ -25,22 +26,28 @@ interface WhatsNewSheetProps {
 
 const RELEASE_ITEMS = [
   {
-    title: "whatsNew.templates.title",
-    body: "whatsNew.templates.body",
-    icon: IconDumbbell,
+    title: "whatsNew.home.title",
+    body: "whatsNew.home.body",
+    icon: IconWidgets,
+    tone: styles.toneLime,
+  },
+  {
+    title: "whatsNew.progress.title",
+    body: "whatsNew.progress.body",
+    icon: IconChart,
     tone: styles.toneIndigo,
   },
   {
-    title: "whatsNew.bodyweight.title",
-    body: "whatsNew.bodyweight.body",
-    icon: IconHistory,
+    title: "whatsNew.workout.title",
+    body: "whatsNew.workout.body",
+    icon: IconFlame,
     tone: styles.toneCherry,
   },
   {
-    title: "whatsNew.workoutFlow.title",
-    body: "whatsNew.workoutFlow.body",
-    icon: IconCalendar,
-    tone: styles.toneLime,
+    title: "whatsNew.library.title",
+    body: "whatsNew.library.body",
+    icon: IconLibrary,
+    tone: styles.toneIndigo,
   },
 ] as const;
 

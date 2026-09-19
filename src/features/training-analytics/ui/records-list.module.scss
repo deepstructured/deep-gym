@@ -1,0 +1,101 @@
+@use "../../../shared/styles/palette" as *;
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.625rem;
+  border-top: 1px solid rgba($line, 0.6);
+  padding: 0.625rem 0;
+
+  &:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.compact .row {
+  gap: 0.5rem;
+  padding: 0.375rem 0;
+
+  &:first-child {
+    padding-top: 0;
+  }
+}
+
+.icon {
+  display: flex;
+  height: 1.875rem;
+  width: 1.875rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba($lime, 0.2);
+  background: rgba($lime, 0.1);
+  color: $lime;
+}
+
+.compact .icon {
+  height: 1.5rem;
+  width: 1.5rem;
+}
+
+.text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.name {
+  @include truncate;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.compact .name {
+  font-size: 0.8125rem;
+}
+
+.meta {
+  @include truncate;
+  font-size: 0.6875rem;
+  color: $faint;
+}
+
+.value {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: $font-dot;
+  font-size: 0.9375rem;
+
+  small {
+    font-family: $font-sans;
+    font-size: 0.625rem;
+    color: $muted;
+  }
+
+  em {
+    font-style: normal;
+    font-size: 0.6875rem;
+    color: $lime;
+  }
+}
+
+.empty {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: $muted;
+}

@@ -13,7 +13,7 @@ import { useProfile } from "@/entities/user";
 import { useI18n } from "@/shared/i18n";
 import { formatWeight } from "@/shared/lib/weight";
 import { cn } from "@/shared/lib/cn";
-import { AppShell } from "@/widgets/app-shell";
+import { AppShell, LibraryTabs } from "@/widgets/app-shell";
 import {
   Button,
   Chip,
@@ -61,23 +61,20 @@ export function ExercisesView() {
 
   return (
     <AppShell
-      title={t("exercises.title")}
+      title={t("nav.library")}
+      account
+      subheader={<LibraryTabs />}
       action={
-        <div className={styles.headerActions}>
-          <Link href="/templates" className={styles.templatesLink}>
-            {t("templates.title")}
-          </Link>
-          <Button
-            type="button"
-            variant="lime"
-            size="sm"
-            iconOnly
-            aria-label={t("picker.createNew")}
-            onClick={() => setCreateOpen(true)}
-          >
-            <IconPlus size={18} />
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="lime"
+          size="sm"
+          iconOnly
+          aria-label={t("picker.createNew")}
+          onClick={() => setCreateOpen(true)}
+        >
+          <IconPlus size={18} />
+        </Button>
       }
     >
       <div className={styles.filters}>

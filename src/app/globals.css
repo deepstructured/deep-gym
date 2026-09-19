@@ -161,7 +161,30 @@ body {
   outline-offset: 3px;
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator {
+/* iOS Safari sizes native date/time inputs to their intrinsic content and
+   ignores width: 100%, so they spill past cards and the screen edge. Dropping
+   the native appearance lets them honor the container width; the native
+   picker still opens on tap. The value is centered by default on iOS. */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="month"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+}
+
+input::-webkit-date-and-time-value {
+  margin: 0;
+  text-align: left;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(0.7);
 }
 

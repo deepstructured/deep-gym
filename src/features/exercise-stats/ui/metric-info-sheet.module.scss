@@ -1,0 +1,65 @@
+@use "../../../shared/styles/palette" as *;
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.item {
+  border-radius: $radius-tile;
+  border: 1px solid $line;
+  background: $raised;
+  padding: 0.75rem 0.875rem;
+}
+
+.active {
+  border-color: rgba($lime, 0.45);
+  background: rgba($lime, 0.05);
+}
+
+.itemTitle {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.itemBody {
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: $muted;
+}
+
+.example {
+  margin-top: 0.5rem;
+  border-radius: 0.75rem;
+  background: rgba(#000, 0.25);
+  padding: 0.5rem 0.625rem;
+  font-family: $font-dot;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: rgba(#fff, 0.8);
+}
+
+.tips {
+  margin-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  border-top: 1px solid rgba($line, 0.7);
+  padding-top: 0.875rem;
+}
+
+.tip {
+  display: flex;
+  gap: 0.625rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: $muted;
+}
+
+.tipIcon {
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+  color: $lime;
+}

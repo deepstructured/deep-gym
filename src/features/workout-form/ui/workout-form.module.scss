@@ -169,10 +169,56 @@
 }
 
 .setIndex {
-  padding: 0 0.25rem;
+  display: flex;
+  height: 1.75rem;
+  width: 1.6rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
   font-family: $font-dot;
   font-size: 0.875rem;
   color: $faint;
+  transition:
+    background-color $tr,
+    color $tr;
+
+  &:active {
+    background: $raised;
+  }
+}
+
+/* Warm-up rows: indigo "W" badge and slightly receded inputs. */
+.setIndexWarmup {
+  border: 1px solid rgba($indigo-bright, 0.35);
+  background: rgba($indigo, 0.35);
+  font-family: $font-sans;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #aeb8ff;
+}
+
+.setRowWarmup {
+  input {
+    border-color: rgba($indigo-bright, 0.18);
+    background: rgba($indigo, 0.12);
+  }
+}
+
+.warmupSpacer {
+  display: block;
+  width: 2.25rem;
+}
+
+.setActions {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.addWarmup.addWarmup {
+  color: #aeb8ff;
 }
 
 .weightWrap {
@@ -282,10 +328,6 @@
   &:disabled {
     opacity: 0.3;
   }
-}
-
-.addSet {
-  margin-top: 0.5rem;
 }
 
 .exerciseNote {

@@ -1,0 +1,268 @@
+@use "../../../shared/styles/palette" as *;
+
+$gap: 0.75rem;
+
+/* Container for the cqw units: one grid cell is a (slightly flattened)
+   square of half the content width, like an iOS small widget. */
+.container {
+  container-type: inline-size;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(9.5rem, auto);
+  gap: $gap;
+}
+
+@supports (width: 1cqw) {
+  .grid {
+    grid-auto-rows: minmax(calc((100cqw - #{$gap}) / 2 * 0.88), auto);
+  }
+}
+
+.cell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.cellInner {
+  height: 100%;
+}
+
+/* ── Edit mode ───────────────────────────────────────────────────── */
+
+.cellEditing {
+  animation: jiggle 0.34s ease-in-out infinite;
+}
+
+.cellOdd {
+  animation-delay: -0.17s;
+  animation-duration: 0.31s;
+}
+
+.cellDragging {
+  animation: none;
+  opacity: 0.3;
+}
+
+.cellAdded {
+  animation: added 1.2s $ease;
+}
+
+.shield {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: $radius-tile;
+  cursor: grab;
+  touch-action: manipulation;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba($lime, 0.85);
+    outline-offset: 2px;
+  }
+}
+
+.remove {
+  position: absolute;
+  top: -0.4rem;
+  left: -0.4rem;
+  z-index: 2;
+  display: flex;
+  height: 1.5rem;
+  width: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid rgba(#fff, 0.14);
+  background: #3a3a42;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(#000, 0.45);
+}
+
+.sizes {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.375rem;
+  z-index: 2;
+  display: flex;
+  gap: 0.125rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(#fff, 0.1);
+  background: #2e2e35;
+  padding: 0.1875rem;
+  box-shadow: 0 4px 10px rgba(#000, 0.45);
+}
+
+.sizeOption {
+  display: flex;
+  height: 1.625rem;
+  width: 1.875rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: $faint;
+}
+
+.sizeOptionActive {
+  background: $lime;
+  color: #000;
+}
+
+.overlay {
+  height: 100%;
+  cursor: grabbing;
+  transform: scale(1.03);
+  border-radius: $radius-tile;
+  box-shadow: 0 24px 48px -12px rgba(#000, 0.7);
+}
+
+.editBar {
+  position: sticky;
+  top: calc(env(safe-area-inset-top) + 0.5rem);
+  z-index: 35;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(#fff, 0.08);
+  background: rgba(#1e1e23, 0.88);
+  padding: 0.375rem;
+  box-shadow: 0 16px 36px -20px rgba(#000, 0.9);
+  backdrop-filter: blur(20px);
+}
+
+.editAdd {
+  display: inline-flex;
+  height: 2.25rem;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 9999px;
+  background: rgba(#fff, 0.08);
+  padding: 0 0.875rem 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.editReset {
+  height: 2.25rem;
+  padding: 0 0.5rem;
+  font-size: 0.8125rem;
+  color: $muted;
+}
+
+.editDone {
+  margin-left: auto;
+  display: inline-flex;
+  height: 2.25rem;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 9999px;
+  background: $lime;
+  padding: 0 1rem 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #000;
+}
+
+.customize {
+  margin: 1.25rem auto 0;
+  display: flex;
+  height: 2.5rem;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  border: 1px solid $line;
+  padding: 0 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: $muted;
+
+  &:active {
+    background: $surface;
+  }
+}
+
+.emptyGrid {
+  @include dashed-card;
+  display: flex;
+  height: 8rem;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: $muted;
+}
+
+.resetMessage {
+  margin-bottom: 1.25rem;
+  font-size: 15px;
+  color: $muted;
+}
+
+.resetRow {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.resetCancel,
+.resetConfirm {
+  height: 3rem;
+  flex: 1;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.resetCancel {
+  border: 1px solid $line;
+  background: $raised;
+  font-weight: 500;
+}
+
+.resetConfirm {
+  background: $lime;
+  color: #000;
+}
+
+@keyframes jiggle {
+  0%,
+  100% {
+    transform: rotate(-0.6deg);
+  }
+  50% {
+    transform: rotate(0.6deg);
+  }
+}
+
+@keyframes added {
+  0% {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cellEditing,
+  .cellAdded {
+    animation: none;
+  }
+}

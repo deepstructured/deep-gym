@@ -6,7 +6,7 @@ import {
   type Equipment,
   type ExerciseLoadMode,
 } from "@/shared/config/workout";
-import { fromISODate } from "@/shared/lib/dates";
+import { fromISODate, toISODate } from "@/shared/lib/dates";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
 import type { Workout, WorkoutInput } from "../model/types";
 
@@ -64,6 +64,26 @@ async function assertCurrentExerciseLoadModes(
   }
 }
 
+const WARMUPS_UNSUPPORTED = "WARMUPS_UNSUPPORTED";
+
+/** Warm-up sets need `sets.set_type` (migration 0008). Check before any
+ * write: an edit deletes the old rows first and must not fail halfway. */
+async function assertWarmupsSupported(exercises: WorkoutInput["exercises"]) {
+  const hasWarmups = exercises.some((exercise) =>
+    exercise.sets.some((set) => set.set_type === "warmup"),
+  );
+  if (!hasWarmups) return;
+  const { error } = await getSupabaseBrowser()
+    .from("sets")
+    .select("set_type")
+    .limit(1);
+  if (error) throw new Error(WARMUPS_UNSUPPORTED);
+}
+
+export function isWarmupsUnsupportedError(error: unknown): boolean {
+  return error instanceof Error && error.message === WARMUPS_UNSUPPORTED;
+}
+
 function sortNested(workout: Workout): Workout {
   workout.workout_exercises.sort((a, b) => a.position - b.position);
   workout.workout_exercises.forEach((we) =>
@@ -86,6 +106,12 @@ export function useWorkoutCount(enabled = true) {
     },
     enabled,
   });
+}
+
+/** Full history, newest first. Home and Progress share this one cached
+ *  query and slice it client-side (records need an all-time baseline). */
+export function useAllWorkouts() {
+  return useWorkouts("2000-01-01", toISODate(new Date()));
 }
 
 /** Workouts within [from, to] (ISO dates, inclusive), newest first. */
@@ -238,6 +264,11 @@ async function insertExercisesWithSets(
   exercises: WorkoutInput["exercises"],
 ) {
   const supabase = getSupabaseBrowser();
+  // set_type is only sent when the workout has warm-ups, so plain workouts
+  // keep saving on a database that has not run migration 0008 yet.
+  const hasWarmups = exercises.some((exercise) =>
+    exercise.sets.some((set) => set.set_type === "warmup"),
+  );
 
   for (let i = 0; i < exercises.length; i++) {
     const draft = exercises[i];
@@ -262,6 +293,7 @@ async function insertExercisesWithSets(
           weight_kg: set.weight_kg,
           reps: set.reps,
           to_failure: set.to_failure,
+          ...(hasWarmups ? { set_type: set.set_type } : {}),
         })),
       );
       if (setsError) throw setsError;
@@ -280,6 +312,7 @@ export function useCreateWorkout() {
       if (!user) throw new Error("Not signed in");
 
       await assertCurrentExerciseLoadModes(input.exercises);
+      await assertWarmupsSupported(input.exercises);
 
       const { data: workout, error } = await supabase
         .from("workouts")
@@ -326,6 +359,7 @@ export function useUpdateWorkout() {
       const supabase = getSupabaseBrowser();
 
       await assertCurrentExerciseLoadModes(input.exercises);
+      await assertWarmupsSupported(input.exercises);
 
       const workoutPatch: {
         type: string;

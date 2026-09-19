@@ -27,6 +27,8 @@ export interface DraftSet {
   addedWeight?: string;
   reps: string;
   toFailure: boolean;
+  /** Warm-up set: logged and shown, excluded from progress statistics. */
+  warmup?: boolean;
 }
 
 export interface DraftExercise {
@@ -57,6 +59,8 @@ export interface WorkoutDraft {
   notes: string;
   showNotes: boolean;
   exercises: DraftExercise[];
+  /** When the draft first got content — drives the "in progress" timer. */
+  startedAt?: string;
 }
 
 export type WorkoutCopyMode = "full" | "last-weight";
@@ -73,6 +77,7 @@ function key(): string {
   ).join("");
 }
 
+/** Next working set, prefilled from the previous working set. */
 export function newSet(prev?: DraftSet): DraftSet {
   return {
     key: key(),
@@ -81,6 +86,59 @@ export function newSet(prev?: DraftSet): DraftSet {
     reps: prev?.reps ?? "",
     toFailure: false,
   };
+}
+
+/** Classic ramp: ~50% × 10, ~70% × 5, ~85% × 3 of the first working set. */
+const WARMUP_RAMP = [
+  { share: 0.5, reps: 10 },
+  { share: 0.7, reps: 5 },
+  { share: 0.85, reps: 3 },
+] as const;
+
+/** Suggested reps for the nth warm-up (shown as a placeholder only). */
+export function warmupRepsHint(index: number): number {
+  return WARMUP_RAMP[Math.min(index, WARMUP_RAMP.length - 1)].reps;
+}
+
+/** Insert a warm-up after the existing warm-ups, weight ramped from the
+ *  first working set and rounded to a loadable step (2.5 kg / 5 lb). */
+export function withWarmupSet(exercise: DraftExercise): DraftSet[] {
+  const warmups = exercise.sets.filter((set) => set.warmup);
+  const firstWorking = exercise.sets.find((set) => !set.warmup);
+  const ramp = WARMUP_RAMP[Math.min(warmups.length, WARMUP_RAMP.length - 1)];
+  const bodyweight = exercise.equipment === "bodyweight";
+
+  let weight = "";
+  if (bodyweight) {
+    // Bodyweight warm-ups are plain reps: base body weight, nothing added.
+    const base =
+      parseWeight(firstWorking?.weight ?? "") != null &&
+      parseSignedWeight(firstWorking?.addedWeight ?? "") != null
+        ? parseWeight(firstWorking!.weight)! -
+          parseSignedWeight(firstWorking!.addedWeight!)!
+        : null;
+    weight = base != null && base > 0 ? String(roundWeight(base)) : "";
+  } else {
+    const working = parseWeight(firstWorking?.weight ?? "");
+    if (working != null) {
+      const step = exercise.unit === "lb" ? 5 : 2.5;
+      const ramped = Math.floor((working * ramp.share) / step) * step;
+      weight = ramped > 0 ? String(roundWeight(ramped)) : "";
+    }
+  }
+
+  const warmup: DraftSet = {
+    key: key(),
+    weight,
+    addedWeight: bodyweight ? "0" : undefined,
+    reps: "",
+    toFailure: false,
+    warmup: true,
+  };
+  const lastWarmupIndex = exercise.sets.findLastIndex((set) => set.warmup);
+  const sets = [...exercise.sets];
+  sets.splice(lastWarmupIndex + 1, 0, warmup);
+  return sets;
 }
 
 export function emptyDraft(): WorkoutDraft {
@@ -188,6 +246,7 @@ export function workoutToDraft(
                   : undefined,
             reps: set.reps != null ? String(set.reps) : "",
             toFailure: set.to_failure,
+            warmup: set.set_type === "warmup" || undefined,
           };
         }),
       };
@@ -213,7 +272,7 @@ export function workoutToCopiedExercises(
       if (mode === "last-weight") {
         const lastWeightedSet = [...sets]
           .reverse()
-          .find((set) => set.weight.trim() !== "");
+          .find((set) => !set.warmup && set.weight.trim() !== "");
         sets = [
           {
             key: key(),
@@ -274,7 +333,8 @@ export function draftToInput(
                 ? Math.round(unitToKg(weight, unit) * 100) / 100
                 : null,
             reps: Number.isFinite(reps) && reps > 0 ? reps : null,
-            to_failure: set.toFailure,
+            to_failure: set.warmup ? false : set.toFailure,
+            set_type: set.warmup ? "warmup" : "working",
           };
         }),
       };
@@ -383,7 +443,15 @@ export const useNewWorkoutDraft = create<NewWorkoutDraftStore>()(
       ownerId: null,
       updatedAt: null,
       setDraft: (draft) =>
-        set({ draft, updatedAt: new Date().toISOString() }),
+        set((state) => {
+          const now = new Date().toISOString();
+          // Stamp the moment the draft first gets content and keep it while
+          // it has any; an emptied draft is no longer "in progress".
+          const startedAt = isDraftEmpty(draft)
+            ? undefined
+            : (draft.startedAt ?? state.draft.startedAt ?? now);
+          return { draft: { ...draft, startedAt }, updatedAt: now };
+        }),
       reset: () =>
         set({ draft: emptyDraft(), updatedAt: new Date().toISOString() }),
     }),

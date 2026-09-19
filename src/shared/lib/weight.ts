@@ -161,3 +161,67 @@ export function calcPlatesGreedy(
   }
   return { counts, remainderKg: Math.round(rest * 2 * 100) / 100 };
 }
+
+export interface PlateStep {
+  /** Plates to add on each side (loaded in pairs). */
+  add: PlateCount[];
+  /** Resulting total weight, kg. */
+  targetKg: number;
+  /** Jump over the current weight, kg. */
+  deltaKg: number;
+}
+
+/**
+ * The smallest jumps reachable by adding plates symmetrically on top of the
+ * current load — one or two plates per side — smallest jump first. Each jump
+ * uses the fewest plates that make it. Works for barbells and plate-loaded
+ * machines alike: the bar never changes, so only the additions matter.
+ */
+export function nextPlateSteps(
+  currentKg: number,
+  specs: PlateSpec[],
+  limit = 3,
+): PlateStep[] {
+  const byDelta = new Map<string, PlateStep & { plates: number }>();
+
+  function consider(add: PlateCount[]) {
+    const perSide = add.reduce((sum, c) => sum + c.plate.kg * c.count, 0);
+    const deltaKg = perSide * 2;
+    if (deltaKg <= 0) return;
+    const plates = add.reduce((sum, c) => sum + c.count, 0);
+    const key = deltaKg.toFixed(2);
+    const existing = byDelta.get(key);
+    if (existing && existing.plates <= plates) return;
+    byDelta.set(key, {
+      add,
+      targetKg: currentKg + deltaKg,
+      deltaKg,
+      plates,
+    });
+  }
+
+  specs.forEach((a, i) => {
+    consider([{ plate: a, count: 1 }]);
+    consider([{ plate: a, count: 2 }]);
+    specs.slice(i + 1).forEach((b) =>
+      consider([
+        { plate: a, count: 1 },
+        { plate: b, count: 1 },
+      ]),
+    );
+  });
+
+  return [...byDelta.values()]
+    .sort((a, b) => a.deltaKg - b.deltaKg)
+    .slice(0, limit)
+    .map(({ add, targetKg, deltaKg }) => ({ add, targetKg, deltaKg }));
+}
+
+/** Typical fixed-dumbbell rack steps above the current dumbbell, in the
+ *  display unit: 1 kg steps below 10 kg, then 2 / 2.5 kg; 5 lb steps. */
+export function nextDumbbellSteps(currentKg: number, unit: Unit): number[] {
+  const current = kgToUnit(currentKg, unit);
+  const steps =
+    unit === "lb" ? [5, 10] : current < 10 ? [1, 2] : [2, 2.5, 5];
+  return steps.map((step) => unitToKg(roundWeight(current + step), unit));
+}

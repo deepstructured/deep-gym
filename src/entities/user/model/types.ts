@@ -27,6 +27,9 @@ export interface Profile {
   onboarding_completed_at: string | null;
   /** Latest product release announcement acknowledged by the user. */
   last_seen_release_version: number;
+  /** Customized home layout (validated by the home dashboard); null = the
+   *  default. Absent until migration 0008 is applied. */
+  home_widgets?: unknown;
   telegram_id: number | null;
   telegram_username: string | null;
   created_at: string;

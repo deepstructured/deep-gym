@@ -11,12 +11,14 @@ import {
   calcPlatesGreedy,
   formatWeight,
   kgToUnit,
+  nextDumbbellSteps,
+  nextPlateSteps,
   roundWeight,
   type PlateCount,
   type Unit,
 } from "@/shared/lib/weight";
 import { cn } from "@/shared/lib/cn";
-import { DotValue, Sheet, Tag } from "@/shared/ui";
+import { DotValue, IconArrowUp, Sheet, Tag } from "@/shared/ui";
 import styles from "./plate-sheet.module.scss";
 
 export interface PlateContext {
@@ -73,6 +75,28 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
 
   const barCoversAll = isBarbell && open && weightKg <= barKg;
 
+  // Next progression step: the lightest plates to add on top of the current
+  // load (or the next dumbbells in the rack) and how big the jump is.
+  const plateSteps = useMemo(
+    () =>
+      open && !isDumbbell && weightKg > 0
+        ? nextPlateSteps(Math.max(weightKg, isBarbell ? barKg : 0), specs)
+        : [],
+    [open, isDumbbell, isBarbell, weightKg, barKg, specs],
+  );
+  const dumbbellSteps = useMemo(
+    () =>
+      open && isDumbbell && weightKg > 0
+        ? nextDumbbellSteps(weightKg, unit)
+        : [],
+    [open, isDumbbell, weightKg, unit],
+  );
+  const percentOver = (targetKg: number) => {
+    const base = weightKg > 0 ? weightKg : targetKg;
+    const pct = Math.round(((targetKg - base) / base) * 1000) / 10;
+    return `+${pct}%`;
+  };
+
   return (
     <Sheet
       open={open}
@@ -101,6 +125,90 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
               </p>
             )}
           </div>
+
+          {(plateSteps.length > 0 || dumbbellSteps.length > 0) && (
+            <div className={styles.next}>
+              <div className={styles.nextHead}>
+                <span className={styles.nextIcon}>
+                  <IconArrowUp size={13} />
+                </span>
+                <p className={styles.nextTitle}>{t("plates.nextStep")}</p>
+                <p className={styles.nextHint}>
+                  {isDumbbell
+                    ? t("plates.nextDumbbellHint")
+                    : t("plates.nextHint")}
+                </p>
+              </div>
+
+              {isDumbbell ? (
+                <div className={styles.nextChips}>
+                  {dumbbellSteps.map((targetKg, index) => (
+                    <span
+                      key={targetKg}
+                      className={cn(
+                        styles.nextChip,
+                        index === 0 && styles.nextChipBest,
+                      )}
+                    >
+                      <span className={styles.nextChipValue}>
+                        {roundWeight(kgToUnit(targetKg, unit))} {unit}
+                      </span>
+                      <span className={styles.nextPct}>
+                        {percentOver(targetKg)}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  {/* The lightest jump, spelled out. */}
+                  <div className={styles.nextRow}>
+                    <div className={styles.nextAdd}>
+                      <span className={styles.nextPlus}>+</span>
+                      {plateSteps[0].add.map((count) => (
+                        <PlateChip
+                          key={`${count.plate.unit}-${count.plate.value}`}
+                          item={count}
+                        />
+                      ))}
+                    </div>
+                    <div className={styles.nextTarget}>
+                      <DotValue
+                        value={roundWeight(
+                          kgToUnit(plateSteps[0].targetKg, unit),
+                        )}
+                        suffix={unit}
+                        className={styles.nextValue}
+                      />
+                      <span className={styles.nextPct}>
+                        {percentOver(plateSteps[0].targetKg)}
+                      </span>
+                    </div>
+                  </div>
+                  {plateSteps.length > 1 && (
+                    <div className={styles.nextChips}>
+                      {plateSteps.slice(1).map((step) => (
+                        <span key={step.deltaKg} className={styles.nextChip}>
+                          <span className={styles.nextChipAdd}>
+                            +
+                            {step.add
+                              .map((c) => `${c.count * 2}×${c.plate.value}`)
+                              .join(" ")}
+                          </span>
+                          <span className={styles.nextChipValue}>
+                            {roundWeight(kgToUnit(step.targetKg, unit))} {unit}
+                          </span>
+                          <span className={styles.nextPct}>
+                            {percentOver(step.targetKg)}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {isDumbbell ? (
             <div className={styles.stack}>
@@ -206,6 +314,7 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
               .
             </p>
           )}
+
         </div>
       )}
     </Sheet>

@@ -36,9 +36,9 @@ There are no automated tests or configured linter. Run `npm run verify` and veri
 app/                  # Next.js App Router — thin route files only (page = one-line re-export of a view), API routes, middleware auth-gate
 src/
   app/                # providers (React Query, i18n), fonts, globals.css
-  views/              # FSD "pages" layer: home, login, onboarding, history, exercises, exercise-detail, workout-new, workout-edit, settings
-  widgets/            # app-shell (header + bottom tab bar), product-experience gate
-  features/           # auth, avatar, first-workout, what's-new, workout-form/share, training-schedule, next-workout, stats/compare, machine-info, plate-calculator
+  views/              # FSD "pages" layer: home, login, onboarding, history, progress, exercises, exercise-detail, templates, workout-new, workout-edit, settings
+  widgets/            # app-shell (header, bottom tab bar, library tabs), home-dashboard (widget grid), product-experience gate
+  features/           # auth, avatar, first-workout, what's-new, workout-form/share, training-schedule, next-workout, stats/compare, training-analytics, body-weight, machine-info, plate-calculator
   entities/           # user, muscle-group, exercise, workout — each with api/queries.ts (React Query hooks) + model/types.ts
   shared/             # ui kit (src/shared/ui), supabase clients, config, lib, i18n
 supabase/migrations/  # numbered SQL files, run manually in SQL Editor
@@ -51,6 +51,9 @@ Key locations:
 - **Server state** — React Query hooks in each entity's `api/queries.ts`. **Local state** — Zustand; the new-workout draft persists to localStorage so input survives app closes.
 - **i18n** — `src/shared/i18n/` (context + translations); UI strings go through it, not hardcoded.
 - **UI kit** — `src/shared/ui/` (button, sheet, calendar, segmented, …), exported via `index.ts`. Styling: Tailwind 4 + SCSS modules for some components.
+- **Navigation** — tabs are Home · History · (+) · Progress · Library (exercises ⇄ templates via `LibraryTabs`); Settings is reached through the profile avatar (`AppShell account`) and accepts `?open=<section>` to open a sheet.
+- **Home dashboard** — `src/widgets/home-dashboard/`: widget registry, `DEFAULT_LAYOUT` and hole-free `packLayout` in `model/layout.ts`; the layout persists in `profiles.home_widgets` (migration 0008) with a per-user localStorage mirror, so it works before the migration too.
+- **Charts** — `LineChart` / `BarChart` / `Fullscreen` / `PeriodSwitch` live in the UI kit; the remembered period is `usePreferredPeriod` (`src/shared/lib/period.ts`).
 - **Product lifecycle versions** — `src/shared/config/releases.ts`; onboarding and release-note sequences are independent from `package.json` and the service-worker cache version.
 - **First-run/release gate** — `src/widgets/product-experience/`; onboarding view is under `src/views/onboarding/`, and release content is under `src/features/whats-new/`.
 
@@ -68,6 +71,7 @@ Key locations:
 
 ## Domain conventions
 
+- Warm-up sets (`sets.set_type = 'warmup'`, `DraftSet.warmup`) are saved and displayed but never count toward statistics — filter with `isWorkingRecord` / `workingSets`. `set_type` is only sent on insert when a workout has warm-ups, so plain workouts still save before migration 0008.
 - Weights are **always stored in kg** (`weight_kg`). Display unit is resolved per exercise: `exercise.unit ?? profile.unit`.
 - Auth: Google OAuth + Telegram OTP (bot sends 6-digit code → `/api/auth/telegram/*`). `middleware.ts` redirects unauthenticated users to `/login`; public paths: `/login`, `/auth`, `/api`, `/offline`.
 - **Do not break** `/api/auth/telegram/verify` returning session tokens in its response — the native Expo/RN sibling app (deep-gym-mobile) depends on it.

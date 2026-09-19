@@ -107,6 +107,19 @@
   line-height: 1rem;
 }
 
+.setWarmup {
+  border-color: rgba($indigo-bright, 0.3);
+  background: rgba($indigo, 0.2);
+  color: rgba(#fff, 0.75);
+}
+
+/* "W" badge on warm-up sets. */
+.warmupMark {
+  font-size: 10px;
+  font-weight: 700;
+  color: #aeb8ff;
+}
+
 .setValue {
   font-family: $font-dot;
 }

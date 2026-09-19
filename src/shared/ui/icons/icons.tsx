@@ -230,3 +230,198 @@ export function IconGoogle({ size = 20, ...props }: IconProps) {
     </svg>
   );
 }
+
+export function IconMinus(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+export function IconChart(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 4v15a1 1 0 001 1h15" />
+      <path d="M8 15l3.5-4 3 2.5L20 7" />
+    </svg>
+  );
+}
+
+export function IconLibrary(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3.5" y="4" width="5" height="16" rx="1.5" />
+      <rect x="10.5" y="4" width="5" height="16" rx="1.5" />
+      <path d="M17.6 5.2l3 14.3" />
+    </svg>
+  );
+}
+
+export function IconTemplate(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="4" y="3.5" width="16" height="6" rx="2" />
+      <rect x="4" y="13" width="7" height="7.5" rx="2" />
+      <rect x="14" y="13" width="6" height="7.5" rx="2" />
+    </svg>
+  );
+}
+
+export function IconWidgets(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="2" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="2" />
+      <rect x="3.5" y="13.5" width="17" height="7" rx="2" />
+    </svg>
+  );
+}
+
+export function IconExpand(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+    </svg>
+  );
+}
+
+export function IconTrophy(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M8 4h8v5a4 4 0 01-8 0V4z" />
+      <path d="M8 6H5a2.5 2.5 0 003 4M16 6h3a2.5 2.5 0 01-3 4" />
+      <path d="M12 13v4M8.5 20.5h7M9.5 17h5" />
+    </svg>
+  );
+}
+
+export function IconScale(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+      <path d="M8 9a5 5 0 018 0" />
+      <path d="M12 9.5l1.4-2" />
+    </svg>
+  );
+}
+
+export function IconBolt(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M13 3L5 13.5h6L10 21l8-10.5h-6L13 3z" />
+    </svg>
+  );
+}
+
+export function IconRepeat(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M17 3l3 3-3 3" />
+      <path d="M4 11V9a3 3 0 013-3h13" />
+      <path d="M7 21l-3-3 3-3" />
+      <path d="M20 13v2a3 3 0 01-3 3H4" />
+    </svg>
+  );
+}
+
+export function IconTarget(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="12" cy="12" r="0.8" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconUser(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4.5 20.5a7.5 7.5 0 0115 0" />
+    </svg>
+  );
+}
+
+export function IconGlobe(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3a14 14 0 010 18M12 3a14 14 0 000 18" />
+    </svg>
+  );
+}
+
+export function IconSparkles(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M11 3l1.8 4.7L17.5 9.5l-4.7 1.8L11 16l-1.8-4.7L4.5 9.5l4.7-1.8L11 3z" />
+      <path d="M18.5 14.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z" />
+    </svg>
+  );
+}
+
+export function IconClock(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
+export function IconMuscle(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 17.5c1.5-4.5 2-8.5 1.2-12.5 2 .3 3.2 1.5 3.6 3.5" />
+      <path d="M9.5 9.3c2.8-1.4 6.3-.8 8.3 1.6 2 2.5 1.7 5.9-.6 7.6-2.8 2-7.8 1.6-12.2-1" />
+      <path d="M12.5 13.5c1.2-.7 2.8-.6 3.8.3" />
+    </svg>
+  );
+}
+
+/** Six-dot drag grip. */
+export function IconGrip(props: IconProps) {
+  return (
+    <svg {...base({ ...props, fill: "currentColor", stroke: "none" })}>
+      {[6, 12, 18].flatMap((y) => [
+        <circle key={`l${y}`} cx="9" cy={y} r="1.5" />,
+        <circle key={`r${y}`} cx="15" cy={y} r="1.5" />,
+      ])}
+    </svg>
+  );
+}
+
+export function IconArrowUp(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M12 19V5M6 11l6-6 6 6" />
+    </svg>
+  );
+}
+
+export function IconArrowRight(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M5 12h14M13 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+export function IconPlay(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M7 4.5v15l12.5-7.5L7 4.5z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconFilter(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <path d="M4 6h16M7 12h10M10 18h4" />
+    </svg>
+  );
+}

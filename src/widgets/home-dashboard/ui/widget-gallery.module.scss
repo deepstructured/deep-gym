@@ -1,0 +1,129 @@
+@use "../../../shared/styles/palette" as *;
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.category {
+  @include micro-label;
+  margin: 0 0 0.5rem 0.25rem;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: $radius-tile;
+  border: 1px solid $line;
+  background: $raised;
+  padding: 0.75rem;
+  text-align: left;
+  transition:
+    background-color $tr,
+    opacity $tr;
+
+  &:active:not(:disabled) {
+    background: $line;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+  }
+}
+
+.icon {
+  display: flex;
+  height: 2.5rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.875rem;
+  background: rgba(#fff, 0.06);
+  color: $text;
+}
+
+.icon_actions {
+  background: rgba($lime, 0.12);
+  color: $lime;
+}
+
+.icon_activity {
+  background: rgba($indigo, 0.4);
+  color: #aeb8ff;
+}
+
+.icon_progress {
+  background: rgba($pink, 0.14);
+  color: $pink;
+}
+
+.icon_plan {
+  background: rgba($cherry, 0.18);
+  color: #ff8a78;
+}
+
+.icon_body {
+  background: rgba($lime, 0.1);
+  color: $lime;
+}
+
+.text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.name {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.desc {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: $muted;
+}
+
+.sizes {
+  margin-top: 0.25rem;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.sizeTag {
+  border-radius: 9999px;
+  border: 1px solid $line;
+  padding: 0 0.4rem;
+  font-size: 0.625rem;
+  line-height: 1rem;
+  color: $faint;
+}
+
+.add {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: $lime;
+  color: #000;
+}
+
+.added {
+  background: transparent;
+  color: $lime;
+}

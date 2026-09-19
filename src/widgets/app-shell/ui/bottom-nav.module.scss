@@ -21,6 +21,7 @@
 }
 
 .primary {
+  position: relative;
   display: flex;
   height: 3.25rem;
   width: 3.25rem;
@@ -34,6 +35,42 @@
 
   &:active {
     filter: brightness(0.9);
+  }
+}
+
+/* A workout draft is in progress: breathing ring + live dot. */
+.primaryLive {
+  animation: live-ring 2.4s $ease infinite;
+}
+
+.liveDot {
+  position: absolute;
+  top: 0.125rem;
+  right: 0.125rem;
+  height: 0.75rem;
+  width: 0.75rem;
+  border-radius: 9999px;
+  border: 2px solid $bg;
+  background: $flame;
+}
+
+@keyframes live-ring {
+  0%,
+  100% {
+    box-shadow:
+      0 10px 30px -6px rgba($lime, 0.5),
+      0 0 0 0 rgba($lime, 0.45);
+  }
+  60% {
+    box-shadow:
+      0 10px 30px -6px rgba($lime, 0.5),
+      0 0 0 9px rgba($lime, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryLive {
+    animation: none;
   }
 }
 

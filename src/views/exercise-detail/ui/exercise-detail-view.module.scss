@@ -100,16 +100,16 @@
   font-size: 1.5rem;
 }
 
-.chartCard {
-  color: #fff;
-}
-
-.cardLabelOnGradient {
-  margin-bottom: 0.75rem;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: 500;
-  color: rgba(#fff, 0.8);
+/* Doubled so the tighter padding and indigo wash beat the Card base. */
+.progressCard.progressCard {
+  padding: 1rem;
+  background:
+    radial-gradient(
+      125% 55% at 50% 108%,
+      rgba(24, 39, 136, 0.13),
+      transparent 72%
+    ),
+    $surface;
 }
 
 /* Doubled so the tighter padding beats the Card base. */
@@ -154,6 +154,19 @@
   padding: 0.25rem 0.625rem;
   font-size: 0.75rem;
   line-height: 1rem;
+}
+
+.setChipWarmup {
+  border-color: rgba($indigo-bright, 0.3);
+  background: rgba($indigo, 0.2);
+  color: rgba(#fff, 0.75);
+}
+
+/* Warm-up badge inside a set chip. */
+.warmupMark {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #aeb8ff;
 }
 
 .setValue {

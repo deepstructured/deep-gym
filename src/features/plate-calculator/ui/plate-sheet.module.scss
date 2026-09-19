@@ -157,3 +157,112 @@
 .dotFont {
   font-family: $font-dot;
 }
+
+/* ── Next progression step ───────────────────────────────────────── */
+
+.next {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: $radius-tile;
+  border: 1px solid rgba($lime, 0.3);
+  background: rgba($lime, 0.045);
+  padding: 0.75rem;
+}
+
+.nextHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+}
+
+.nextIcon {
+  display: flex;
+  height: 1.375rem;
+  width: 1.375rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba($lime, 0.16);
+  color: $lime;
+}
+
+.nextTitle {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.nextHint {
+  width: 100%;
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  color: $faint;
+}
+
+.nextRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.nextAdd {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.nextPlus {
+  font-family: $font-dot;
+  color: $lime;
+}
+
+.nextTarget {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.nextValue {
+  font-size: 1.25rem;
+}
+
+.nextPct {
+  font-family: $font-dot;
+  font-size: 0.75rem;
+  color: $lime;
+}
+
+.nextChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.nextChip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  border: 1px solid $line;
+  background: $raised;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+}
+
+.nextChipBest {
+  border-color: rgba($lime, 0.45);
+}
+
+.nextChipAdd {
+  font-size: 0.6875rem;
+  color: $faint;
+}
+
+.nextChipValue {
+  font-family: $font-dot;
+}
