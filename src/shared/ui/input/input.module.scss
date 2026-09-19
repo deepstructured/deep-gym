@@ -1,6 +1,7 @@
-@use "../../styles/palette" as *;
+@use '../../styles/palette' as *;
 
 .input {
+  display: flex !important;
   height: 3rem;
   width: 100%;
   border-radius: 1rem;
