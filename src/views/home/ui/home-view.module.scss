@@ -6,6 +6,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+
+  @include desktop {
+    margin-bottom: 1.75rem;
+    padding-top: 1.75rem;
+  }
 }
 
 .headerText {
@@ -30,6 +35,12 @@
   font-size: 1.5rem;
   line-height: 2rem;
   font-weight: 600;
+
+  @include desktop {
+    font-size: 2rem;
+    line-height: 2.5rem;
+    letter-spacing: -0.02em;
+  }
 }
 
 .headerActions {
@@ -48,6 +59,11 @@
     background-color $tr,
     border-color $tr;
 
+  @include hover {
+    border-color: #3a3a44;
+    color: $text;
+  }
+
   &:active {
     transform: scale(0.95);
   }
@@ -61,6 +77,11 @@
 
 .avatarLink {
   flex-shrink: 0;
+
+  /* The desktop top bar already carries the avatar. */
+  @include desktop {
+    display: none;
+  }
 }
 
 .guide {

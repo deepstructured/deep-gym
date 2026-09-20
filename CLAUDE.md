@@ -58,6 +58,42 @@ Key locations:
 - **Product lifecycle versions** — `src/shared/config/releases.ts`; onboarding and release-note sequences are independent from `package.json` and the service-worker cache version.
 - **First-run/release gate** — `src/widgets/product-experience/`; onboarding view is under `src/views/onboarding/`, and release content is under `src/features/whats-new/`.
 
+## Mobile and desktop shells
+
+The app ships two layouts behind one component tree.
+
+- **Mode** — `src/shared/lib/ui-mode.ts`. `UiMode` (`auto | mobile | desktop`) is the
+  user's choice, stored per device in localStorage (**not** on the profile: one account is
+  used from a phone and a desktop). `LayoutMode` (`mobile | desktop`) is the resolved
+  result; `auto` picks desktop at `min-width: 1024px`. Settings → Interface and the
+  sidebar toggle both write it.
+- **No flash** — `UI_MODE_SCRIPT` runs blocking in `<head>` (`app/layout.tsx`) and writes
+  `data-ui` / `data-ui-mode` onto `<html>` before the first paint. `<html>` therefore
+  carries `suppressHydrationWarning`. Keep the script in sync with `resolve()`.
+- **Switch with CSS, not JS.** Anything that can key off `html[data-ui="desktop"]` must:
+  use the `desktop` / `mobile-ui` / `phone-framed` / `wide` / `hover` mixins in
+  `src/shared/styles/_palette.scss`. `useLayoutMode()` is only for the few places that
+  genuinely need a different React tree; it renders as `mobile` on the server.
+- **Shell** — `AppShell` renders one tree: a full-width top bar (brand, page title, the
+  view's `action`, then `HeaderActions`: ⌘K, interface mode, "log a workout", avatar),
+  the content column, an optional `aside` rail (≥1440px), `BottomNav` (phone) and `Dock`
+  (desktop). Navigation on desktop is the floating bottom dock — the same five
+  destinations as the phone tab bar, so one mental model serves both. Mobile is the CSS
+  default, so the app still works with JavaScript disabled.
+- **Two-column views** wrap their halves in elements that are `display: contents` on the
+  phone, so the phone layout stays exactly what it was (see `exercise-detail-view`).
+- **Home grid** gives each widget its natural span for 2 or 4 columns (`packLayout`);
+  both spans are emitted as CSS variables per cell, so changing mode never reflows
+  through React and no migration was needed. Holes are closed by
+  `grid-auto-flow: row dense`, not by widening tiles — one DOM order has to serve both
+  grids, and a JS packer would need to reorder differently for each.
+- `Sheet` becomes a centered dialog on desktop (`size` prop for width) — one change that
+  covers every sheet in the app.
+- Desktop-only extras: ⌘K command palette (`src/features/command-palette/`), ⌘S to save a
+  workout, Enter in the reps field to add a set, the "last time" reference column in the
+  set table (`previous-sets.tsx`), and workout type/date as compact top-bar controls
+  (`workout-meta.tsx`) instead of the phone's chip row.
+
 ## Onboarding and release notes
 
 - The authenticated `/onboarding` route is required when the user's `onboarding_version` is behind `CURRENT_ONBOARDING_VERSION` **and** their exact workout count is zero.

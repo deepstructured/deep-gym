@@ -18,6 +18,8 @@ import { useProfile } from "@/entities/user";
 import { BodyWeightTracker } from "@/features/body-weight";
 import { FirstWorkoutFormTip } from "@/features/first-workout";
 import {
+  DraftSummary,
+  WorkoutMetaControls,
   WorkoutForm,
   bodyweightDraftIssue,
   draftBodyWeightKg,
@@ -54,6 +56,7 @@ export function WorkoutNewView() {
   const [error, setError] = useState<string | null>(null);
   const [isFirstWorkout, setIsFirstWorkout] = useState(false);
   const [bodyWeightPending, setBodyWeightPending] = useState(false);
+  const [launchPending, setLaunchPending] = useState(false);
   // A template or "repeat workout" launch waiting for confirmation because
   // it would replace a draft that already has content.
   const [pendingReplace, setPendingReplace] = useState<{
@@ -166,6 +169,7 @@ export function WorkoutNewView() {
         : null;
     if (!launch || handledLaunch.current === launch) return;
     handledLaunch.current = launch;
+    setLaunchPending(true);
 
     const groupNames = new Map(groups.map((group) => [group.id, group.name]));
     const resolve: Promise<{ type: string; exercises: DraftExercise[] }> =
@@ -204,13 +208,26 @@ export function WorkoutNewView() {
               : t("workout.notFound"),
         );
         consumeLaunchParams();
-      });
+      })
+      .finally(() => setLaunchPending(false));
   }, [groups, profile, ready, t]);
 
   const canSave =
     draft.exercises.length > 0 &&
     !createWorkout.isPending &&
-    !bodyWeightPending;
+    !bodyWeightPending &&
+    !launchPending;
+
+  // Desktop muscle memory: Cmd/Ctrl+S saves without reaching for the button.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "s" || !(event.metaKey || event.ctrlKey)) return;
+      event.preventDefault();
+      if (canSave) save();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   function consumeLaunchParams() {
     const url = new URL(window.location.href);
@@ -303,8 +320,17 @@ export function WorkoutNewView() {
     <AppShell
       title={t("workout.new")}
       back
+      aside={ready ? <DraftSummary draft={draft} unit={unit} /> : undefined}
       action={
         <div className={styles.headerActions}>
+          {ready && (
+            <WorkoutMetaControls
+              type={draft.type}
+              date={draft.date}
+              onTypeChange={(type) => setDraft({ ...draft, type })}
+              onDateChange={(date) => setDraft({ ...draft, date })}
+            />
+          )}
           {ready && !isDraftEmpty(draft) && (
             <button
               type="button"
@@ -328,8 +354,8 @@ export function WorkoutNewView() {
         </div>
       }
     >
-      {!ready ? (
-        <PageLoader />
+      {!ready || launchPending ? (
+        <PageLoader variant="form" />
       ) : (
         <div className={styles.stack}>
           {isFirstWorkout && <FirstWorkoutFormTip />}
@@ -371,6 +397,7 @@ export function WorkoutNewView() {
               variant="gradient"
               size="lg"
               block
+              className={styles.saveButton}
               onClick={save}
               disabled={!canSave}
               loading={createWorkout.isPending}

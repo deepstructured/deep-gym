@@ -124,7 +124,7 @@ export function ProgressView() {
       subheader={<PeriodSwitch value={period} onChange={setPeriod} />}
     >
       {isLoading ? (
-        <PageLoader />
+        <PageLoader variant="progress" />
       ) : (workouts ?? []).length === 0 ? (
         <EmptyState
           title={t("progress.emptyTitle")}
@@ -142,7 +142,7 @@ export function ProgressView() {
             <div
               role="group"
               aria-label={t("progress.focus")}
-              className={cn(styles.focus, "no-scrollbar")}
+              className={cn(styles.focus, styles.full, "no-scrollbar")}
             >
               <Chip
                 selected={focusedGroupId == null}
@@ -166,23 +166,24 @@ export function ProgressView() {
             </div>
           )}
 
-          <PeriodOverview
-            current={view.totals}
-            previous={view.previousTotals}
-            unit={unit}
-          />
+          <div className={cn(styles.overview, styles.full)}>
+            <PeriodOverview
+              current={view.totals}
+              previous={view.previousTotals}
+              unit={unit}
+            />
+            <Section title={t("progress.activity")}>
+              <Card variant="surface" className={styles.card}>
+                <WeeklyActivity
+                  workouts={view.current}
+                  unit={unit}
+                  weeks={view.weeks}
+                />
+              </Card>
+            </Section>
+          </div>
 
-          <Section title={t("progress.activity")}>
-            <Card variant="surface" className={styles.card}>
-              <WeeklyActivity
-                workouts={view.current}
-                unit={unit}
-                weeks={view.weeks}
-              />
-            </Card>
-          </Section>
-
-          <Section title={t("progress.exercises")}>
+          <Section title={t("progress.exercises")} full>
             <ProgressExplorer
               workouts={workouts}
               unit={unit}
@@ -292,14 +293,17 @@ export function ProgressView() {
 function Section({
   title,
   action,
+  full,
   children,
 }: {
   title: string;
   action?: React.ReactNode;
+  /** Span both columns of the desktop grid (wide charts). */
+  full?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <section>
+    <section className={cn(styles.section, full && styles.full)}>
       <div className={styles.sectionHead}>
         <h2 className={styles.sectionTitle}>{title}</h2>
         {action}

@@ -20,3 +20,5 @@ export {
   type ActiveDraftSummary,
 } from "./model/active-draft";
 export { ElapsedSince } from "./ui/elapsed-since";
+export { DraftSummary } from "./ui/draft-summary";
+export { WorkoutMetaControls } from "./ui/workout-meta";

@@ -6,6 +6,10 @@
   border: 1px solid $line;
   background: $surface;
   padding: 0.25rem;
+
+  @include desktop {
+    max-width: 26rem;
+  }
 }
 
 .option {
@@ -20,6 +24,11 @@
     color $tr,
     background-color $tr;
 
+  @include hover {
+    background: rgba(#fff, 0.05);
+    color: $text;
+  }
+
   &:active {
     color: $text;
   }
@@ -29,6 +38,11 @@
 .active {
   background: $lime;
   color: #000;
+
+  @include hover {
+    background: $lime;
+    color: #000;
+  }
 
   &:active {
     color: #000;

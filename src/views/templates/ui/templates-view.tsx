@@ -43,7 +43,7 @@ export function TemplatesView() {
       }
     >
       {isLoading ? (
-        <PageLoader />
+        <PageLoader variant="cards" />
       ) : error ? (
         <ErrorNote message={t("common.error")} />
       ) : !templates || templates.length === 0 ? (

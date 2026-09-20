@@ -30,11 +30,13 @@ import { formatDay } from "@/shared/lib/dates";
 import { kgToUnit, roundWeight } from "@/shared/lib/weight";
 import {
   DotValue,
+  ErrorNote,
   IconChevronDown,
   IconChevronRight,
   IconScale,
   IconTrophy,
   LineChart,
+  Skeleton,
   Sheet,
 } from "@/shared/ui";
 import { useHomeData, type TileProps } from "../home-data";
@@ -64,7 +66,7 @@ export function ExerciseProgressTile({
 }: TileProps) {
   const { t } = useI18n();
   const { unit } = useHomeData();
-  const { data: exercises } = useExercises();
+  const { data: exercises, isLoading: exercisesLoading, error: exercisesError } = useExercises();
   const { data: groups } = useMuscleGroups();
   const recentIds = useRecentExerciseIds();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -75,7 +77,7 @@ export function ExerciseProgressTile({
       ? pinnedId
       : recentIds[0];
   const exercise = exercises?.find((item) => item.id === exerciseId);
-  const { data: history } = useExerciseHistory(exerciseId ?? "");
+  const { data: history, isLoading: historyLoading, error: historyError } = useExerciseHistory(exerciseId ?? "");
   const exerciseUnit = exercise?.unit ?? unit;
   const bodyweight = exercise?.equipment === "bodyweight";
   // A stored metric may not fit after the exercise changed its load mode.
@@ -157,6 +159,22 @@ export function ExerciseProgressTile({
       </div>
     </Sheet>
   );
+
+  if (exercisesLoading || historyLoading) {
+    return (
+      <Tile>
+        {header}
+        <div role="status" aria-label={t("common.loading")} aria-busy="true" className={styles.listSlot}>
+          <Skeleton style={{ width: "42%", height: "1.5rem", marginTop: "1rem" }} />
+          <Skeleton style={{ height: "4rem", marginTop: "0.75rem" }} />
+        </div>
+      </Tile>
+    );
+  }
+
+  if (exercisesError || historyError) {
+    return <Tile>{header}<ErrorNote message={t("common.error")} /></Tile>;
+  }
 
   if (!exercise) {
     return (

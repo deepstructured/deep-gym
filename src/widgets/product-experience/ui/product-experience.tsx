@@ -11,7 +11,7 @@ import {
 } from "@/shared/config/releases";
 import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
-import { BrandMark, Button, Spinner } from "@/shared/ui";
+import { BrandMark, Button, PageLoader } from "@/shared/ui";
 import styles from "./product-experience.module.scss";
 
 const PUBLIC_PATHS = ["/login", "/offline", "/auth"];
@@ -103,7 +103,7 @@ export function ProductExperience({
     profileQuery.isLoading ||
     (needsWorkoutCheck && workoutCountQuery.isLoading);
   if (resolvingEligibility || needsOnboarding) {
-    return <ExperienceLoader />;
+    return <PageLoader fullscreen />;
   }
 
   const releasePending = Boolean(
@@ -161,16 +161,5 @@ function EligibilityError({
         </Button>
       </div>
     </main>
-  );
-}
-
-function ExperienceLoader() {
-  return (
-    <div className={styles.loader}>
-      <div className={styles.loaderInner}>
-        <BrandMark width={38} />
-        <Spinner size={20} />
-      </div>
-    </div>
   );
 }

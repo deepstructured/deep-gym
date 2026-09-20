@@ -159,53 +159,49 @@ export function newWidgetId(type: WidgetType): string {
     .slice(2, 6)}`;
 }
 
+/** How many grid columns each layout mode offers. A widget keeps the same
+ *  proportions in both: "s" is a quarter of the row on desktop instead of a
+ *  half, so two phone rows sit side by side. */
+export const GRID_COLUMNS = { mobile: 2, desktop: 4 } as const;
+export type GridColumns = (typeof GRID_COLUMNS)[keyof typeof GRID_COLUMNS];
+
 export interface PlacedWidget {
   widget: HomeWidget;
-  /** Grid columns (1 or 2) and rows occupied. */
-  columns: 1 | 2;
+  /** Grid columns occupied (>= the size's natural width when stretched). */
+  columns: number;
   rows: 1 | 2;
-  /** A small widget left alone in its row, widened to fill it. */
+  /** Widened beyond its natural width to close a gap at the end of a row. */
   stretched: boolean;
 }
 
+/** Natural width of a size, in grid columns. */
+function naturalColumns(size: WidgetSize): number {
+  return size === "s" ? 1 : 2;
+}
+
 /**
- * Pack widgets into the 2-column grid without holes. Small tiles pair up:
- * a lone small tile pulls the next small tile up next to it (like iOS dense
- * packing), and one left over at the end stretches to the full width.
+ * Give every widget its natural span for a `columns`-wide grid, in the
+ * author's order.
+ *
+ * Gaps are closed by CSS (`grid-auto-flow: row dense`), which pulls a later
+ * tile up into a hole it fits — the same dense packing the phone grid always
+ * did when a small tile paired with a later small one. Doing it in CSS rather
+ * than here is what lets one DOM order drive both the two- and the
+ * four-column grid: a JavaScript packer would have to reorder the tiles
+ * differently for each, and there is only one DOM.
+ *
+ * Widening a tile to fill a leftover gap was dropped with it: on the phone it
+ * was a subtle half-to-full nudge, but on four columns it ballooned a
+ * two-column widget to the whole row and left it looking empty.
  */
-export function packLayout(widgets: HomeWidget[]): PlacedWidget[] {
-  const rows: PlacedWidget[][] = [];
-  let openRow: number | null = null;
-
-  for (const widget of widgets) {
-    if (widget.size === "s") {
-      const placed: PlacedWidget = {
-        widget,
-        columns: 1,
-        rows: 1,
-        stretched: false,
-      };
-      if (openRow != null) {
-        rows[openRow].push(placed);
-        openRow = null;
-      } else {
-        rows.push([placed]);
-        openRow = rows.length - 1;
-      }
-    } else {
-      rows.push([
-        {
-          widget,
-          columns: 2,
-          rows: widget.size === "l" ? 2 : 1,
-          stretched: false,
-        },
-      ]);
-    }
-  }
-
-  if (openRow != null) {
-    rows[openRow][0] = { ...rows[openRow][0], columns: 2, stretched: true };
-  }
-  return rows.flat();
+export function packLayout(
+  widgets: HomeWidget[],
+  columns: number = GRID_COLUMNS.mobile,
+): PlacedWidget[] {
+  return widgets.map((widget) => ({
+    widget,
+    columns: Math.min(naturalColumns(widget.size), columns),
+    rows: widget.size === "l" ? 2 : 1,
+    stretched: false,
+  }));
 }

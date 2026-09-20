@@ -425,3 +425,39 @@ export function IconFilter(props: IconProps) {
     </svg>
   );
 }
+
+export function IconMonitor(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M9 20h6M12 16v4" />
+    </svg>
+  );
+}
+
+export function IconPhone(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+      <path d="M11 18.5h2" />
+    </svg>
+  );
+}
+
+export function IconAuto(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <rect x="2.5" y="5" width="13" height="10" rx="2" />
+      <path d="M16.5 9.5h3a2 2 0 012 2v5a2 2 0 01-2 2h-3a2 2 0 01-2-2v-5a2 2 0 012-2zM7 19h4" />
+    </svg>
+  );
+}
+
+export function IconSearch(props: IconProps) {
+  return (
+    <svg {...base(props)}>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="M20 20l-4.2-4.2" />
+    </svg>
+  );
+}

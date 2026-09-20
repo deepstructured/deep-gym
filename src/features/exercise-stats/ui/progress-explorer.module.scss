@@ -10,6 +10,16 @@
   font-size: 0.8125rem;
   font-weight: 500;
   color: $muted;
+  transition: color $tr;
+
+  @include hover {
+    color: $text;
+  }
+
+  @include desktop {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
 }
 
 /* Doubled so the tighter padding and indigo wash beat the Card base. */
@@ -26,6 +36,54 @@
       transparent 72%
     ),
     $surface;
+
+  /* Explicit placement, so the DOM keeps the phone's reading order
+     (picker → chart → numbers → table) while desktop puts the numbers
+     under the rail instead of leaving that column empty. */
+  @include desktop {
+    display: grid;
+    grid-template-columns: 13rem minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    gap: 1rem 1.25rem;
+    align-items: start;
+    padding: 1.25rem;
+  }
+}
+
+/* Selector rail beside the chart on desktop; stacked on the phone. */
+.picker {
+  display: contents;
+
+  @include desktop {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+}
+
+/* On desktop the wrapper disappears so its children become grid items of
+   the card and can be placed individually. */
+.insights {
+  display: contents;
+}
+
+.panelCell {
+  @include desktop {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+}
+
+.repsCell {
+  @include desktop {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+  }
 }
 
 /* Chip rows bleed to the card edges and scroll horizontally. */
@@ -35,6 +93,15 @@
   gap: 0.5rem;
   overflow-x: auto;
   padding: 0 1rem;
+
+  /* Nothing to bleed into in the rail — wrap instead of scrolling. */
+  @include desktop {
+    margin: 0;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    overflow: visible;
+    padding: 0;
+  }
 }
 
 /* Doubled: compact chip size overriding the kit Chip. */
@@ -48,6 +115,14 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 0.375rem;
+
+  /* Stacked in the rail under the exercise picker. */
+  @include desktop {
+    grid-column: 1;
+    grid-row: 2;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.375rem;
+  }
 }
 
 .miniStat {

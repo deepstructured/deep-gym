@@ -9,6 +9,8 @@
   transition:
     filter $tr,
     background-color $tr,
+    border-color $tr,
+    color $tr,
     opacity $tr;
 
   &:disabled {
@@ -24,6 +26,10 @@
   color: #000;
   font-weight: 600;
 
+  @include hover {
+    filter: brightness(1.08);
+  }
+
   &:active {
     filter: brightness(0.9);
   }
@@ -32,6 +38,10 @@
 .gradient {
   color: #fff;
   font-weight: 600;
+
+  @include hover {
+    filter: brightness(1.1);
+  }
 
   &:active {
     filter: brightness(0.95);
@@ -43,6 +53,10 @@
   color: $text;
   border: 1px solid $line;
   font-weight: 500;
+  @include hover {
+    border-color: #3a3a44;
+    background: #24242a;
+  }
 
   &:active {
     background: rgba($line, 0.6);
@@ -53,6 +67,10 @@
   background: transparent;
   color: $muted;
   font-weight: 500;
+  @include hover {
+    background: rgba(#fff, 0.05);
+    color: $text;
+  }
 
   &:active {
     color: $text;
@@ -64,6 +82,11 @@
   color: $flame-text;
   border: 1px solid rgba($flame, 0.3);
   font-weight: 500;
+
+  @include hover {
+    background: rgba($flame, 0.24);
+    border-color: rgba($flame, 0.5);
+  }
 }
 
 /* Sizes */

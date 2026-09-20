@@ -28,6 +28,10 @@
 
   --radius-card: 1.75rem;
   --radius-tile: 1.25rem;
+
+  /* Desktop shell metrics — mirrored in src/shared/styles/_palette.scss. */
+  --content-max: 84rem;
+  --phone-column: 28rem;
 }
 
 /* ── Reset ───────────────────────────────────────────────────────── */
@@ -354,4 +358,65 @@ input[type="number"] {
 
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* ── Layout modes ────────────────────────────────────────────────── */
+/* `data-ui` is set on <html> before the first paint by the inline script in
+   app/layout.tsx (source: src/shared/lib/ui-mode.ts). Mobile is the default
+   so the app still renders without JavaScript. */
+
+/* A mouse needs a visible scrollbar; a phone does not. Only the desktop
+   shell gets one, styled to match the palette. */
+html[data-ui="desktop"] {
+  scrollbar-color: var(--color-line) transparent;
+}
+
+html[data-ui="desktop"] *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html[data-ui="desktop"] *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html[data-ui="desktop"] *::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background: var(--color-line);
+  background-clip: content-box;
+}
+
+html[data-ui="desktop"] *::-webkit-scrollbar-thumb:hover {
+  background: #3a3a44;
+  background-clip: content-box;
+}
+
+/* The phone layout deliberately kept on a wide monitor: sit the column in a
+   device frame instead of stranding it in the middle of an empty screen. */
+@media (min-width: 1024px) {
+  html[data-ui="mobile"] body {
+    background:
+      radial-gradient(
+        70% 44rem at 50% -14rem,
+        rgba(24, 39, 136, 0.22),
+        transparent 70%
+      ),
+      var(--color-bg);
+  }
+
+  html[data-ui="mobile"] body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    z-index: 0;
+    width: min(var(--phone-column), 100%);
+    transform: translateX(-50%);
+    border-inline: 1px solid rgba(42, 42, 49, 0.9);
+    background: rgba(10, 10, 12, 0.55);
+    box-shadow: 0 0 120px -20px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+  }
 }

@@ -7,6 +7,12 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
+
+  /* Desktop: a centered dialog instead of a bottom sheet. */
+  @include desktop {
+    align-items: center;
+    padding: 2rem 1.5rem;
+  }
 }
 
 .backdrop {
@@ -21,7 +27,7 @@
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 28rem;
+  max-width: $phone-column;
   max-height: 88dvh;
   overflow-y: auto;
   border-top: 1px solid rgba($line, 0.6);
@@ -30,6 +36,34 @@
   background: $surface;
   padding: 0.75rem 1.25rem calc(2rem + env(safe-area-inset-bottom));
   animation: sheet-up 0.28s cubic-bezier(0.32, 0.72, 0.2, 1);
+
+  @include desktop {
+    max-height: min(84dvh, 52rem);
+    border: 1px solid rgba($line, 0.8);
+    border-radius: 1.75rem;
+    padding: 1.25rem 1.5rem 1.75rem;
+    box-shadow: 0 40px 90px -30px rgba(#000, 0.95);
+    animation: dialog-in 0.2s $ease;
+  }
+}
+
+/* Desktop dialog widths; ignored in the phone sheet, which is full width. */
+.size_sm {
+  @include desktop {
+    max-width: 26rem;
+  }
+}
+
+.size_md {
+  @include desktop {
+    max-width: 34rem;
+  }
+}
+
+.size_lg {
+  @include desktop {
+    max-width: 52rem;
+  }
 }
 
 .grip {
@@ -38,6 +72,11 @@
   width: 2.5rem;
   border-radius: 9999px;
   background: $line;
+
+  /* No drag affordance on a dialog. */
+  @include desktop {
+    display: none;
+  }
 }
 
 .titleRow {
@@ -62,6 +101,19 @@
   border-radius: 9999px;
   background: $raised;
   color: $muted;
+  transition:
+    background-color $tr,
+    color $tr;
+
+  @include hover {
+    background: #2a2a31;
+    color: $text;
+  }
+
+  @include desktop {
+    height: 2.25rem;
+    width: 2.25rem;
+  }
 }
 
 .confirmMessage {
@@ -82,6 +134,11 @@
   border: 1px solid $line;
   background: $raised;
   font-weight: 500;
+  transition: background-color $tr;
+
+  @include hover {
+    background: #2a2a31;
+  }
 }
 
 .confirmDelete {
@@ -91,6 +148,11 @@
   background: $flame;
   font-weight: 600;
   color: #fff;
+  transition: filter $tr;
+
+  @include hover {
+    filter: brightness(1.1);
+  }
 
   &:disabled {
     opacity: 0.5;
@@ -103,6 +165,23 @@
   }
   to {
     transform: translateY(0);
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
   }
 }
 

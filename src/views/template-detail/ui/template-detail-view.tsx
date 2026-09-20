@@ -61,7 +61,7 @@ export function TemplateDetailView({ templateId }: { templateId: string }) {
       }
     >
       {isLoading ? (
-        <PageLoader />
+        <PageLoader variant="list" />
       ) : loadError || !template ? (
         <ErrorNote message={t("templates.notFound")} />
       ) : (

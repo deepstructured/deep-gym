@@ -7,16 +7,29 @@ import { cn } from "@/shared/lib/cn";
 import { IconClose } from "../icons/icons";
 import styles from "./sheet.module.scss";
 
+type SheetSize = "sm" | "md" | "lg";
+
 interface SheetProps {
   open: boolean;
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
+  /** Desktop dialog width; the phone sheet is always full width. */
+  size?: SheetSize;
   className?: string;
 }
 
-/** Bottom sheet modal. */
-export function Sheet({ open, onClose, title, children, className }: SheetProps) {
+/** Bottom sheet on the phone, centered dialog in the desktop shell — the
+ *  switch is pure CSS on `html[data-ui]`, so the behaviour (focus trap,
+ *  Escape, scroll lock) is identical in both. */
+export function Sheet({
+  open,
+  onClose,
+  title,
+  children,
+  size = "md",
+  className,
+}: SheetProps) {
   const { t } = useI18n();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -92,7 +105,7 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
-        className={cn(styles.panel, className)}
+        className={cn(styles.panel, styles[`size_${size}`], className)}
       >
         <div className={styles.grip} />
         {title != null && (
@@ -138,7 +151,7 @@ export function ConfirmSheet({
 }: ConfirmSheetProps) {
   const { t } = useI18n();
   return (
-    <Sheet open={open} onClose={onClose} title={title}>
+    <Sheet open={open} onClose={onClose} title={title} size="sm">
       {message && <p className={styles.confirmMessage}>{message}</p>}
       <div className={styles.confirmRow}>
         <button type="button" onClick={onClose} className={styles.confirmCancel}>

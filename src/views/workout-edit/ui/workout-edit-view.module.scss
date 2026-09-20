@@ -1,5 +1,34 @@
+@use "../../../shared/styles/palette" as *;
+
 .stack {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* The top bar already carries Save on desktop; the bottom one stops being
+   a full-width bar and just sits at the end of the form. */
+.stack {
+  @include desktop {
+    width: 100%;
+    max-width: 44rem;
+    margin-inline: auto;
+    gap: 1rem;
+  }
+}
+
+/* Doubled so it beats the kit Button's own `block` width rule. */
+.saveButton.saveButton {
+  @include desktop {
+    width: auto;
+    align-self: flex-start;
+    height: 2.75rem;
+    padding-inline: 1.5rem;
+  }
 }

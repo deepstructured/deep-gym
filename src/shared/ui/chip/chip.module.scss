@@ -25,6 +25,12 @@
   background: $raised;
   color: $muted;
 
+  @include hover {
+    border-color: #3a3a44;
+    background: #24242a;
+    color: $text;
+  }
+
   &:active {
     color: $text;
   }
@@ -33,4 +39,8 @@
 .selected {
   background: $lime;
   color: #000;
+
+  @include hover {
+    filter: brightness(1.08);
+  }
 }

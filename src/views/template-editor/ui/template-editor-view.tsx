@@ -178,7 +178,7 @@ export function TemplateEditorView({ templateId }: TemplateEditorViewProps) {
       }
     >
       {loading ? (
-        <PageLoader />
+        <PageLoader variant="form" />
       ) : loadError || (editing && !template) ? (
         <ErrorNote
           message={

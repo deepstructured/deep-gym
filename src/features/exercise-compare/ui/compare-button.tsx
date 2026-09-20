@@ -31,7 +31,8 @@ import {
   IconCompare,
   IconFlame,
   Sheet,
-  Spinner,
+  PageLoader,
+  ErrorNote,
 } from "@/shared/ui";
 import styles from "./compare-button.module.scss";
 
@@ -136,7 +137,7 @@ function CompareSheet({
   onClose,
 }: CompareButtonProps & { onClose: () => void }) {
   const { t } = useI18n();
-  const { data: history, isLoading } = useExerciseHistory(exerciseId);
+  const { data: history, isLoading, error } = useExerciseHistory(exerciseId);
   const { data: exercise } = useExercise(exerciseId);
   const { data: profile } = useProfile();
   const isBodyweight = exercise?.equipment === "bodyweight";
@@ -187,9 +188,9 @@ function CompareSheet({
       <p className={styles.exerciseName}>{exerciseName}</p>
 
       {isLoading ? (
-        <div className={styles.loading}>
-          <Spinner size={24} />
-        </div>
+        <PageLoader variant="list" />
+      ) : error ? (
+        <ErrorNote message={t("common.error")} />
       ) : markedDates.size === 0 ? (
         <EmptyState
           title={t("compare.emptyTitle")}

@@ -92,9 +92,12 @@ export function TemplatesTile({ size }: TileProps) {
             </Link>
           </div>
         </div>
-      ) : size === "l" ? (
-        <div className={styles.list}>
-          {list.slice(0, 4).map((template) => (
+      ) : (
+        // One list at every size: the old single row of chips left most of
+        // the tile empty, and the rows below stretch to fill whatever
+        // height the tile has.
+        <div className={styles.templateList}>
+          {list.slice(0, size === "l" ? 5 : 3).map((template) => (
             <div key={template.id} className={styles.listRow}>
               <Link
                 href={`/templates/${template.id}`}
@@ -114,22 +117,6 @@ export function TemplatesTile({ size }: TileProps) {
                 {t("templates.start")}
               </Link>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className={cn(styles.chips, styles.bottom, "no-scrollbar")}>
-          {list.slice(0, 6).map((template) => (
-            <Link
-              key={template.id}
-              href={`/workouts/new?template=${template.id}`}
-              className={styles.startChip}
-              aria-label={`${t("templates.startWorkout")}: ${template.name}`}
-            >
-              <span className={styles.playDot}>
-                <IconPlay size={12} />
-              </span>
-              <span>{template.name}</span>
-            </Link>
           ))}
         </div>
       )}

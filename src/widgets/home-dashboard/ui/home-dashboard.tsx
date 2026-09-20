@@ -20,20 +20,30 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { useProfile } from "@/entities/user";
 import { useAllWorkouts, useWorkoutCount } from "@/entities/workout";
 import { BodyWeightTracker } from "@/features/body-weight";
 import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
+import { useLayoutMode } from "@/shared/lib/ui-mode";
 import {
   IconCheck,
   IconMinus,
   IconPlus,
   IconWidgets,
+  PageLoader,
+  ErrorNote,
   Sheet,
 } from "@/shared/ui";
 import {
+  GRID_COLUMNS,
   WIDGETS,
   newWidgetId,
   packLayout,
@@ -72,7 +82,7 @@ export function HomeDashboard({
   const router = useRouter();
   const { t } = useI18n();
   const { data: profile } = useProfile();
-  const { data: workouts, isSuccess } = useAllWorkouts();
+  const { data: workouts, isSuccess, isLoading, error } = useAllWorkouts();
   const { data: workoutCount } = useWorkoutCount();
   const { layout, save, reset, isCustom } = useHomeLayout();
 
@@ -85,7 +95,19 @@ export function HomeDashboard({
   const lastOverId = useRef<string | null>(null);
 
   const widgets = dragOrder ?? layout.widgets;
-  const placed = useMemo(() => packLayout(widgets), [widgets]);
+  const layoutMode = useLayoutMode();
+
+  // Both packings are computed for every render: the grid geometry is driven
+  // by CSS variables so switching modes never reflows through React, while
+  // the tile *content* follows the mode that is actually showing.
+  const cells = useMemo(() => {
+    const mobile = packLayout(widgets, GRID_COLUMNS.mobile);
+    const desktop = packLayout(widgets, GRID_COLUMNS.desktop);
+    return mobile.map((item, index) => ({ mobile: item, desktop: desktop[index] }));
+  }, [widgets]);
+  const placed = cells.map((cell) =>
+    layoutMode === "desktop" ? cell.desktop : cell.mobile,
+  );
 
   // Settings → "Home screen" deep-links here with ?edit=1.
   useEffect(() => {
@@ -186,6 +208,9 @@ export function HomeDashboard({
 
   const activePlaced = placed.find((item) => item.widget.id === activeId);
 
+  if (isLoading) return <PageLoader variant="dashboard" />;
+  if (error && !workouts) return <ErrorNote message={t("common.error")} />;
+
   return (
     <HomeDataProvider value={data}>
       {editing && (
@@ -236,24 +261,29 @@ export function HomeDashboard({
             strategy={noShift}
           >
             <div className={cn(styles.grid, editing && styles.editing)}>
-              {placed.map((item, index) => (
+              {cells.map((cell, index) => (
                 <SortableTile
-                  key={item.widget.id}
-                  placed={item}
+                  key={cell.mobile.widget.id}
+                  placed={
+                    layoutMode === "desktop" ? cell.desktop : cell.mobile
+                  }
+                  spans={cell}
                   index={index}
                   editing={editing}
-                  highlighted={item.widget.id === addedId}
+                  highlighted={cell.mobile.widget.id === addedId}
                   onLongPress={() => setEditing(true)}
                   onRemove={() =>
                     commit(
                       layout.widgets.filter(
-                        (widget) => widget.id !== item.widget.id,
+                        (widget) => widget.id !== cell.mobile.widget.id,
                       ),
                     )
                   }
-                  onResize={(size) => patchWidget(item.widget.id, { size })}
+                  onResize={(size) =>
+                    patchWidget(cell.mobile.widget.id, { size })
+                  }
                   onConfigChange={(config) =>
-                    patchWidget(item.widget.id, { config })
+                    patchWidget(cell.mobile.widget.id, { config })
                   }
                 />
               ))}
@@ -344,17 +374,19 @@ export function HomeDashboard({
   );
 }
 
+/** What the tile should render as, given how wide it actually ended up.
+ *  A stretched "s" becomes a real "m" when the widget supports one;
+ *  anything else keeps its size and just gets the extra room. */
 function effectiveSize(item: PlacedWidget): {
   size: WidgetSize;
   wide: boolean;
 } {
-  const definition = WIDGETS[item.widget.type];
-  if (item.stretched) {
-    return definition.sizes.includes("m")
-      ? { size: "m", wide: false }
-      : { size: "s", wide: true };
+  const { size } = item.widget;
+  if (!item.stretched) return { size, wide: false };
+  if (size === "s" && WIDGETS[item.widget.type].sizes.includes("m")) {
+    return { size: "m", wide: false };
   }
-  return { size: item.widget.size, wide: false };
+  return { size, wide: true };
 }
 
 function TileContent({
@@ -378,6 +410,7 @@ function TileContent({
 
 function SortableTile({
   placed,
+  spans,
   index,
   editing,
   highlighted,
@@ -387,6 +420,8 @@ function SortableTile({
   onConfigChange,
 }: {
   placed: PlacedWidget;
+  /** Both packings, so CSS can switch grid geometry without a re-render. */
+  spans: { mobile: PlacedWidget; desktop: PlacedWidget };
   index: number;
   editing: boolean;
   highlighted: boolean;
@@ -415,10 +450,14 @@ function SortableTile({
         isDragging && styles.cellDragging,
         highlighted && styles.cellAdded,
       )}
-      style={{
-        gridColumn: `span ${placed.columns}`,
-        gridRow: `span ${placed.rows}`,
-      }}
+      style={
+        {
+          "--col-m": spans.mobile.columns,
+          "--row-m": spans.mobile.rows,
+          "--col-d": spans.desktop.columns,
+          "--row-d": spans.desktop.rows,
+        } as CSSProperties
+      }
       {...longPress}
     >
       <div className={styles.cellInner} inert={editing || undefined}>

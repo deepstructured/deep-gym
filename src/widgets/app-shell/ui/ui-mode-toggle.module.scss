@@ -1,0 +1,110 @@
+@use "../../../shared/styles/palette" as *;
+
+/* ── Top-bar segmented control ───────────────────────────────────── */
+
+.toggle {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.125rem;
+  border-radius: 9999px;
+  border: 1px solid $line;
+  background: rgba(#fff, 0.03);
+  padding: 0.1875rem;
+}
+
+.option {
+  display: flex;
+  height: 1.75rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  color: $faint;
+  transition:
+    color $tr,
+    background-color $tr;
+
+  @include hover {
+    color: $text;
+  }
+}
+
+.optionActive {
+  background: rgba(#fff, 0.09);
+  color: $text;
+
+  @include hover {
+    color: $text;
+  }
+}
+
+/* ── Settings sheet list ─────────────────────────────────────────── */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  border-radius: 1rem;
+  border: 1px solid $line;
+  background: $raised;
+  padding: 0.875rem 1rem;
+  text-align: left;
+  transition:
+    border-color $tr,
+    background-color $tr;
+
+  @include hover {
+    border-color: rgba($lime, 0.35);
+  }
+
+  &:active {
+    background: $surface;
+  }
+}
+
+.rowActive {
+  border-color: rgba($lime, 0.55);
+  background: rgba($lime, 0.08);
+}
+
+.rowIcon {
+  @include icon-circle(2.25rem);
+  border-color: transparent;
+  background: rgba(#fff, 0.06);
+  color: $muted;
+
+  .rowActive & {
+    background: rgba($lime, 0.14);
+    color: $lime;
+  }
+}
+
+.rowText {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.rowLabel {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.rowHint {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: $muted;
+}
+
+.rowMark {
+  flex-shrink: 0;
+  color: $lime;
+}

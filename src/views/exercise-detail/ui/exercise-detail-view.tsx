@@ -46,6 +46,7 @@ import {
   Input,
   PageLoader,
   Sheet,
+  Skeleton,
   Tag,
   TextArea,
 } from "@/shared/ui";
@@ -55,10 +56,10 @@ import styles from "./exercise-detail-view.module.scss";
 export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
   const router = useRouter();
   const { t } = useI18n();
-  const { data: exercise, isLoading } = useExercise(exerciseId);
+  const { data: exercise, isLoading, error: loadError } = useExercise(exerciseId);
   const { data: groups } = useMuscleGroups();
   const { data: profile } = useProfile();
-  const { data: history } = useExerciseHistory(exerciseId);
+  const { data: history, isLoading: historyLoading, error: historyError } = useExerciseHistory(exerciseId);
   const exerciseUsage = useExerciseUsageCount(exerciseId);
 
   const [weightSheetOpen, setWeightSheetOpen] = useState(false);
@@ -101,7 +102,11 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
   if (isLoading || !exercise) {
     return (
       <AppShell title={t("detail.title")} back>
-        <PageLoader />
+        {loadError || (!isLoading && !exercise) ? (
+          <ErrorNote message={t("common.error")} />
+        ) : (
+          <PageLoader variant="detail" />
+        )}
       </AppShell>
     );
   }
@@ -121,7 +126,11 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
         </button>
       }
     >
+      {/* The two wrappers are `display: contents` in the phone layout, so
+          the stack there is exactly what it always was; on desktop they
+          become the identity column and the analysis column. */}
       <div className={styles.stack}>
+        <div className={styles.sideColumn}>
         <div className={styles.tags}>
           <Tag tone="lime">{groupName}</Tag>
           <Tag>{t(`equipment.${exercise.equipment}`)}</Tag>
@@ -198,17 +207,19 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
 
         {/* Summary tiles */}
         <div className={styles.statGrid}>
-          <StatTile label={t("detail.sessions")} value={summary.sessions} />
-          <StatTile label={t("detail.totalSets")} value={summary.totalSets} />
+          <StatTile label={t("detail.sessions")} value={summary.sessions} loading={historyLoading} />
+          <StatTile label={t("detail.totalSets")} value={summary.totalSets} loading={historyLoading} />
           {isBodyweight ? (
             <>
               <StatTile
                 label={t("stats.totalReps")}
                 value={summary.totalReps}
+                loading={historyLoading}
               />
               <StatTile
                 label={t("detail.bestAddedLoad")}
                 value={formatSignedWeight(summary.bestAddedLoadKg, unit)}
+                loading={historyLoading}
                 suffix={
                   summary.bestAddedLoadKg != null ? unit : undefined
                 }
@@ -218,6 +229,7 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
             <>
               <StatTile
                 label={t("detail.bestWeight")}
+                loading={historyLoading}
                 value={
                   summary.bestWeightKg != null
                     ? roundWeight(kgToUnit(summary.bestWeightKg, unit))
@@ -227,6 +239,7 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
               />
               <StatTile
                 label={t("detail.est1rm")}
+                loading={historyLoading}
                 value={
                   summary.estOneRepMaxKg != null
                     ? roundWeight(kgToUnit(summary.estOneRepMaxKg, unit))
@@ -238,6 +251,11 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
           )}
         </div>
 
+        </div>
+
+        <div className={styles.mainColumn}>
+        {historyLoading && <PageLoader variant="chart" />}
+        {historyError && <ErrorNote message={t("common.error")} />}
         {/* Progress — interactive chart with periods and full screen */}
         {summary.sessions > 0 && (
           <Card variant="surface" className={styles.progressCard}>
@@ -310,9 +328,10 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
           </Card>
         )}
 
-        {(history?.length ?? 0) === 0 && (
+        {!historyLoading && !historyError && (history?.length ?? 0) === 0 && (
           <p className={styles.noSets}>{t("detail.noSets")}</p>
         )}
+        </div>
       </div>
 
       {!isBodyweight && (
@@ -360,15 +379,21 @@ function StatTile({
   label,
   value,
   suffix,
+  loading,
 }: {
   label: string;
   value: string | number;
   suffix?: string;
+  loading?: boolean;
 }) {
   return (
     <div className={styles.statTile}>
       <p className={styles.statTileLabel}>{label}</p>
-      <DotValue value={value} suffix={suffix} className={styles.statTileValue} />
+      {loading ? (
+        <Skeleton style={{ width: "60%", height: "1.75rem", marginTop: "0.5rem" }} />
+      ) : (
+        <DotValue value={value} suffix={suffix} className={styles.statTileValue} />
+      )}
     </div>
   );
 }

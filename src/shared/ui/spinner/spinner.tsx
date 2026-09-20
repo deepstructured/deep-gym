@@ -14,6 +14,8 @@ export function Spinner({
       height={size}
       viewBox="0 0 24 24"
       fill="none"
+      aria-hidden="true"
+      focusable="false"
       className={cn(styles.spinner, className)}
     >
       <circle

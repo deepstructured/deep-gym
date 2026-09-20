@@ -2,8 +2,12 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.625rem;
+
+  @include desktop {
+    align-self: stretch;
+  }
 }
 
 .tile {
@@ -13,6 +17,10 @@
   border-radius: $radius-tile;
   border: 1px solid transparent;
   padding: 0.875rem 1rem;
+
+  @include desktop {
+    justify-content: center;
+  }
 }
 
 .label {
@@ -27,6 +35,10 @@
 .value {
   margin-top: 0.5rem;
   font-size: 1.75rem;
+
+  @include desktop {
+    margin-top: 0.25rem;
+  }
 }
 
 .suffix {

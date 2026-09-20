@@ -23,9 +23,27 @@
   transition:
     color $tr,
     background-color $tr;
+
+  @include hover {
+    background: rgba(#fff, 0.05);
+    color: $text;
+  }
 }
 
+/* Declared after .tab so its colors win at equal specificity. */
 .active {
   background: $lime;
   color: #000;
+
+  @include hover {
+    background: $lime;
+    color: #000;
+  }
+}
+
+/* Two short labels do not need the whole content column. */
+.tabs {
+  @include desktop {
+    max-width: 22rem;
+  }
 }

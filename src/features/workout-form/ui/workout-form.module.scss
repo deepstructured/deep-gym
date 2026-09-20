@@ -4,6 +4,22 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+
+  /* A logging form does not get better past a certain width — inputs just
+     stretch. Cap it and let the session rail use the rest. */
+  @include desktop {
+    max-width: 44rem;
+    gap: 1rem;
+  }
+}
+
+/* Type and date move into the top bar on desktop. */
+.metaRow {
+  display: contents;
+
+  @include desktop {
+    display: none;
+  }
 }
 
 /* Horizontally scrollable type chips, bleeding to the screen edges. */
@@ -13,6 +29,14 @@
   gap: 0.5rem;
   overflow-x: auto;
   padding: 0 1.25rem 0.25rem;
+
+  /* Nothing to bleed into on desktop — wrap instead of scrolling. */
+  @include desktop {
+    margin: 0;
+    flex-wrap: wrap;
+    overflow: visible;
+    padding: 0;
+  }
 }
 
 .noteWrap {
@@ -52,6 +76,17 @@
   gap: 0.5rem;
   font-weight: 500;
   color: $lime;
+  transition: border-color $tr;
+
+  @include hover {
+    border-color: rgba($lime, 0.5);
+    background: $surface;
+  }
+
+  @include desktop {
+    height: 2.75rem;
+    font-size: 0.875rem;
+  }
 }
 
 /* ── Exercise editor ─────────────────────────────────────────────── */
@@ -149,6 +184,11 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0 0.25rem;
+
+  @include desktop {
+    grid-template-columns: 1.6rem minmax(0, 1fr) minmax(0, 1fr) 6rem 2.4rem 1.8rem;
+    gap: 0.625rem;
+  }
 }
 
 .headerUnitOverride {
@@ -166,6 +206,22 @@
   grid-template-columns: 1.6rem 1fr 1fr 2.4rem 1.8rem;
   align-items: center;
   gap: 0.5rem;
+
+  @include desktop {
+    grid-template-columns: 1.6rem minmax(0, 1fr) minmax(0, 1fr) 6rem 2.4rem 1.8rem;
+    gap: 0.625rem;
+  }
+}
+
+/* "Last time" reference: only the desktop table has room for it. */
+.previousColumn {
+  display: none;
+
+  @include desktop {
+    display: block;
+    min-width: 0;
+    text-align: right;
+  }
 }
 
 .setIndex {
@@ -215,6 +271,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+
+  /* Side by side on the left: pushed to opposite ends of a wide card the
+     two actions read as unrelated. */
+  @include desktop {
+    justify-content: flex-start;
+    gap: 0.25rem;
+  }
 }
 
 .addWarmup.addWarmup {

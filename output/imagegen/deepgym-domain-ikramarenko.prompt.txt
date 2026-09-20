@@ -1,0 +1,15 @@
+Generated with the built-in image_gen tool.
+
+Use case: ads-marketing.
+Create one polished personalized domain-move announcement card for the DeepGym workout tracker, ready to send as an image to a user. Portrait 4:5, high resolution, exceptionally considered editorial typography and premium sports app identity.
+Reference image 1 is the EXACT official DeepGym logo: reproduce its distinctive lime silhouette faithfully, do not redesign it. Reference image 2 shows the app's visual language only; do not reproduce the login screen.
+Art direction: deep near-black graphite #0a0a0c, subtly rounded charcoal panels #151518, off-white #f5f5f7 type, acid lime #d7f651 accent. Restrained pink #f567b5 to purple #622595 glow around one edge, slight indigo depth, very subtle regular dot-matrix field inspired by the app. A flat graphic designed announcement, no physical mockup or device frame. Lots of confident breathing room, crisp layout, tasteful micro-details, clean Urbanist-like geometric sans typography. Main headline large and elegant, domain exceptionally prominent and unmistakably readable. Official logo placed prominently in top brand lockup with DeepGym wordmark. Optionally oversized ultra-subtle watermark of the same logo in background, but no new symbols. Design should feel like a personal invitation from a beautifully designed fitness app, not a generic corporate email.
+Exact visible text, preserve capitalization and spelling:
+"DeepGym"
+"Dear @ikramarenko,"
+"New home."
+"Same drive."
+"DeepGym has moved to"
+"deepgym.fit"
+"See you at your next workout."
+Compose the two headline lines as the hero. Place domain inside a large refined lime rounded destination panel with a minimal northeast arrow at right. Greeting has a warm personal visual emphasis. Footer closing line is quiet but comfortably readable. Do not add any other text, fake URLs, dates, QR codes, badges, claims about accounts or data. All visible copy in English. Username must be exactly @ikramarenko and domain exactly deepgym.fit. Deliver a complete beautiful standalone announcement card with no surrounding canvas margins.

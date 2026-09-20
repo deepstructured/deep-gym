@@ -3,12 +3,53 @@
 .editButton {
   @include icon-circle(2.5rem);
   color: $muted;
+  transition:
+    background-color $tr,
+    color $tr;
+
+  @include hover {
+    background: #2a2a31;
+    color: $text;
+  }
 }
 
 .stack {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+
+  /* Desktop: identity and headline numbers on the left, the analysis
+     (chart, tables, history) on the right. */
+  @include desktop {
+    display: grid;
+    grid-template-columns: 21rem minmax(0, 1fr);
+    gap: 1.75rem;
+    align-items: start;
+  }
+}
+
+/* `display: contents` keeps the phone layout byte-for-byte what it was —
+   the wrappers only become real columns in the desktop grid. */
+.sideColumn,
+.mainColumn {
+  display: contents;
+}
+
+@media (min-width: $bp-desktop) {
+  html[data-ui="desktop"] {
+    .sideColumn,
+    .mainColumn {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .sideColumn {
+      position: sticky;
+      top: 6rem;
+    }
+  }
 }
 
 .tags {

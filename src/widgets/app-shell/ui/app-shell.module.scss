@@ -1,13 +1,36 @@
 @use "../../../shared/styles/palette" as *;
 
+/* ── Phone layout (the default, also used with JS disabled) ──────── */
+
 .shell {
+  --shell-sticky-top: 5.5rem;
   margin: 0 auto;
   display: flex;
   min-height: 100dvh;
   width: 100%;
-  max-width: 28rem;
+  max-width: $phone-column;
   flex-direction: column;
   padding: 3.5rem 1.25rem 8rem;
+
+  @include tablet {
+    max-width: 40rem;
+    padding-top: 1.5rem;
+  }
+
+  /* Keep the column above the device frame drawn on body::before. */
+  @include phone-framed {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.withSubheader {
+  --shell-sticky-top: 9rem;
+}
+
+.body,
+.main {
+  display: contents;
 }
 
 .header {
@@ -23,6 +46,17 @@
   backdrop-filter: blur(24px);
 }
 
+/* On the phone the inner wrapper is invisible: the header's own flex column
+   still stacks the row and the subheader exactly as it always did. */
+.headerInner {
+  display: contents;
+}
+
+/* Nothing but the desktop top bar's own controls — no page chrome. */
+.headerGlobalOnly {
+  display: none;
+}
+
 .headerRow {
   display: flex;
   align-items: center;
@@ -32,6 +66,21 @@
 .back {
   @include icon-circle(2.5rem);
   color: $text;
+  transition: background-color $tr;
+
+  @include hover {
+    background: #2a2a31;
+  }
+}
+
+.mark {
+  flex-shrink: 0;
+}
+
+/* Shown in the desktop top bar only — the phone keeps the original rule
+   of a brand mark on top-level titled screens. */
+.markDesktop {
+  display: none;
 }
 
 .title {
@@ -43,6 +92,11 @@
   font-weight: 600;
 }
 
+/* Pushes the global actions right when the view has no title. */
+.spacer {
+  flex: 1;
+}
+
 .action {
   flex-shrink: 0;
 }
@@ -50,7 +104,13 @@
 .account {
   flex-shrink: 0;
   border-radius: 9999px;
-  transition: transform $tr;
+  transition:
+    transform $tr,
+    box-shadow $tr;
+
+  @include hover {
+    box-shadow: 0 0 0 2px rgba($lime, 0.4);
+  }
 
   &:active {
     transform: scale(0.94);
@@ -59,4 +119,137 @@
 
 .content {
   flex: 1;
+}
+
+/* The right rail is desktop-only; in the phone layout it must not add an
+   orphaned block at the end of the page. */
+.rail {
+  display: none;
+}
+
+/* ── Desktop layout ──────────────────────────────────────────────── */
+/* Navigation lives in the floating dock, so the shell only reserves room
+   for the sticky top bar and for the dock at the bottom. */
+
+.shell {
+  @include desktop {
+    display: block;
+    max-width: none;
+    /* Bottom padding clears the floating dock. */
+    padding: 0 0 7rem;
+  }
+}
+
+.body {
+  @include desktop {
+    display: block;
+    padding: 0 2rem;
+  }
+}
+
+.main {
+  @include desktop {
+    display: block;
+    margin: 0 auto;
+    max-width: 72rem;
+  }
+}
+
+.mainWide {
+  @include desktop {
+    max-width: $content-max;
+  }
+}
+
+/* Wide screens give the contextual rail its own column next to the main
+   one; below 1440px the rail is not rendered and this is a no-op. */
+.body:has(.rail) {
+  @include wide {
+    display: grid;
+    /* A capped content column, not "whatever is left" — that is what made
+       the workout form stretch to the full window. */
+    grid-template-columns: minmax(0, 46rem) 20rem;
+    justify-content: center;
+    gap: 1.5rem;
+    align-items: start;
+  }
+}
+
+.body:has(.rail) .main {
+  @include wide {
+    margin: 0;
+    max-width: none;
+  }
+}
+
+.rail {
+  @include wide {
+    position: sticky;
+    top: var(--shell-sticky-top);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
+/* Spans the window: with the page title, the view's own actions and the
+   global controls all in one row, the content column is far too narrow. */
+.header {
+  @include desktop {
+    margin: 0 0 1.5rem;
+    border-bottom: 1px solid rgba($line, 0.7);
+    background: rgba(#0d0d10, 0.82);
+    padding: 0.75rem 2rem;
+    backdrop-filter: blur(24px);
+  }
+}
+
+.headerInner {
+  @include desktop {
+    display: flex;
+    margin: 0 auto;
+    width: 100%;
+    /* Matches .main so the brand lines up with the content below it. */
+    max-width: 72rem;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
+.headerGlobalOnly {
+  @include desktop {
+    display: flex;
+  }
+}
+
+.headerRow {
+  @include desktop {
+    gap: 0.875rem;
+    min-height: 2.5rem;
+  }
+}
+
+.markDesktop {
+  @include desktop {
+    display: block;
+  }
+}
+
+.title {
+  @include desktop {
+    /* Never let a crowded bar squeeze the page name out of existence. */
+    flex: 0 1 auto;
+    min-width: 5rem;
+    margin-right: auto;
+    font-size: 1.375rem;
+    line-height: 1.875rem;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* HeaderActions carries the avatar on desktop. */
+.account {
+  @include desktop {
+    display: none;
+  }
 }

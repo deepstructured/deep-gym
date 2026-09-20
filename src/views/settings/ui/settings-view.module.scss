@@ -4,6 +4,11 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+
+  @include desktop {
+    margin: 0 auto;
+    max-width: 42rem;
+  }
 }
 
 /* ── Profile header ──────────────────────────────────────────────── */
@@ -16,7 +21,13 @@
   border-radius: $radius-card;
   padding: 0.875rem 1rem;
   text-align: left;
-  transition: transform $tr;
+  transition:
+    transform $tr,
+    border-color $tr;
+
+  @include hover {
+    border-color: #3a3a44;
+  }
 
   &:active {
     transform: scale(0.99);
@@ -66,6 +77,12 @@
 
   & + & {
     border-top: 1px solid rgba($line, 0.6);
+  }
+
+  @include hover {
+    &:not(.rowStatic) {
+      background: rgba(#fff, 0.045);
+    }
   }
 
   &:active:not(.rowStatic) {
@@ -171,6 +188,10 @@
 
   & + & {
     border-top: 1px solid rgba($line, 0.7);
+  }
+
+  @include hover {
+    background: rgba(#fff, 0.045);
   }
 
   &:active {

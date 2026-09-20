@@ -13,7 +13,7 @@ export { ErrorNote } from "./error-note/error-note";
 export { Fullscreen } from "./fullscreen/fullscreen";
 export { Input, TextArea, Field } from "./input/input";
 export { LineChart, type LineChartPoint } from "./line-chart/line-chart";
-export { PageLoader } from "./page-loader/page-loader";
+export { PageLoader, Skeleton } from "./page-loader/page-loader";
 export { PeriodSwitch } from "./period-switch/period-switch";
 export { Segmented } from "./segmented/segmented";
 export { Sheet, ConfirmSheet } from "./sheet/sheet";

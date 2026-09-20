@@ -13,6 +13,7 @@ import type { Unit } from "@/shared/lib/weight";
 import {
   Button,
   Chip,
+  ErrorNote,
   IconPlus,
   Input,
   PageLoader,
@@ -34,8 +35,8 @@ export function ExercisePicker({
   unit,
 }: ExercisePickerProps) {
   const { t } = useI18n();
-  const { data: groups, isLoading: groupsLoading } = useMuscleGroups();
-  const { data: exercises, isLoading } = useExercises();
+  const { data: groups, isLoading: groupsLoading, error: groupsError } = useMuscleGroups();
+  const { data: exercises, isLoading, error: exercisesError } = useExercises();
 
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
@@ -103,7 +104,9 @@ export function ExercisePicker({
           </div>
 
           {isLoading || groupsLoading ? (
-            <PageLoader />
+            <PageLoader variant="list" />
+          ) : groupsError || exercisesError ? (
+            <ErrorNote message={t("common.error")} />
           ) : (
             <div className={styles.list}>
               {filtered.map((exercise) => (

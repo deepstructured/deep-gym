@@ -106,7 +106,7 @@ export function TemplatePicker({
         title={t("workout.templatePickerTitle")}
       >
         {isLoading || groupsLoading ? (
-          <PageLoader />
+          <PageLoader variant="list" />
         ) : templatesError || groupsError ? (
           <ErrorNote message={t("common.error")} />
         ) : !templates || templates.length === 0 ? (

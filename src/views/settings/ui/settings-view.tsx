@@ -17,15 +17,18 @@ import { CURRENT_RELEASE } from '@/shared/config/releases'
 import { LANGUAGE_OPTIONS, useI18n, type Lang } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
 import { getDateLocale } from '@/shared/lib/dates'
+import { useUiMode } from '@/shared/lib/ui-mode'
 import { kgToUnit, roundWeight, type Unit } from '@/shared/lib/weight'
-import { AppShell } from '@/widgets/app-shell'
+import { AppShell, UiModeOptions } from '@/widgets/app-shell'
 import {
   Avatar,
+  ErrorNote,
   IconCalendar,
   IconCheck,
   IconChevronRight,
   IconGlobe,
   IconInfo,
+  IconMonitor,
   IconMuscle,
   IconPlates,
   IconScale,
@@ -49,6 +52,7 @@ const SHEETS = [
   'plates',
   'groups',
   'language',
+  'interface',
 ] as const
 type SheetKey = (typeof SHEETS)[number]
 
@@ -65,11 +69,12 @@ const MONDAY = new Date(2024, 0, 1)
  */
 export function SettingsView() {
   const { t, lang, setLang } = useI18n()
-  const { data: profile, isLoading } = useProfile()
+  const { data: profile, isLoading, error: loadError } = useProfile()
   const { data: groups } = useMuscleGroups()
   const updateProfile = useUpdateProfile()
   const [sheet, setSheet] = useState<SheetKey | null>(null)
   const [whatsNewOpen, setWhatsNewOpen] = useState(false)
+  const [uiMode] = useUiMode()
 
   useEffect(() => {
     const url = new URL(window.location.href)
@@ -84,7 +89,11 @@ export function SettingsView() {
   if (isLoading || !profile) {
     return (
       <AppShell title={t('settings.title')} back>
-        <PageLoader />
+        {loadError || (!isLoading && !profile) ? (
+          <ErrorNote message={t('common.error')} />
+        ) : (
+          <PageLoader variant="settings" />
+        )}
       </AppShell>
     )
   }
@@ -210,6 +219,12 @@ export function SettingsView() {
             }
           />
           <Row
+            icon={<IconMonitor size={18} />}
+            title={t('ui.mode.title')}
+            value={t(`ui.mode.${uiMode}`)}
+            onClick={() => setSheet('interface')}
+          />
+          <Row
             icon={<IconWidgets size={18} />}
             title={t('settings.homeScreen')}
             value={t('settings.customize')}
@@ -315,6 +330,14 @@ export function SettingsView() {
             </button>
           ))}
         </div>
+      </Sheet>
+
+      <Sheet
+        open={sheet === 'interface'}
+        onClose={close}
+        title={t('ui.mode.title')}
+      >
+        <UiModeOptions onPicked={close} />
       </Sheet>
 
       <WhatsNewSheet

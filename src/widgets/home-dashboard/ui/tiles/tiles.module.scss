@@ -8,7 +8,13 @@
   width: 100%;
   border-radius: $radius-tile;
   text-align: left;
-  transition: transform $tr;
+  transition:
+    transform $tr,
+    filter $tr;
+
+  @include hover {
+    filter: brightness(1.12);
+  }
 
   &:active {
     transform: scale(0.985);
@@ -342,6 +348,21 @@
   margin-top: 0.625rem;
   display: flex;
   flex-direction: column;
+}
+
+/* Templates fill whatever height the tile has: the rows share the space
+   evenly instead of clustering at the top and leaving the rest empty. */
+.templateList {
+  margin-top: 0.5rem;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+
+  .listRow {
+    flex: 1;
+    min-height: 2.25rem;
+  }
 }
 
 .listRow {

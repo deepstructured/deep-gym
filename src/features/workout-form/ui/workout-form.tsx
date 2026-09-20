@@ -62,6 +62,11 @@ import {
   type WorkoutDraft,
 } from "../model/draft";
 import { CopyLastWorkout } from "./copy-last-workout";
+import {
+  PreviousSetCell,
+  PreviousSetsLabel,
+  usePreviousSession,
+} from "./previous-sets";
 import { CopyWorkoutPicker } from "./copy-workout-picker";
 import { ExercisePicker } from "./exercise-picker";
 import { TemplatePicker } from "./template-picker";
@@ -160,29 +165,33 @@ export function WorkoutForm({
 
   return (
     <div className={styles.form}>
-      {/* Type */}
-      <Field label={t("workout.type")}>
-        <div className={cn(styles.typeRow, "no-scrollbar")}>
-          {typeOptions.map((type) => (
-            <Chip
-              key={type}
-              selected={value.type === type}
-              onClick={() => patch({ type })}
-            >
-              {type}
-            </Chip>
-          ))}
-        </div>
-      </Field>
+      {/* Phone only: on desktop these two live in the top bar, where they
+          cost no vertical space (see WorkoutMetaControls). */}
+      <div className={styles.metaRow}>
+        {/* Type */}
+        <Field label={t("workout.type")}>
+          <div className={cn(styles.typeRow, "no-scrollbar")}>
+            {typeOptions.map((type) => (
+              <Chip
+                key={type}
+                selected={value.type === type}
+                onClick={() => patch({ type })}
+              >
+                {type}
+              </Chip>
+            ))}
+          </div>
+        </Field>
 
-      {/* Date */}
-      <Field label={t("workout.date")}>
-        <Input
-          type="date"
-          value={value.date}
-          onChange={(e) => e.target.value && patch({ date: e.target.value })}
-        />
-      </Field>
+        {/* Date */}
+        <Field label={t("workout.date")}>
+          <Input
+            type="date"
+            value={value.date}
+            onChange={(e) => e.target.value && patch({ date: e.target.value })}
+          />
+        </Field>
+      </div>
 
       {/* Workout notes */}
       {value.showNotes ? (
@@ -395,6 +404,42 @@ function ExerciseEditor({
   // Working sets are numbered 1, 2, 3… while warm-ups show "W".
   let workingCount = 0;
   let warmupCount = 0;
+  // Last time's numbers, shown beside the inputs in the desktop table.
+  const previous = usePreviousSession(
+    exercise.exerciseId,
+    workoutDate,
+    exercise.unit ?? unit,
+    exercise.equipment === "bodyweight",
+    bodyWeightKg,
+  );
+
+  /** New working set, seeded from the last working one. */
+  function addSet() {
+    onPatch({
+      sets: [
+        ...exercise.sets,
+        newSet(
+          exercise.sets.findLast((set) => !set.warmup) ?? exercise.sets.at(-1),
+        ),
+      ],
+    });
+  }
+
+  /** Enter at the end of a row logs it and opens the next — the rhythm of
+   *  logging with a keyboard. The last row's reps field is focused after
+   *  React has rendered it. */
+  function onRepsKeyDown(event: React.KeyboardEvent, isLast: boolean) {
+    if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    if (!isLast) return;
+    addSet();
+    const rows = (event.target as HTMLElement).closest(`.${styles.setRows}`);
+    requestAnimationFrame(() => {
+      // The new row is appended last; its first input is the weight field.
+      const last = rows?.lastElementChild;
+      last?.querySelector<HTMLInputElement>("input")?.focus();
+    });
+  }
 
   return (
     <div
@@ -474,12 +519,16 @@ function ExerciseEditor({
             : t("set.weight", { unit: exercise.unit ?? unit })}
         </span>
         <span>{t("set.reps")}</span>
+        {/* Desktop-only reference column: CSS hides it in the phone grid. */}
+        <span className={styles.previousColumn}>
+          <PreviousSetsLabel date={previous?.date} />
+        </span>
         <span style={{ textAlign: "center" }}>{t("set.fail")}</span>
         <span />
       </div>
 
       <div className={styles.setRows}>
-        {exercise.sets.map((set) => {
+        {exercise.sets.map((set, setIndex) => {
           if (set.warmup) warmupCount += 1;
           else workingCount += 1;
           const warmupIndex = warmupCount - 1;
@@ -559,12 +608,19 @@ function ExerciseEditor({
                   set.warmup ? String(warmupRepsHint(warmupIndex)) : "0"
                 }
                 className={styles.setInput}
+                onKeyDown={(event) =>
+                  onRepsKeyDown(event, setIndex === exercise.sets.length - 1)
+                }
                 onChange={(e) =>
                   onPatchSet(set.key, {
                     reps: e.target.value.replace(/\D/g, ""),
                   })
                 }
               />
+
+              <span className={styles.previousColumn}>
+                <PreviousSetCell set={previous?.sets[setIndex]} />
+              </span>
 
               {set.warmup ? (
                 <span aria-hidden="true" className={styles.warmupSpacer} />
@@ -609,17 +665,7 @@ function ExerciseEditor({
           variant="ghost"
           size="sm"
           tone="lime"
-          onClick={() =>
-            onPatch({
-              sets: [
-                ...exercise.sets,
-                newSet(
-                  exercise.sets.findLast((set) => !set.warmup) ??
-                    exercise.sets.at(-1),
-                ),
-              ],
-            })
-          }
+          onClick={addSet}
         >
           <IconPlus size={16} />
           {t("set.addSet")}

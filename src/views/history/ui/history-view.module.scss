@@ -1,7 +1,62 @@
 @use "../../../shared/styles/palette" as *;
 
+/* Phone: one column, calendar above the day list. Desktop: a sticky
+   calendar pane beside a scrolling day pane. */
+.layout {
+  @include desktop {
+    display: grid;
+    grid-template-columns: 22rem minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+  }
+}
+
+.calendarPane {
+  @include desktop {
+    position: sticky;
+    top: 6rem;
+  }
+}
+
+.dayPane {
+  @include desktop {
+    min-width: 0;
+  }
+}
+
 .modeSwitch {
   margin-bottom: 1rem;
+}
+
+/* ── Period summary (desktop only) ───────────────────────────────── */
+
+.summary {
+  display: none;
+
+  @include desktop {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-radius: $radius-tile;
+    padding: 0.875rem 1rem;
+  }
+}
+
+.summaryCell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.summaryLabel {
+  @include micro-label;
+  @include truncate;
+}
+
+.summaryValue {
+  @include truncate;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .navigator {
@@ -14,15 +69,37 @@
 .navButton {
   @include icon-circle(2.5rem);
   color: $muted;
+  transition:
+    background-color $tr,
+    color $tr;
+
+  @include hover {
+    background: #2a2a31;
+    color: $text;
+  }
 }
 
 .heading {
   font-size: 15px;
   font-weight: 600;
+  border-radius: 9999px;
+  padding: 0.375rem 0.75rem;
+  transition: background-color $tr;
+
+  @include hover {
+    background: rgba(#fff, 0.05);
+  }
 }
 
 .periodBlock {
   margin-bottom: 1.25rem;
+}
+
+/* The day list heads its own pane on desktop, so it needs a little air. */
+.dayList {
+  @include desktop {
+    gap: 1.25rem;
+  }
 }
 
 .weekGrid {
@@ -40,6 +117,13 @@
   border: 1px solid $line;
   background: $surface;
   padding: 0.625rem 0;
+  transition:
+    border-color $tr,
+    background-color $tr;
+
+  @include hover {
+    border-color: #3a3a44;
+  }
 }
 
 .weekDayActive {
@@ -115,6 +199,13 @@
   border: 1px solid transparent;
   font-size: 0.875rem;
   line-height: 1.25rem;
+  transition:
+    border-color $tr,
+    background-color $tr;
+
+  @include hover {
+    background: rgba(#fff, 0.06);
+  }
 }
 
 .monthDayActive {

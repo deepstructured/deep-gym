@@ -5,6 +5,10 @@
   padding: 1rem;
   transition: border-color 0.2s ease;
 
+  @include hover {
+    border-color: rgba($lime, 0.45);
+  }
+
   &:focus,
   &:active {
     border-color: $lime;

@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { matricha, urbanist } from "@/app/fonts";
 import { Providers } from "@/app/providers";
+import { UI_MODE_SCRIPT } from "@/shared/lib/ui-mode";
 import "@/app/globals.css";
+import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   title: {
@@ -46,16 +48,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${urbanist.variable} ${matricha.variable}`}>
+    // The inline script below writes data-ui/data-ui-mode before hydration,
+    // so those attributes legitimately differ from the server render.
+    <html
+      lang="en"
+      className={`${urbanist.variable} ${matricha.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <link
           rel="mask-icon"
           href="/safari-pinned-tab.svg"
           color="#D7F651"
         />
+        {/* Resolves the mobile/desktop shell onto <html data-ui> before the
+            first paint, so the layout never flashes the wrong mode. */}
+        <script
+          dangerouslySetInnerHTML={{ __html: UI_MODE_SCRIPT }}
+        />
       </head>
       <body>
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );

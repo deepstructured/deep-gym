@@ -48,6 +48,17 @@ export function ExercisesView() {
     return list;
   }, [exercises, groupFilter, search]);
 
+  const countByGroup = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const exercise of exercises ?? []) {
+      counts.set(
+        exercise.muscle_group_id,
+        (counts.get(exercise.muscle_group_id) ?? 0) + 1,
+      );
+    }
+    return counts;
+  }, [exercises]);
+
   const visibleGroups = useMemo(() => {
     if (!groups) return [];
     return groups
@@ -77,59 +88,76 @@ export function ExercisesView() {
         </Button>
       }
     >
-      <div className={styles.filters}>
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("picker.search")}
-        />
-        <div className={cn(styles.groupRow, "no-scrollbar")}>
-          <Chip selected={groupFilter === null} onClick={() => setGroupFilter(null)}>
-            {t("common.all")}
-          </Chip>
-          {groups?.map((group) => (
+      {/* Phone: filters above the list. Desktop: CSS turns the filters into
+          a sticky left rail and the list into a multi-column grid. */}
+      <div className={styles.layout}>
+        <div className={styles.filters}>
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("picker.search")}
+          />
+          <div className={cn(styles.groupRow, "no-scrollbar")}>
             <Chip
-              key={group.id}
-              selected={groupFilter === group.id}
-              onClick={() =>
-                setGroupFilter(groupFilter === group.id ? null : group.id)
-              }
+              selected={groupFilter === null}
+              className={styles.groupChip}
+              onClick={() => setGroupFilter(null)}
             >
-              {group.name}
+              {t("common.all")}
+              <span className={styles.groupCount}>
+                {exercises?.length ?? ""}
+              </span>
             </Chip>
-          ))}
+            {groups?.map((group) => (
+              <Chip
+                key={group.id}
+                selected={groupFilter === group.id}
+                className={styles.groupChip}
+                onClick={() =>
+                  setGroupFilter(groupFilter === group.id ? null : group.id)
+                }
+              >
+                {group.name}
+                <span className={styles.groupCount}>
+                  {countByGroup.get(group.id) ?? 0}
+                </span>
+              </Chip>
+            ))}
+          </div>
+        </div>
+
+        <div className={styles.results}>
+          {isLoading || groupsLoading ? (
+            <PageLoader variant="cards" />
+          ) : visibleGroups.length === 0 ? (
+            <EmptyState
+              title={t("exercises.emptyTitle")}
+              hint={t("exercises.emptyHint")}
+            />
+          ) : (
+            <div className={styles.sections}>
+              {visibleGroups.map(({ group, exercises: list }) => (
+                <section key={group.id}>
+                  <h2 className={styles.sectionTitle}>
+                    {group.name}
+                    <span className={styles.sectionCount}>{list.length}</span>
+                  </h2>
+                  <div className={styles.list}>
+                    {list.map((exercise) => (
+                      <ExerciseRow
+                        key={exercise.id}
+                        exercise={exercise}
+                        unit={unit}
+                        bodyWeightKg={profile?.body_weight_kg ?? null}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-
-      {isLoading || groupsLoading ? (
-        <PageLoader />
-      ) : visibleGroups.length === 0 ? (
-        <EmptyState
-          title={t("exercises.emptyTitle")}
-          hint={t("exercises.emptyHint")}
-        />
-      ) : (
-        <div className={styles.sections}>
-          {visibleGroups.map(({ group, exercises: list }) => (
-            <section key={group.id}>
-              <h2 className={styles.sectionTitle}>
-                {group.name}
-                <span className={styles.sectionCount}>{list.length}</span>
-              </h2>
-              <div className={styles.list}>
-                {list.map((exercise) => (
-                  <ExerciseRow
-                    key={exercise.id}
-                    exercise={exercise}
-                    unit={unit}
-                    bodyWeightKg={profile?.body_weight_kg ?? null}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
       <Sheet
         open={createOpen}
         onClose={() => setCreateOpen(false)}

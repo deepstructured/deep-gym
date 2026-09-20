@@ -4,8 +4,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
 import type { Exercise, ExerciseInput } from "../model/types";
 
-export function useExercises() {
+/** `enabled` lets a lazy consumer (the command palette) defer the fetch
+ *  until it is actually opened. */
+export function useExercises(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: ["exercises"],
     queryFn: async (): Promise<Exercise[]> => {
       const supabase = getSupabaseBrowser();

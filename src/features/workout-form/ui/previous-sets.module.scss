@@ -1,0 +1,26 @@
+@use "../../../shared/styles/palette" as *;
+
+.value {
+  @include truncate;
+  font-family: $font-dot;
+  font-size: 0.8125rem;
+  color: $muted;
+}
+
+.warmup {
+  @include truncate;
+  font-family: $font-dot;
+  font-size: 0.8125rem;
+  color: rgba($flame-text, 0.7);
+}
+
+.empty {
+  font-family: $font-dot;
+  font-size: 0.8125rem;
+  color: rgba($faint, 0.6);
+}
+
+.label {
+  @include truncate;
+  display: block;
+}

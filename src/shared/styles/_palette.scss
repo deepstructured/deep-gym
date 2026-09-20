@@ -31,6 +31,71 @@ $font-dot: var(--font-dot);
 $ease: cubic-bezier(0.4, 0, 0.2, 1);
 $tr: 150ms $ease;
 
+// ── Layout modes ───────────────────────────────────────────────────
+// `data-ui` is written on <html> before the first paint (see
+// src/shared/lib/ui-mode.ts). Mobile is the default so the app still renders
+// correctly with JavaScript disabled; desktop is opt-in via the attribute.
+
+$bp-desktop: 1024px; // "auto" switches to the desktop shell here
+$bp-wide: 1440px; // the contextual right rail appears here
+$phone-column: 28rem; // the phone layout's content width
+$content-max: 84rem;
+
+/// Desktop shell only. Used inside a selector:
+///   .foo { display: none; @include desktop { display: flex } }
+/// The `html[data-ui]` part is a type selector, so CSS Modules leaves it
+/// global and only hashes the nested class.
+@mixin desktop {
+  html[data-ui="desktop"] & {
+    @content;
+  }
+}
+
+/// Phone shell only (including phone-forced on a wide monitor).
+@mixin mobile-ui {
+  html[data-ui="mobile"] & {
+    @content;
+  }
+}
+
+/// Portrait tablets keep touch navigation, with a roomier reading column.
+/// An explicitly selected phone preview keeps its original proportions.
+@mixin tablet {
+  @media (min-width: 640px) and (max-width: 1023px) {
+    html[data-ui-mode="auto"] & {
+      @content;
+    }
+  }
+}
+
+/// The phone layout shown inside a device frame on a wide screen.
+@mixin phone-framed {
+  @media (min-width: $bp-desktop) {
+    html[data-ui="mobile"] & {
+      @content;
+    }
+  }
+}
+
+/// Desktop, wide enough for the contextual right rail.
+@mixin wide {
+  @media (min-width: $bp-wide) {
+    html[data-ui="desktop"] & {
+      @content;
+    }
+  }
+}
+
+/// Pointer-driven hover. Never fires on touch, where `:active` is the
+/// feedback the app already uses everywhere.
+@mixin hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @content;
+    }
+  }
+}
+
 // Round icon-in-a-circle button/badge used all over the app.
 @mixin icon-circle($size: 2rem) {
   display: flex;

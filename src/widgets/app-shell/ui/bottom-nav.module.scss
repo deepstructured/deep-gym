@@ -9,6 +9,33 @@
   background: rgba($bg, 0.85);
   backdrop-filter: blur(24px);
   padding-bottom: env(safe-area-inset-bottom);
+
+  @include tablet {
+    left: 50%;
+    right: auto;
+    width: 100%;
+    max-width: 40rem;
+    transform: translateX(-50%);
+    border-inline: 1px solid rgba($line, 0.6);
+    border-radius: 1.25rem 1.25rem 0 0;
+  }
+
+  /* The desktop shell navigates from the floating dock. */
+  @include desktop {
+    display: none;
+  }
+
+  /* Phone layout kept on a wide monitor: the bar belongs to the device
+     frame, not to the whole viewport. */
+  @include phone-framed {
+    inset-inline: auto;
+    left: 50%;
+    width: 100%;
+    max-width: $phone-column;
+    transform: translateX(-50%);
+    border-inline: 1px solid rgba($line, 0.9);
+    border-radius: 1.25rem 1.25rem 0 0;
+  }
 }
 
 .tabs {
@@ -32,6 +59,11 @@
   background: $lime;
   color: #000;
   box-shadow: 0 10px 30px -6px rgba($lime, 0.5);
+  transition: filter $tr;
+
+  @include hover {
+    filter: brightness(1.08);
+  }
 
   &:active {
     filter: brightness(0.9);
@@ -85,8 +117,17 @@
   font-weight: 500;
   color: $faint;
   transition: color $tr;
+
+  @include hover {
+    color: $muted;
+  }
 }
 
 .tabActive {
   color: $lime;
+
+  /* Wins over .tab's hover rule, which comes earlier at equal specificity. */
+  @include hover {
+    color: $lime;
+  }
 }

@@ -55,7 +55,7 @@ export function BodyWeightHistory({
       </div>
 
       {measurements == null && query.isLoading ? (
-        <PageLoader />
+        <PageLoader variant="list" />
       ) : measurements == null && query.error ? (
         <ErrorNote message={t("common.error")} />
       ) : rows.length === 0 ? (

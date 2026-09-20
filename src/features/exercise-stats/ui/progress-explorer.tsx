@@ -9,7 +9,7 @@ import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
 import { periodStart, type PeriodKey } from "@/shared/lib/period";
 import { kgToUnit, roundWeight, type Unit } from "@/shared/lib/weight";
-import { Card, Chip, DotValue, IconChevronRight } from "@/shared/ui";
+import { Card, Chip, DotValue, ErrorNote, IconChevronRight, PageLoader } from "@/shared/ui";
 import { formatSigned, formatThousands } from "../model/format";
 import {
   extendedSummary,
@@ -83,8 +83,9 @@ export function ProgressExplorer({
   onPeriodChange,
   groupId = null,
 }: ProgressExplorerProps) {
-  const { data: exercises } = useExercises();
-  const { data: groups } = useMuscleGroups();
+  const { t } = useI18n();
+  const { data: exercises, isLoading: exercisesLoading, error: exercisesError } = useExercises();
+  const { data: groups, isLoading: groupsLoading, error: groupsError } = useMuscleGroups();
 
   const [groupChoice, setGroupChoice] = useState<string | null>(null);
   const [exerciseChoice, setExerciseChoice] = useState<string | null>(null);
@@ -109,6 +110,8 @@ export function ProgressExplorer({
       .sort((a, b) => lastDates.get(b.id)!.localeCompare(lastDates.get(a.id)!));
   }, [exercises, byExercise]);
 
+  if (exercisesLoading || groupsLoading) return <PageLoader variant="detail" />;
+  if (exercisesError || groupsError) return <ErrorNote message={t("common.error")} />;
   if (chartable.length === 0) return null;
 
   const groupsWithData = (groups ?? []).filter((group) =>
@@ -138,6 +141,10 @@ export function ProgressExplorer({
 
   return (
     <Card variant="surface" className={styles.card}>
+      {/* Picker and insights are one column on the phone; on desktop CSS
+          turns them into a narrow selector rail beside the chart, which
+          roughly halves the card's height. */}
+      <div className={styles.picker}>
       {groupId == null && (
         <div className={cn(styles.chipRow, "no-scrollbar")}>
           {groupsWithData.map((group) => (
@@ -169,16 +176,20 @@ export function ProgressExplorer({
         ))}
       </div>
 
+      </div>
+
       {/* Keyed: a specific-load filter belongs to one exercise. */}
-      <ExerciseInsights
-        key={activeExercise.id}
-        exercise={activeExercise}
-        groupName={groupName}
-        records={byExercise.get(activeExercise.id) ?? []}
-        unit={unit}
-        period={period}
-        onPeriodChange={onPeriodChange}
-      />
+      <div className={styles.insights}>
+        <ExerciseInsights
+          key={activeExercise.id}
+          exercise={activeExercise}
+          groupName={groupName}
+          records={byExercise.get(activeExercise.id) ?? []}
+          unit={unit}
+          period={period}
+          onPeriodChange={onPeriodChange}
+        />
+      </div>
     </Card>
   );
 }
@@ -217,20 +228,23 @@ function ExerciseInsights({
 
   return (
     <>
-      <ExerciseProgressPanel
-        records={records}
-        unit={exerciseUnit}
-        bodyweight={isBodyweight}
-        exerciseName={exercise.name}
-        subtitle={groupName}
-        period={period}
-        onPeriodChange={onPeriodChange}
-        showPeriodSwitch={false}
-        loadFilter={filter}
-        onLoadFilterChange={setFilter}
-      />
+      <div className={styles.panelCell}>
+        <ExerciseProgressPanel
+          records={records}
+          unit={exerciseUnit}
+          bodyweight={isBodyweight}
+          exerciseName={exercise.name}
+          subtitle={groupName}
+          period={period}
+          onPeriodChange={onPeriodChange}
+          showPeriodSwitch={false}
+          loadFilter={filter}
+          onLoadFilterChange={setFilter}
+        />
+      </div>
 
-      {/* Period tiles */}
+      {/* Period tiles — they sit under the selector rail on desktop, which
+          is what keeps that column from being a tall empty strip. */}
       <div className={styles.statGrid}>
         {isBodyweight ? (
           <MiniStat
@@ -280,7 +294,7 @@ function ExerciseInsights({
       </div>
 
       {repStats.length > 0 && (
-        <div>
+        <div className={styles.repsCell}>
           <p className={styles.repsLabel}>
             {isBodyweight
               ? t("detail.repsByAddedLoad")

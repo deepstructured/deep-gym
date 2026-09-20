@@ -1,0 +1,53 @@
+@use "../../../shared/styles/palette" as *;
+
+/* Doubled so the tighter padding beats the Card base. */
+.card.card {
+  padding: 1.125rem 1.25rem;
+}
+
+.title {
+  @include micro-label;
+  margin-bottom: 0.875rem;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid rgba($line, 0.6);
+  padding: 0.5rem 0;
+
+  &:first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.label {
+  @include truncate;
+  font-size: 0.8125rem;
+  color: $muted;
+}
+
+.value {
+  flex-shrink: 0;
+  font-family: $font-dot;
+  font-size: 1rem;
+}
+
+.valueStrong {
+  flex-shrink: 0;
+  font-family: $font-dot;
+  font-size: 1.125rem;
+  color: $lime;
+}

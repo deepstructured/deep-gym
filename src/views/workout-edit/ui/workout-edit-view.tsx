@@ -13,6 +13,7 @@ import {
 } from "@/entities/workout";
 import {
   WorkoutForm,
+  WorkoutMetaControls,
   bodyweightDraftIssue,
   draftToInput,
   workoutToDraft,
@@ -106,22 +107,32 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
       title={t("workout.edit")}
       back
       action={
-        <Button
-          variant="lime"
-          size="sm"
-          onClick={save}
-          disabled={!canSave}
-          loading={updateWorkout.isPending}
-        >
-          {t("common.save")}
-        </Button>
+        <div className={styles.headerActions}>
+          {draft && (
+            <WorkoutMetaControls
+              type={draft.type}
+              date={draft.date}
+              onTypeChange={(type) => setDraft({ ...draft, type })}
+              onDateChange={(date) => setDraft({ ...draft, date })}
+            />
+          )}
+          <Button
+            variant="lime"
+            size="sm"
+            onClick={save}
+            disabled={!canSave}
+            loading={updateWorkout.isPending}
+          >
+            {t("common.save")}
+          </Button>
+        </div>
       }
     >
       {isLoading || !draft ? (
         loadError ? (
           <ErrorNote message={t("workout.notFound")} />
         ) : (
-          <PageLoader />
+          <PageLoader variant="form" />
         )
       ) : (
         <div className={styles.stack}>
@@ -131,6 +142,7 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
             variant="gradient"
             size="lg"
             block
+            className={styles.saveButton}
             onClick={save}
             disabled={!canSave}
             loading={updateWorkout.isPending}

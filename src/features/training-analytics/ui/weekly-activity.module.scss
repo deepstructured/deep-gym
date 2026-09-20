@@ -1,3 +1,5 @@
+@use "../../../shared/styles/palette" as *;
+
 .wrap {
   display: flex;
   flex-direction: column;
@@ -8,4 +10,11 @@
 .switch.switch button {
   height: 2rem;
   font-size: 0.75rem;
+}
+
+/* Three short words do not need the whole card. */
+.switch.switch {
+  @include desktop {
+    max-width: 24rem;
+  }
 }

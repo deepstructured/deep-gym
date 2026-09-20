@@ -15,7 +15,7 @@ import {
   startOfWeek,
 } from 'date-fns'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProfile, type TrainingSchedule } from '@/entities/user'
 import { WorkoutCard, useWorkouts, type Workout } from '@/entities/workout'
 import { FirstWorkoutSuccessSheet } from '@/features/first-workout'
@@ -24,6 +24,7 @@ import {
   scheduledWorkoutOn,
   type ScheduledWorkout,
 } from '@/features/next-workout'
+import { periodTotals } from '@/features/training-analytics'
 import { useI18n } from '@/shared/i18n'
 import { cn } from '@/shared/lib/cn'
 import {
@@ -34,6 +35,8 @@ import {
   getDateLocale,
   toISODate,
 } from '@/shared/lib/dates'
+import { useLayoutMode } from '@/shared/lib/ui-mode'
+import { formatWeight } from '@/shared/lib/weight'
 import { AppShell } from '@/widgets/app-shell'
 import {
   EmptyState,
@@ -50,8 +53,16 @@ export function HistoryView() {
   const router = useRouter()
   const { t } = useI18n()
   const { data: profile, isLoading: isProfileLoading } = useProfile()
+  const layoutMode = useLayoutMode()
   const [mode, setMode] = useState<Mode>('day')
   const [cursor, setCursor] = useState<Date>(() => new Date())
+  // Only promotes the initial view once, so a deliberate switch to Day sticks.
+  const promotedToMonth = useRef(false)
+  useEffect(() => {
+    if (layoutMode !== 'desktop' || promotedToMonth.current) return
+    promotedToMonth.current = true
+    setMode((current) => (current === 'day' ? 'month' : current))
+  }, [layoutMode])
   const [showFirstWorkoutSuccess, setShowFirstWorkoutSuccess] = useState(false)
 
   useEffect(() => {
@@ -110,81 +121,132 @@ export function HistoryView() {
 
   return (
     <AppShell title={t('history.title')} account>
-      <Segmented
-        className={styles.modeSwitch}
-        value={mode}
-        onChange={setMode}
-        options={[
-          { value: 'day', label: t('history.day') },
-          { value: 'week', label: t('history.week') },
-          { value: 'month', label: t('history.month') },
-        ]}
-      />
+      {/* One tree, two shapes: on desktop CSS turns this into a sticky
+          calendar pane next to a scrolling day pane. */}
+      <div className={styles.layout}>
+        <div className={styles.calendarPane}>
+          <Segmented
+            className={styles.modeSwitch}
+            value={mode}
+            onChange={setMode}
+            options={[
+              { value: 'day', label: t('history.day') },
+              { value: 'week', label: t('history.week') },
+              { value: 'month', label: t('history.month') },
+            ]}
+          />
 
-      {/* Period navigator */}
-      <div className={styles.navigator}>
-        <button
-          type="button"
-          aria-label={t('history.previous')}
-          onClick={() => shift(-1)}
-          className={styles.navButton}
-        >
-          <IconChevronLeft size={18} />
-        </button>
-        <button
-          type="button"
-          className={styles.heading}
-          onClick={() => setCursor(new Date())}
-        >
-          {heading}
-        </button>
-        <button
-          type="button"
-          aria-label={t('history.next')}
-          onClick={() => shift(1)}
-          className={styles.navButton}
-        >
-          <IconChevronRight size={18} />
-        </button>
+          {/* Period navigator */}
+          <div className={styles.navigator}>
+            <button
+              type="button"
+              aria-label={t('history.previous')}
+              onClick={() => shift(-1)}
+              className={styles.navButton}
+            >
+              <IconChevronLeft size={18} />
+            </button>
+            <button
+              type="button"
+              className={styles.heading}
+              onClick={() => setCursor(new Date())}
+            >
+              {heading}
+            </button>
+            <button
+              type="button"
+              aria-label={t('history.next')}
+              onClick={() => shift(1)}
+              className={styles.navButton}
+            >
+              <IconChevronRight size={18} />
+            </button>
+          </div>
+
+          {mode === 'week' && (
+            <WeekStrip
+              from={range.from}
+              workouts={workouts ?? []}
+              schedule={profile?.training_schedule}
+              selected={cursor}
+              onSelect={setCursor}
+            />
+          )}
+
+          {mode === 'month' && (
+            <MonthGrid
+              cursor={cursor}
+              workouts={workouts ?? []}
+              schedule={profile?.training_schedule}
+              onSelect={setCursor}
+            />
+          )}
+
+          {/* The wider shell has room for what the period actually adds up
+              to — information the phone layout has no space for. */}
+          {mode !== 'day' && (
+            <PeriodSummary workouts={workouts ?? []} unit={unit} />
+          )}
+        </div>
+
+        <div className={styles.dayPane}>
+          {isLoading || isProfileLoading ? (
+            <PageLoader variant="list" />
+          ) : (
+            <SelectedDayWorkouts
+              cursor={cursor}
+              mode={mode}
+              workouts={workouts ?? []}
+              scheduledWorkout={scheduledWorkout}
+              unit={unit}
+              actions={workoutActions}
+            />
+          )}
+        </div>
       </div>
-
-      {mode === 'week' && (
-        <WeekStrip
-          from={range.from}
-          workouts={workouts ?? []}
-          schedule={profile?.training_schedule}
-          selected={cursor}
-          onSelect={setCursor}
-        />
-      )}
-
-      {mode === 'month' && (
-        <MonthGrid
-          cursor={cursor}
-          workouts={workouts ?? []}
-          schedule={profile?.training_schedule}
-          onSelect={setCursor}
-        />
-      )}
-
-      {isLoading || isProfileLoading ? (
-        <PageLoader />
-      ) : (
-        <SelectedDayWorkouts
-          cursor={cursor}
-          mode={mode}
-          workouts={workouts ?? []}
-          scheduledWorkout={scheduledWorkout}
-          unit={unit}
-          actions={workoutActions}
-        />
-      )}
 
       <FirstWorkoutSuccessSheet
         open={showFirstWorkoutSuccess}
         onClose={dismissFirstWorkoutSuccess}
       />
     </AppShell>
+  )
+}
+
+/** Totals for the selected week or month. Desktop-only: the phone layout
+ *  keeps the calendar and the day list in one narrow column. */
+function PeriodSummary({
+  workouts,
+  unit,
+}: {
+  workouts: Workout[]
+  unit: 'kg' | 'lb'
+}) {
+  const { t } = useI18n()
+  const totals = useMemo(() => periodTotals(workouts), [workouts])
+  if (workouts.length === 0) return null
+
+  return (
+    <div className={cn(styles.summary, 'surface-well')}>
+      <SummaryCell
+        label={t('progress.workouts')}
+        value={String(totals.workouts)}
+      />
+      <SummaryCell label={t('progress.sets')} value={String(totals.sets)} />
+      <SummaryCell
+        label={t('stats.metric.volume')}
+        value={formatWeight(totals.volumeKg, unit)}
+      />
+    </div>
+  )
+}
+
+function SummaryCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className={styles.summaryCell}>
+      <span className={styles.summaryLabel}>{label}</span>
+      <span className={styles.summaryValue}>{value}</span>
+    </div>
   )
 }
 

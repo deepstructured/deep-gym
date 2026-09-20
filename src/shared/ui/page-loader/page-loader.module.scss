@@ -1,8 +1,196 @@
 @use "../../styles/palette" as *;
 
 .pageLoader {
-  display: flex;
-  justify-content: center;
-  padding: 5rem 0;
+  width: 100%;
+  min-width: 0;
   color: $muted;
+}
+
+.brand {
+  display: grid;
+  min-height: 16rem;
+  place-items: center;
+  padding: 3rem 1rem;
+}
+
+.fullscreen {
+  min-height: 100dvh;
+  background: $bg;
+}
+
+.brandInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.mark {
+  display: grid;
+  width: 5rem;
+  height: 5rem;
+  place-items: center;
+  border: 1px solid rgba($lime, 0.12);
+  border-radius: 1.625rem;
+  background: radial-gradient(ellipse at top, rgba($lime, 0.1), rgba($surface, 0.75));
+  box-shadow: 0 12px 40px rgba(#000, 0.16);
+}
+
+.loadingTrack {
+  width: 4rem;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba($lime, 0.1);
+
+  span {
+    display: block;
+    width: 45%;
+    height: 100%;
+    border-radius: inherit;
+    background: $lime;
+    animation: travel 1.5s ease-in-out infinite;
+  }
+}
+
+.loadingLabel {
+  margin-top: -0.375rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
+.placeholder,
+.detailSide,
+.detailMain,
+.rows,
+.fieldGroup {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bone {
+  position: relative;
+  display: block;
+  flex-shrink: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 0.875rem;
+  border-radius: 0.375rem;
+  background: rgba(#fff, 0.055);
+
+  &::after {
+    position: absolute;
+    inset: 0;
+    content: "";
+    background: linear-gradient(100deg, transparent 15%, rgba(#fff, 0.045) 50%, transparent 85%);
+    transform: translateX(-100%);
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+}
+
+.row,
+.profile,
+.summaryCard,
+.chart,
+.metric,
+.dashboardCard {
+  min-width: 0;
+  border: 1px solid rgba($line, 0.75);
+  border-radius: $radius-tile;
+  background: rgba($surface, 0.7);
+  padding: 1.125rem;
+}
+
+.row,
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.rowText {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.title { width: 52%; height: 0.875rem; }
+.caption { width: 36%; height: 0.625rem; }
+.value { width: 55%; height: 1.875rem; }
+.square { width: 2.5rem; height: 2.5rem; border-radius: 0.75rem; }
+.avatar { width: 3.5rem; height: 3.5rem; border-radius: 50%; }
+.end { width: 1.25rem; height: 1.25rem; }
+.field { height: 3.125rem; border-radius: 1rem; }
+
+.fieldGroup { margin-bottom: 0.5rem; gap: 0.875rem; }
+.summaryCard { display: grid; gap: 1.25rem; padding: 1.5rem; }
+
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.chartArea { height: 7.5rem; opacity: 0.6; }
+.axis { display: flex; justify-content: space-between; gap: 2rem; }
+.axis .caption { width: 2.5rem; }
+
+.metrics,
+.dashboardGrid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.metric { display: grid; gap: 1rem; }
+.metric .caption { width: 55%; }
+.overview,
+.analysis,
+.detailGrid { display: grid; gap: 1.25rem; }
+.progress .placeholder { gap: 1.5rem; }
+.dashboardCard { display: grid; min-height: 9rem; align-content: space-between; gap: 1rem; }
+.dashboardCard:nth-child(3n + 1) { grid-column: 1 / -1; }
+
+.settings {
+  max-width: 52rem;
+  margin-inline: auto;
+}
+
+.form { max-width: 66rem; }
+
+.pageLoader {
+ @include desktop {
+  &.cards > .placeholder > .rows {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(21rem, 100%), 1fr));
+  }
+
+  .overview { grid-template-columns: minmax(15rem, 0.8fr) minmax(0, 1.6fr); align-items: stretch; }
+  .analysis { grid-template-columns: minmax(0, 1.6fr) minmax(15rem, 1fr); }
+  .detailGrid { grid-template-columns: minmax(16rem, 0.8fr) minmax(0, 1.65fr); gap: 1.5rem; }
+  .dashboardGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+  .dashboardCard { min-height: 11rem; }
+  .dashboardCard:nth-child(3n + 1) { grid-column: span 2; }
+ }
+}
+
+@keyframes travel {
+  0%, 100% { transform: translateX(-105%); }
+  50% { transform: translateX(225%); }
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bone::after,
+  .loadingTrack span { animation: none; }
+
+  .loadingTrack span { width: 100%; opacity: 0.7; }
 }

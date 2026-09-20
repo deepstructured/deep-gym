@@ -17,6 +17,10 @@
     color: $faint;
   }
 
+  @include hover {
+    border-color: #3a3a44;
+  }
+
   &:focus {
     border-color: rgba($lime, 0.6);
   }
@@ -36,6 +40,10 @@
 
   &::placeholder {
     color: $faint;
+  }
+
+  @include hover {
+    border-color: #3a3a44;
   }
 
   &:focus {

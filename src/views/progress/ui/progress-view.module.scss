@@ -4,6 +4,42 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+
+  /* Two columns on desktop: the long phone stack becomes a dashboard.
+     Wide charts opt back into the full width with .full.
+     Items stretch (the grid default) so side-by-side cards end on the same
+     line instead of leaving a ragged edge. */
+  @include desktop {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+.overview {
+  display: grid;
+  min-width: 0;
+  gap: 1.5rem;
+
+  @include desktop {
+    grid-template-columns: minmax(19rem, 0.9fr) minmax(0, 1.7fr);
+    align-items: stretch;
+  }
+}
+
+/* Each section is a column so its card can take the row's full height. */
+.section {
+  @include desktop {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+  }
+}
+
+.full {
+  @include desktop {
+    grid-column: 1 / -1;
+  }
 }
 
 /* Muscle-group focus chips bleed to the screen edges. */
@@ -13,6 +49,13 @@
   gap: 0.5rem;
   overflow-x: auto;
   padding: 0 1.25rem;
+
+  /* Nothing to bleed into once the shell has margins of its own. */
+  @include desktop {
+    margin: 0;
+    flex-wrap: wrap;
+    padding: 0;
+  }
 }
 
 /* Doubled: compact chip size overriding the kit Chip. */
@@ -43,11 +86,20 @@
   font-size: 0.8125rem;
   font-weight: 600;
   color: $lime;
+  transition: opacity $tr;
+
+  @include hover {
+    opacity: 0.75;
+  }
 }
 
 /* Doubled so the tighter padding beats the Card base. */
 .card.card {
   padding: 1rem;
+
+  @include desktop {
+    flex: 1;
+  }
 }
 
 .lifts {
@@ -61,6 +113,11 @@
   gap: 0.75rem;
   border-top: 1px solid rgba($line, 0.6);
   padding: 0.625rem 0;
+  transition: opacity $tr;
+
+  @include hover {
+    opacity: 0.75;
+  }
 
   &:first-child {
     border-top: 0;
