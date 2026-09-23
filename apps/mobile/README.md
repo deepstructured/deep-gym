@@ -6,10 +6,12 @@ Expo / React Native app in the same npm workspace as the Next.js web app.
 
 1. From the repository root run `npm install`.
 2. Copy `apps/mobile/.env.example` to `apps/mobile/.env.local` and fill in the public Supabase URL/anon key, the deployed web app URL for Telegram OTP and account deletion, the Telegram bot username, and the public privacy policy URL when ready. Never put `SUPABASE_SERVICE_ROLE_KEY` in an `EXPO_PUBLIC_` variable.
-3. Run `npm run mobile` from the root for a development build, or `npm run mobile:go` for Expo Go. The Expo development server uses its own port and can run alongside Next.js on port 3000.
+3. Run `npm run mobile:go` from the root for Expo Go. Open the printed QR with the iPhone Camera while the phone and laptop are on the same Wi-Fi. On a physical iPhone, sign in to the same Expo account in Expo Go and on the laptop (`npx expo login`). For a custom development build use `npm run mobile` instead. The Expo server normally uses port 8081 and can run alongside Next.js on port 3000.
 4. Run `npm run mobile:typecheck` for mobile TypeScript checks. `npm run typecheck` checks the web app only.
 
 The app reads and writes the same Supabase project as the web app. Its auth session is stored on the device with AsyncStorage; the server's RLS policies remain the data access boundary.
+
+`EXPO_PUBLIC_WEB_URL` must be reachable from the iPhone. `http://localhost:3000` points at the phone itself, not the laptop. Use the deployed HTTPS web API, or the laptop's Wi-Fi address if testing a local Next server. Google OAuth needs this app's custom URL scheme and therefore cannot finish inside Expo Go. Telegram OTP can be used for Expo Go when its web API is reachable; use only a demo identity while testing writes against the live database. The native Apple login should be validated in a signed development build.
 
 ## Database migration
 
