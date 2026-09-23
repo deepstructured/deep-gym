@@ -445,7 +445,7 @@ export function WeeklyVolumeTile({ size, wide }: TileProps) {
               workouts={workouts}
               unit={unit}
               weeks={8}
-              height={78}
+              height={62}
               metric="volume"
             />
           </div>

@@ -8,6 +8,60 @@ import Svg, {
 } from "react-native-svg";
 
 export type GradientVariant = "pink" | "indigo" | "cherry" | "flame";
+export type WellVariant = "surface" | "raised" | "stat" | "explorer" | "live";
+
+/** Neutral wells from the PWA: a lit upper edge, with a deeper curved
+ * reflection in compact stats and a faint indigo foot in the explorer. */
+export function WellSurface({ variant }: { variant: WellVariant }) {
+  const stat = variant === "stat";
+  const explorer = variant === "explorer";
+  const live = variant === "live";
+  const base = stat ? "#111114" : variant === "raised" ? "#1e1e23" : "#151518";
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+        <Defs>
+          {stat ? <LinearGradient id="wellBase" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor="#121215" />
+            <Stop offset="62%" stopColor="#0c0c0f" />
+            <Stop offset="100%" stopColor="#111116" />
+          </LinearGradient> : <LinearGradient id="wellBase" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={base} />
+            <Stop offset="100%" stopColor={base} />
+          </LinearGradient>}
+          <LinearGradient id="wellLight" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor="#ffffff" stopOpacity={stat ? 0.065 : 0.035} />
+            <Stop offset="46%" stopColor="#ffffff" stopOpacity={0} />
+          </LinearGradient>
+          <RadialGradient id="wellTop" cx="-8%" cy="-12%" rx="72%" ry="64%">
+            <Stop offset="0%" stopColor="#ffffff" stopOpacity={0.06} />
+            <Stop offset="64%" stopColor="#ffffff" stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="wellFoot" cx="50%" cy="118%" rx="94%" ry="58%">
+            <Stop offset="0%" stopColor="#686c7f" stopOpacity={0.18} />
+            <Stop offset="72%" stopColor="#686c7f" stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="explorerFoot" cx="50%" cy="108%" r="125%">
+            <Stop offset="0%" stopColor="#182788" stopOpacity={0.13} />
+            <Stop offset="72%" stopColor="#182788" stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="liveCorner" cx="0%" cy="0%" rx="120%" ry="90%">
+            <Stop offset="0%" stopColor="#d7f651" stopOpacity={0.14} />
+            <Stop offset="60%" stopColor="#d7f651" stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100%" height="100%" fill="url(#wellBase)" />
+        {!stat && !explorer && !live ? <Rect x="0" y="0" width="100%" height="100%" fill="url(#wellLight)" /> : null}
+        {stat ? <>
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#wellTop)" />
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#wellFoot)" />
+        </> : null}
+        {explorer ? <Rect x="0" y="0" width="100%" height="100%" fill="url(#explorerFoot)" /> : null}
+        {live ? <Rect x="0" y="0" width="100%" height="100%" fill="url(#liveCorner)" /> : null}
+      </Svg>
+    </View>
+  );
+}
 
 /** Layered SVG fills recreate the radial colour at the edge of the web cards. */
 export function GradientSurface({ variant }: { variant: GradientVariant }) {

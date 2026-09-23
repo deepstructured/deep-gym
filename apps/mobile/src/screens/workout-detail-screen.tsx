@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Alert, Pressable, View } from "react-native";
 import { isWarmupSet } from "@deepgym/core/workout";
@@ -54,7 +55,10 @@ export function WorkoutDetailScreen() {
       {workout ? (
         <View style={{ gap: 14, paddingTop: 16 }}>
           <GradientCard variant="pink" style={{ minHeight: 152 }}>
-            <Text variant="micro" tone="muted">{formatDate(workout.date, lang)}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+              <Ionicons name="calendar-outline" size={15} color={colors.muted} />
+              <Text variant="micro" tone="muted">{formatDate(workout.date, lang)}</Text>
+            </View>
             <Text variant="display" style={{ marginTop: 16 }}>{workout.type}</Text>
             <Text tone="muted" style={{ marginTop: 6 }}>
               {translateCount(lang, "count.exercises", workout.workout_exercises.length)}
@@ -83,7 +87,10 @@ export function WorkoutDetailScreen() {
 
           {workout.notes ? (
             <Card radius={18} padding={16}>
-              <Text variant="micro" tone="muted">{t("workout.note")}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+                <Ionicons name="document-text-outline" size={17} color={colors.muted} />
+                <Text variant="micro" tone="muted">{t("workout.note")}</Text>
+              </View>
               <Text style={{ marginTop: 8 }}>{workout.notes}</Text>
             </Card>
           ) : null}
@@ -103,32 +110,41 @@ export function WorkoutDetailScreen() {
                     <Text tone="lime" variant="micro">{String(index + 1).padStart(2, "0")}</Text>
                     <View style={{ flex: 1 }}>
                       <Text variant="title">{entry.exercise?.name ?? t("exercises.title")}</Text>
-                      <Text variant="caption" tone="muted">
-                        {entry.exercise ? t(`equipment.${entry.exercise.equipment}`) : ""}
-                      </Text>
+                      {entry.exercise ? (
+                        <View style={{ alignSelf: "flex-start", marginTop: 7, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 9, backgroundColor: colors.raised, borderWidth: 1, borderColor: colors.line }}>
+                          <Text variant="micro" tone="muted">{t(`equipment.${entry.exercise.equipment}`)}</Text>
+                        </View>
+                      ) : null}
                     </View>
-                    <Text tone="faint">›</Text>
+                    <Ionicons name="chevron-forward" size={18} color={colors.faint} />
                   </View>
-                  {entry.notes ? <Text tone="muted" style={{ marginTop: 12 }}>{entry.notes}</Text> : null}
-                  <View style={{ gap: 7, marginTop: 15 }}>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 15 }}>
                     {entry.sets.map((set, setIndex) => {
                       const warmup = isWarmupSet(set);
                       const added = entry.load_mode === "bodyweight" && workout.body_weight_kg != null && set.weight_kg != null
                         ? roundWeight(kgToUnit(set.weight_kg - workout.body_weight_kg, unit))
                         : null;
                       return (
-                        <View key={set.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 10, borderRadius: 12, backgroundColor: colors.raised }}>
-                          <Text variant="caption" tone="faint" style={{ width: 25 }}>{String(setIndex + 1).padStart(2, "0")}</Text>
-                          {warmup ? <Text variant="micro" tone="pink">{t("set.warmupShort")}</Text> : null}
-                          <Text style={{ flex: 1 }}>
-                            {formatWeight(set.weight_kg, unit)} × {set.reps ?? "—"}
-                            {added != null ? ` (${added >= 0 ? "+" : ""}${added} ${unit})` : ""}
-                          </Text>
-                          {set.to_failure ? <Text tone="pink">●</Text> : null}
+                        <View key={set.id} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 9, borderRadius: 12, borderWidth: 1, borderColor: warmup ? "rgba(64,84,214,0.35)" : colors.line, backgroundColor: warmup ? "rgba(24,39,136,0.2)" : colors.raised }}>
+                          {warmup ? <Text variant="micro" tone="white" style={{ marginRight: 1 }}>{t("set.warmupShort")}</Text> : null}
+                          {added != null && workout.body_weight_kg != null ? (
+                            <Text variant="caption">
+                              {roundWeight(kgToUnit(workout.body_weight_kg, unit))} {added >= 0 ? "+" : ""}{added} = {formatWeight(set.weight_kg, unit)}
+                            </Text>
+                          ) : <Text variant="caption">{formatWeight(set.weight_kg, unit)}</Text>}
+                          <Text variant="caption" tone="faint">×</Text>
+                          <Text variant="caption">{set.reps ?? "—"}</Text>
+                          {set.to_failure ? <Ionicons name="flame" size={13} color={colors.flameText} style={{ marginLeft: 2 }} /> : null}
                         </View>
                       );
                     })}
                   </View>
+                  {entry.notes ? (
+                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 7, marginTop: 13 }}>
+                      <Ionicons name="document-text-outline" size={15} color={colors.muted} style={{ marginTop: 2 }} />
+                      <Text tone="muted" style={{ flex: 1 }}>{entry.notes}</Text>
+                    </View>
+                  ) : null}
                 </Card>
               </Pressable>
             );

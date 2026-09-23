@@ -35,5 +35,5 @@ export function useTelegramBotLink(): string {
     };
   }, []);
 
-  return `https://${host}/${TELEGRAM_BOT_USERNAME}`;
+  return `https://${host}/${TELEGRAM_BOT_USERNAME.trim().replace(/^@+/, "")}`;
 }

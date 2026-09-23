@@ -5,15 +5,15 @@ Expo / React Native app in the same npm workspace as the Next.js web app.
 ## Local setup
 
 1. From the repository root run `npm install`.
-2. Copy `apps/mobile/.env.example` to `apps/mobile/.env.local` and fill in the public Supabase URL/anon key, the deployed web app URL for Telegram OTP and account deletion, the Telegram bot username, and the public privacy policy URL when ready. Never put `SUPABASE_SERVICE_ROLE_KEY` in an `EXPO_PUBLIC_` variable.
+2. Copy `apps/mobile/.env.example` to `apps/mobile/.env.local` and fill in the public Supabase URL/anon key, the deployed web app URL for Telegram OTP and account deletion, and the Telegram bot username. Never put `SUPABASE_SERVICE_ROLE_KEY` in an `EXPO_PUBLIC_` variable.
 3. Run `npm run mobile:go` from the root for Expo Go. Open the printed QR with the iPhone Camera while the phone and laptop are on the same Wi-Fi. On a physical iPhone, sign in to the same Expo account in Expo Go and on the laptop (`npx expo login`). For a custom development build use `npm run mobile` instead. The Expo server normally uses port 8081 and can run alongside Next.js on port 3000.
 4. Run `npm run mobile:typecheck` for mobile TypeScript checks. `npm run typecheck` checks the web app only.
 
 The app reads and writes the same Supabase project as the web app. Its auth session is stored on the device with AsyncStorage; the server's RLS policies remain the data access boundary.
 
-If Expo Go stays on a dark loading screen, wait five seconds and tap **Reset local session**. This clears only the mobile Supabase credentials and reloads the app. Expo Go starts on Telegram sign-in; Google OAuth and native Apple sign-in are available in signed development builds.
+If Expo Go stays on a dark loading screen, wait five seconds and tap **Reset local session**. This clears only the mobile Supabase credentials and reloads the app. Expo Go starts on Telegram sign-in; Google OAuth is available in signed development builds. Apple sign-in is currently a visible placeholder and cannot be used yet.
 
-`EXPO_PUBLIC_WEB_URL` must be reachable from the iPhone. `http://localhost:3000` points at the phone itself, not the laptop. Use the deployed HTTPS web API, or the laptop's Wi-Fi address if testing a local Next server. Google OAuth needs this app's custom URL scheme and therefore cannot finish inside Expo Go. Telegram OTP can be used for Expo Go when its web API is reachable; use only a demo identity while testing writes against the live database. The native Apple login should be validated in a signed development build.
+`EXPO_PUBLIC_WEB_URL` must be reachable from the iPhone. `http://localhost:3000` points at the phone itself, not the laptop. Use the deployed HTTPS web API, or the laptop's Wi-Fi address if testing a local Next server. Google OAuth needs this app's custom URL scheme and therefore cannot finish inside Expo Go. Telegram OTP can be used for Expo Go when its web API is reachable; use only a demo identity while testing writes against the live database.
 
 ## Database migration
 
@@ -29,9 +29,9 @@ For safe UI review, `/onboarding?preview=1` is available in development builds a
 
 Google sign-in redirects to `deepgym://auth/callback`. Add this exact URL (or `deepgym://**`) in **Supabase Auth → URL Configuration → Redirect URLs** before testing Google login. The Supabase Google provider remains the same one used by the web app. OAuth needs an Expo development build or a standalone build; Expo Go cannot receive this app's custom URL scheme. `eas.json` includes development builds for devices and iOS Simulator. Configure the same public environment variables in EAS before cloud builds. Telegram OTP works through the deployed Next.js API at `EXPO_PUBLIC_WEB_URL` and can be tested in Expo Go.
 
-On iOS, the login screen also offers the native **Continue with Apple** button when the device supports it. `app.json` enables the Apple Sign In entitlement through `expo-apple-authentication`. Before a device or TestFlight test, enable the Apple provider in Supabase Auth, configure Sign in with Apple for the final iOS bundle identifier in Apple Developer, and build with a provisioning profile that includes the capability. The native flow passes a nonce and Apple's identity token to Supabase. Apple only provides a person's name on the first authorization, so the app saves it immediately. This flow cannot be validated by the JavaScript bundle export alone; test it on an Apple-signed iOS build.
+The login screen shows **Continue with Apple** as a disabled placeholder. The native integration code remains in `src/lib/native-auth.ts`, but the Apple Sign In capability is not enabled for development builds. Before enabling Apple login, configure the Apple provider in Supabase Auth and Sign in with Apple for the final iOS bundle identifier, add `expo-apple-authentication` to the Expo config plugins and `ios.usesAppleSignIn: true`, then rebuild and test an Apple-signed iOS build.
 
-Account deletion in mobile Settings calls `DELETE /api/account/delete` on `EXPO_PUBLIC_WEB_URL`. Deploy the matching web API before testing deletion from a mobile build. Set `EXPO_PUBLIC_PRIVACY_POLICY_URL` to a public HTTPS policy page to show the policy in mobile Settings; the same URL is required in App Store Connect. The policy content needs product and legal review before submission.
+Account deletion in mobile Settings calls `DELETE /api/account/delete` on `EXPO_PUBLIC_WEB_URL`. Deploy the matching web API before testing deletion from a mobile build. The shared privacy policy is available in mobile Settings at `/privacy` and publicly on the web app at `/privacy`. Submit the deployed web page URL in App Store Connect. The operator and contact details are set to the owner's verified information; review the final policy and deployed URL before store submission.
 
 ## Store identifiers and assets
 
@@ -43,4 +43,4 @@ The root `app/` and `src/` directories remain the Next.js app. Shared, platform 
 
 This is the first native milestone, not an App Store release build. The main flows are implemented: authentication, onboarding, Home, History, workout create/edit/detail, exercise and template library/detail, Progress, Settings and the plate calculator. Workout creation uses a stable key in the local and cloud draft, with an atomic database write after the keyed cloud copy is confirmed.
 
-The native Home currently renders and customizes the nine default widgets. Other widget types from a web-saved layout stay in the layout data but do not render yet. Remaining parity work includes the web's richer progress comparisons, workout image sharing and additional workout copy modes. Verify the complete flow, appearance, OAuth, and account deletion on a signed iPhone build before inviting testers; a JavaScript bundle export cannot establish device behavior.
+The native Home renders and customizes the same widget types as the web Home, with a shared layout model in `packages/core`. Remaining parity work includes the web's richer progress comparisons, workout image sharing and additional workout copy modes. Verify the complete flow, appearance, OAuth, and account deletion on a signed iPhone build before inviting testers; a JavaScript bundle export cannot establish device behavior.

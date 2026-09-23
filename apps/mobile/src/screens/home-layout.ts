@@ -32,6 +32,8 @@ interface StoredLayout {
   layout: HomeLayout | null;
   /** The local choice has not yet been acknowledged by the profile write. */
   pending: boolean;
+  /** Server layout seen when this local edit was made. */
+  baseRemote?: string;
 }
 
 interface LocalLayout {
@@ -40,9 +42,10 @@ interface LocalLayout {
   present: boolean;
   layout: HomeLayout | null;
   pending: boolean;
+  baseRemote?: string;
 }
 
-function readStored(raw: string | null): Pick<LocalLayout, "present" | "layout" | "pending"> {
+function readStored(raw: string | null): Pick<LocalLayout, "present" | "layout" | "pending" | "baseRemote"> {
   if (!raw) return { present: false, layout: null, pending: false };
   const parsed: unknown = JSON.parse(raw);
   if (parsed && typeof parsed === "object" && "layout" in parsed) {
@@ -51,7 +54,8 @@ function readStored(raw: string | null): Pick<LocalLayout, "present" | "layout" 
     if (record.layout != null && !layout) {
       return { present: false, layout: null, pending: false };
     }
-    return { present: true, layout, pending: record.pending !== false };
+    return { present: true, layout, pending: record.pending !== false,
+      baseRemote: typeof record.baseRemote === "string" ? record.baseRemote : undefined };
   }
 
   // Accept a plain layout saved by an earlier mobile build.
@@ -86,6 +90,7 @@ export function useMobileHomeLayout(profile: Profile | null | undefined): {
   const remoteLayout = remoteAvailable && profile
     ? normalizeLayout(profile.home_widgets)
     : null;
+  const remoteFingerprint = JSON.stringify(remoteLayout);
   const [local, setLocal] = useState<LocalLayout | null>(null);
   const [savingCount, setSavingCount] = useState(0);
   const [error, setError] = useState(false);
@@ -126,7 +131,7 @@ export function useMobileHomeLayout(profile: Profile | null | undefined): {
   }, [userId]);
 
   const persist = useCallback(
-    (next: HomeLayout | null) => {
+    (next: HomeLayout | null, baseRemote = remoteFingerprint) => {
       if (!userId) return;
       const normalized = next === null ? null : normalizeLayout(next);
       if (next !== null && !normalized) {
@@ -136,8 +141,8 @@ export function useMobileHomeLayout(profile: Profile | null | undefined): {
 
       const sequence = (latestByUserRef.current.get(userId) ?? 0) + 1;
       latestByUserRef.current.set(userId, sequence);
-      retryAttemptRef.current = `${userId}:${JSON.stringify(normalized)}`;
-      setLocal({ userId, hydrated: true, present: true, layout: normalized, pending: true });
+      retryAttemptRef.current = `${userId}:${JSON.stringify(normalized)}:${baseRemote}`;
+      setLocal({ userId, hydrated: true, present: true, layout: normalized, pending: true, baseRemote });
       setError(false);
       setSavingCount((count) => count + 1);
 
@@ -145,7 +150,7 @@ export function useMobileHomeLayout(profile: Profile | null | undefined): {
       const run = async () => {
         let failed = false;
         const key = STORAGE_PREFIX + userId;
-        const record: StoredLayout = { version: 1, layout: normalized, pending: true };
+        const record: StoredLayout = { version: 1, layout: normalized, pending: true, baseRemote };
         try {
           await AsyncStorage.setItem(key, JSON.stringify(record));
         } catch {
@@ -186,22 +191,32 @@ export function useMobileHomeLayout(profile: Profile | null | undefined): {
       const queued = queueRef.current.then(run, run);
       queueRef.current = queued.catch(() => undefined);
     },
-    [queryClient, remoteAvailable, userId],
+    [queryClient, remoteAvailable, remoteFingerprint, userId],
   );
 
   const activeLocal = local?.userId === userId && local.hydrated ? local : null;
-  const localWins = Boolean(activeLocal?.present && (activeLocal.pending || !remoteAvailable));
+  const localWins = Boolean(activeLocal?.present && (!remoteAvailable ||
+    (activeLocal.pending && (activeLocal.baseRemote === remoteFingerprint || savingCount > 0))));
   const layout = localWins ? activeLocal?.layout ?? DEFAULT_LAYOUT : remoteLayout ?? DEFAULT_LAYOUT;
   const isCustom = localWins ? activeLocal?.layout !== null : remoteLayout !== null;
 
   useEffect(() => {
     if (!userId || !remoteAvailable || !activeLocal?.present || !activeLocal.pending) return;
     if (savingCount > 0) return;
-    const fingerprint = `${userId}:${JSON.stringify(activeLocal.layout)}`;
+    const fingerprint = `${userId}:${JSON.stringify(activeLocal.layout)}:${remoteFingerprint}`;
     if (retryAttemptRef.current === fingerprint) return;
+    if (JSON.stringify(activeLocal.layout) === remoteFingerprint ||
+      (activeLocal.baseRemote !== remoteFingerprint && !(activeLocal.baseRemote === undefined && remoteLayout === null))) {
+      // Another device changed the profile after this local edit (or an old
+      // build left a pending copy with no baseline). Keep the server's choice.
+      retryAttemptRef.current = fingerprint;
+      setLocal({ userId, hydrated: true, present: false, layout: null, pending: false });
+      void AsyncStorage.removeItem(STORAGE_PREFIX + userId).catch(() => {});
+      return;
+    }
     retryAttemptRef.current = fingerprint;
-    persist(activeLocal.layout);
-  }, [activeLocal, persist, remoteAvailable, savingCount, userId]);
+    persist(activeLocal.layout, activeLocal.baseRemote ?? remoteFingerprint);
+  }, [activeLocal, persist, remoteAvailable, remoteFingerprint, remoteLayout, savingCount, userId]);
 
   return {
     layout,

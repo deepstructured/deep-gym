@@ -1,7 +1,7 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { Fragment, useMemo, useState } from "react";
-import { Pressable, ScrollView, TextInput, View, type LayoutChangeEvent } from "react-native";
-import Svg, { Circle, Line, Path } from "react-native-svg";
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { EQUIPMENT_OPTIONS, type Equipment } from "@deepgym/core/workout";
 import {
   kgToUnit,
@@ -15,47 +15,22 @@ import { BottomSheet, Button, Card, Chip, DotValue, GradientCard, Screen, Text }
 import { useExercises, useMuscleGroups, useProfile, useWorkouts } from "../data/queries";
 import {
   exerciseHistory,
-  exerciseProgress,
   exerciseSummary,
   repsByWeight,
+  useDeleteExerciseDetail,
   useUpdateExerciseDetail,
   type ExerciseSetRecord,
-  type ProgressMetric,
-  type ProgressPoint,
 } from "../data/exercise-detail";
 import { useI18n } from "../providers/locale-provider";
 import { userErrorMessage } from "../lib/user-error";
-import { formatDate, localISO } from "./format";
+import { formatDate } from "./format";
 import { ErrorState, Header, LoadingState } from "./common";
-
-type Period = "1m" | "3m" | "6m" | "1y" | "all";
-
-const PERIODS = [
-  { value: "1m", label: "period.1m" },
-  { value: "3m", label: "period.3m" },
-  { value: "6m", label: "period.6m" },
-  { value: "1y", label: "period.1y" },
-  { value: "all", label: "period.all" },
-] as const;
-
-function periodStart(period: Period): string | null {
-  if (period === "all") return null;
-  const date = new Date();
-  if (period === "1y") date.setFullYear(date.getFullYear() - 1);
-  else date.setMonth(date.getMonth() - Number(period[0]));
-  return localISO(date);
-}
+import { ExerciseProgressForDetail } from "./progress-extras";
 
 function signedWeight(valueKg: number | null, unit: Unit): string {
   if (valueKg == null) return "—";
   const value = roundWeight(kgToUnit(valueKg, unit));
   return value > 0 ? `+${value}` : String(value);
-}
-
-function metricValue(value: number, metric: ProgressMetric, unit: Unit): string {
-  if (metric === "reps") return String(Math.round(value));
-  const converted = roundWeight(kgToUnit(value, unit));
-  return metric === "addedLoad" && converted > 0 ? `+${converted}` : String(converted);
 }
 
 function SetLabel({ record, unit, bodyweight }: {
@@ -75,10 +50,14 @@ function SetLabel({ record, unit, bodyweight }: {
     ? `${base}${added < 0 ? "−" : "+"}${Math.abs(added)}=${total}`
     : total == null ? "—" : String(total);
   return (
-    <Text variant="caption" tone={record.set_type === "warmup" ? "muted" : "primary"}>
-      {record.set_type === "warmup" ? `${t("set.warmupShort")}  ` : ""}
-      {load}{total == null ? "" : ` ${unit}`} × {record.reps ?? "—"}{record.to_failure ? "  🔥" : ""}
-    </Text>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+      {record.set_type === "warmup" ? <Text style={{ fontSize: 10, color: "#aeb8ff", fontFamily: fonts.bold }}>{t("set.warmupShort")}</Text> : null}
+      <DotValue value={load} size={12} color={record.set_type === "warmup" ? "rgba(255,255,255,0.75)" : colors.text} />
+      {total != null ? <Text style={{ fontSize: 10, color: colors.faint, marginLeft: -2 }}>{unit}</Text> : null}
+      <Text variant="caption" tone="faint">×</Text>
+      <DotValue value={record.reps ?? "—"} size={12} color={record.set_type === "warmup" ? "rgba(255,255,255,0.75)" : colors.text} />
+      {record.to_failure ? <Ionicons name="flame-outline" size={12} color={colors.flame} /> : null}
+    </View>
   );
 }
 
@@ -88,10 +67,10 @@ function StatTile({ label, value, suffix }: {
   suffix?: string;
 }) {
   return (
-    <Card variant="stat" radius={20} padding={15} style={{ flex: 1, minHeight: 94 }}>
-      <Text variant="micro" tone="muted" numberOfLines={2}>{label}</Text>
-      <View style={{ flex: 1, justifyContent: "flex-end", paddingTop: 8 }}>
-        <DotValue value={value} suffix={suffix} size={28} />
+    <Card radius={radii.tile} padding={14} style={{ flex: 1, minHeight: 91 }}>
+      <Text variant="micro" tone="muted" numberOfLines={2} style={{ marginBottom: 6 }}>{label}</Text>
+      <View style={{ flex: 1, justifyContent: "flex-end" }}>
+        <DotValue value={value} suffix={suffix} size={24} />
       </View>
     </Card>
   );
@@ -115,60 +94,6 @@ function Tag({ children, tone = "muted" }: {
   );
 }
 
-function ProgressChart({ points, selectedIndex, onSelect }: {
-  points: ProgressPoint[];
-  selectedIndex: number;
-  onSelect: (index: number) => void;
-}) {
-  const [width, setWidth] = useState(300);
-  const chartHeight = 166;
-  const left = 13;
-  const right = width - 13;
-  const top = 15;
-  const bottom = chartHeight - 16;
-  const values = points.map((point) => point.value);
-  const minValue = Math.min(...values);
-  const maxValue = Math.max(...values);
-  const spread = Math.max(maxValue - minValue, Math.abs(maxValue) * 0.08, 1);
-  const floor = minValue - spread * 0.1;
-  const ceiling = maxValue + spread * 0.1;
-  const coords = points.map((point, index) => ({
-    x: points.length === 1 ? width / 2 : left + (index / (points.length - 1)) * (right - left),
-    y: bottom - ((point.value - floor) / (ceiling - floor)) * (bottom - top),
-  }));
-  const line = coords.map((point, index) => `${index === 0 ? "M" : "L"}${point.x} ${point.y}`).join(" ");
-  const area = coords.length > 1
-    ? `${line} L${coords[coords.length - 1].x} ${bottom} L${coords[0].x} ${bottom} Z`
-    : "";
-
-  function onLayout(event: LayoutChangeEvent) {
-    setWidth(Math.max(100, event.nativeEvent.layout.width));
-  }
-
-  return (
-    <View onLayout={onLayout}>
-      <Svg width="100%" height={chartHeight} viewBox={`0 0 ${width} ${chartHeight}`}>
-        <Line x1={left} y1={bottom} x2={right} y2={bottom} stroke={colors.line} strokeWidth={1} />
-        {area ? <Path d={area} fill="rgba(215,246,81,0.075)" /> : null}
-        {points.length > 1 ? <Path d={line} fill="none" stroke={colors.lime} strokeWidth={2.5} /> : null}
-        {coords.map((point, index) => (
-          <Fragment key={`${points[index].date}-${index}`}>
-            <Circle
-              cx={point.x}
-              cy={point.y}
-              r={index === selectedIndex ? 6 : 4}
-              fill={index === selectedIndex ? colors.lime : colors.surface}
-              stroke={colors.lime}
-              strokeWidth={2}
-            />
-            <Circle cx={point.x} cy={point.y} r={18} fill="transparent" onPress={() => onSelect(index)} />
-          </Fragment>
-        ))}
-      </Svg>
-    </View>
-  );
-}
-
 export function ExerciseDetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const exerciseId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -178,6 +103,7 @@ export function ExerciseDetailScreen() {
   const groupsQuery = useMuscleGroups();
   const workoutsQuery = useWorkouts();
   const update = useUpdateExerciseDetail();
+  const remove = useDeleteExerciseDetail();
   const exercise = exercisesQuery.data?.find((item) => item.id === exerciseId);
   const unit: Unit = exercise?.unit ?? profileQuery.data?.unit ?? "kg";
   const bodyweight = exercise?.equipment === "bodyweight";
@@ -188,16 +114,9 @@ export function ExerciseDetailScreen() {
   );
   const summary = useMemo(() => exerciseSummary(records, bodyweight), [records, bodyweight]);
   const repStats = useMemo(() => repsByWeight(records, bodyweight), [records, bodyweight]);
-  const [metric, setMetric] = useState<ProgressMetric>("topSet");
-  const [period, setPeriod] = useState<Period>("3m");
-  const [selected, setSelected] = useState<number | null>(null);
-  const activeMetric = bodyweight && metric !== "reps" && metric !== "addedLoad" ? "reps" : metric;
-  const allPoints = useMemo(() => exerciseProgress(records, activeMetric), [records, activeMetric]);
-  const since = periodStart(period);
-  const points = since ? allPoints.filter((point) => point.date >= since) : allPoints;
-  const selectedIndex = selected != null && selected < points.length ? selected : points.length - 1;
-  const activePoint = points[selectedIndex];
   const [editOpen, setEditOpen] = useState(false);
+  const [weightOpen, setWeightOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [machineOpen, setMachineOpen] = useState(false);
   const [machineEditing, setMachineEditing] = useState(false);
   const [machineText, setMachineText] = useState("");
@@ -205,11 +124,11 @@ export function ExerciseDetailScreen() {
   const [name, setName] = useState("");
   const [groupId, setGroupId] = useState("");
   const [equipment, setEquipment] = useState<Equipment>("machine");
-  const [weight, setWeight] = useState("");
+  const [weightDraft, setWeightDraft] = useState("");
+  const [weightError, setWeightError] = useState<string | null>(null);
   const [machineSettings, setMachineSettings] = useState("");
   const [unitChoice, setUnitChoice] = useState<"default" | Unit>("default");
   const [editError, setEditError] = useState<string | null>(null);
-  const editUnit: Unit = unitChoice === "default" ? profileQuery.data?.unit ?? "kg" : unitChoice;
   const used = (workoutsQuery.data ?? []).some((workout) =>
     workout.workout_exercises.some((occurrence) => occurrence.exercise_id === exerciseId),
   );
@@ -236,10 +155,51 @@ export function ExerciseDetailScreen() {
     setGroupId(exercise.muscle_group_id);
     setEquipment(exercise.equipment);
     setUnitChoice(exercise.unit ?? "default");
-    setWeight(exercise.working_weight_kg == null ? "" : String(roundWeight(kgToUnit(exercise.working_weight_kg, unit))));
     setMachineSettings(exercise.machine_settings ?? "");
     setEditError(null);
+    setConfirmDelete(false);
     setEditOpen(true);
+  }
+
+  function openWeight() {
+    setWeightDraft(exercise?.working_weight_kg == null ? "" : String(roundWeight(kgToUnit(exercise.working_weight_kg, unit))));
+    setWeightError(null);
+    setWeightOpen(true);
+  }
+
+  async function saveWeight() {
+    if (!exercise) return;
+    const parsed = parseWeight(weightDraft);
+    setWeightError(null);
+    try {
+      await update.mutateAsync({
+        id: exercise.id,
+        patch: { working_weight_kg: parsed == null ? null : Math.round(unitToKg(parsed, unit) * 100) / 100 },
+      });
+      setWeightOpen(false);
+    } catch (error) {
+      setWeightError(userErrorMessage(t, error));
+    }
+  }
+
+  async function deleteExercise() {
+    if (!exercise) return;
+    setEditError(null);
+    try {
+      await remove.mutateAsync(exercise.id);
+      setEditOpen(false);
+      router.replace("/library");
+    } catch (error) {
+      setEditError(userErrorMessage(t, error));
+    }
+  }
+
+  function openPlates() {
+    if (!exercise || exercise.working_weight_kg == null) return;
+    router.push({
+      pathname: "/plate-calculator",
+      params: { weightKg: String(exercise.working_weight_kg), equipment: exercise.equipment, unit },
+    });
   }
 
   function openMachine() {
@@ -264,11 +224,6 @@ export function ExerciseDetailScreen() {
   }
 
   function chooseUnit(next: "default" | Unit) {
-    const nextUnit = next === "default" ? profileQuery.data?.unit ?? "kg" : next;
-    const parsed = parseWeight(weight);
-    if (parsed != null && nextUnit !== editUnit) {
-      setWeight(String(roundWeight(kgToUnit(unitToKg(parsed, editUnit), nextUnit))));
-    }
     setUnitChoice(next);
   }
 
@@ -279,7 +234,6 @@ export function ExerciseDetailScreen() {
       return setEditError(t("detail.bodyweightModeLocked"));
     }
     setEditError(null);
-    const parsed = parseWeight(weight);
     try {
       await update.mutateAsync({
         id: exercise.id,
@@ -289,9 +243,7 @@ export function ExerciseDetailScreen() {
           equipment,
           unit: unitChoice === "default" ? null : unitChoice,
           machine_settings: equipment === "machine" ? machineSettings.trim() || null : null,
-          working_weight_kg: equipment === "bodyweight" || parsed == null
-            ? null
-            : Math.round(unitToKg(parsed, editUnit) * 100) / 100,
+          ...(equipment === "bodyweight" ? { working_weight_kg: null } : {}),
         },
       });
       setEditOpen(false);
@@ -317,9 +269,6 @@ export function ExerciseDetailScreen() {
     );
   }
 
-  const metricOptions: ProgressMetric[] = bodyweight
-    ? ["reps", "addedLoad"]
-    : ["topSet", "oneRm", "volume", "reps"];
   const currentKg = bodyweight ? profileQuery.data?.body_weight_kg : exercise.working_weight_kg;
   const currentValue = currentKg == null ? "—" : roundWeight(kgToUnit(currentKg, unit));
   const bestLoad = bodyweight ? summary.bestAddedLoadKg : summary.bestWeightKg;
@@ -329,7 +278,7 @@ export function ExerciseDetailScreen() {
       <Header
         title={exercise.name}
         back
-        action={<Button iconOnly size="sm" onPress={openEdit} accessibilityLabel={t("detail.editExercise")}>✎</Button>}
+        action={<Button iconOnly size="compact" onPress={openEdit} accessibilityLabel={t("detail.editExercise")}><Ionicons name="create-outline" size={18} color={colors.muted} /></Button>}
       />
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 11, marginBottom: 20 }}>
@@ -339,35 +288,35 @@ export function ExerciseDetailScreen() {
           ? <Tag tone="pink">{t("detail.inUnit", { unit: exercise.unit })}</Tag>
           : null}
         {exercise.equipment === "machine" ? (
-          <Pressable onPress={openMachine} accessibilityRole="button" accessibilityLabel={t("machine.title")}>
-            <Tag>{t("machine.title")}</Tag>
+          <Pressable onPress={openMachine} accessibilityRole="button" accessibilityLabel={t("machine.title")}
+            style={{ height: 32, width: 32, borderRadius: 16, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised, alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name="information" size={17} color={colors.lime} />
           </Pressable>
         ) : null}
       </View>
 
-      <GradientCard variant="pink" padding={24} style={{ marginBottom: 13 }}>
+      <GradientCard variant="pink" padding={24} style={{ marginBottom: 20 }}>
         <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 15 }}>
           <Text tone="white" weight="medium" style={{ flex: 1, opacity: 0.84 }}>
             {bodyweight ? t("bodyWeight.title") : t("detail.currentWorking")}
           </Text>
           {!bodyweight ? (
-            <Button iconOnly size="sm" variant="surface" onPress={openEdit} accessibilityLabel={t("detail.editWorking")}>✎</Button>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {exercise.equipment !== "crossover" ? (
+                <Pressable onPress={openPlates} disabled={currentKg == null} accessibilityRole="button" accessibilityLabel={t("set.plates")}
+                  style={{ height: 32, width: 32, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.15)", opacity: currentKg == null ? 0.4 : 1, alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="disc-outline" size={18} color={colors.white} />
+                </Pressable>
+              ) : null}
+              <Pressable onPress={openWeight} accessibilityRole="button" accessibilityLabel={t("detail.editWorking")}
+                style={{ height: 32, width: 32, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name="create-outline" size={17} color={colors.white} />
+              </Pressable>
+            </View>
           ) : null}
         </View>
         <DotValue value={currentValue} suffix={currentKg == null ? undefined : unit} size={57} color={colors.white} />
       </GradientCard>
-      {!bodyweight ? (
-        <Button variant="surface" block style={{ marginBottom: 14 }} onPress={() => router.push({
-          pathname: "/plate-calculator",
-          params: {
-            ...(currentKg != null ? { weightKg: String(currentKg) } : {}),
-            equipment: exercise.equipment,
-            unit,
-          },
-        })}>
-          {t("settings.plateCalc")}
-        </Button>
-      ) : null}
 
       <View style={{ flexDirection: "row", gap: 10, marginBottom: 10 }}>
         <StatTile label={t("detail.sessions")} value={historyLoading ? "…" : summary.sessions} />
@@ -406,47 +355,12 @@ export function ExerciseDetailScreen() {
         <>
           <Card padding={16} style={{ marginBottom: 20 }}>
             <Text tone="muted" weight="medium" style={{ marginBottom: 14 }}>{t("home.progress")}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, paddingBottom: 13 }}>
-              {metricOptions.map((option) => (
-                <Chip key={option} selected={activeMetric === option} onPress={() => { setMetric(option); setSelected(null); }}>
-                  {t(`stats.metric.${option}`)}
-                </Chip>
-              ))}
-            </ScrollView>
-            <Text variant="caption" tone="muted" style={{ marginBottom: 14 }}>
-              {t(`stats.caption.${activeMetric}`)}
-            </Text>
-            {activePoint ? (
-              <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
-                <DotValue
-                  value={metricValue(activePoint.value, activeMetric, unit)}
-                  suffix={activeMetric === "reps" ? undefined : unit}
-                  size={35}
-                />
-                <Text variant="caption" tone="muted">{formatDate(activePoint.date, lang)}</Text>
-              </View>
-            ) : null}
-            {points.length ? (
-              <ProgressChart points={points} selectedIndex={selectedIndex} onSelect={setSelected} />
-            ) : (
-              <View style={{ paddingVertical: 40, alignItems: "center" }}>
-                <Text tone="muted">{t("stats.emptyPeriod")}</Text>
-                <Button variant="ghost" size="sm" onPress={() => setPeriod("all")}>{t("stats.showAllTime")}</Button>
-              </View>
-            )}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, marginTop: 10 }}>
-              {PERIODS.map((option) => (
-                <Chip key={option.value} selected={period === option.value} onPress={() => { setPeriod(option.value); setSelected(null); }}>
-                  {t(option.label)}
-                </Chip>
-              ))}
-            </ScrollView>
-            {activePoint ? (
-              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderColor: colors.line }}>
-                <Text variant="caption" tone="muted">{t("stats.latest")}: {metricValue(points[points.length - 1].value, activeMetric, unit)}</Text>
-                <Text variant="caption" tone="lime">{t("stats.best")}: {metricValue(Math.max(...points.map((point) => point.value)), activeMetric, unit)}</Text>
-              </View>
-            ) : null}
+            <ExerciseProgressForDetail
+              exercise={exercise}
+              workouts={workoutsQuery.data ?? []}
+              profileUnit={profileQuery.data?.unit ?? "kg"}
+              groupName={groupName}
+            />
           </Card>
 
           {repStats.length > 0 ? (
@@ -454,21 +368,22 @@ export function ExerciseDetailScreen() {
               <Text tone="muted" weight="medium" style={{ marginBottom: 12 }}>
                 {t(bodyweight ? "detail.repsByAddedLoad" : "detail.repsByWeight")}
               </Text>
-              {repStats.slice(0, 8).map((row, index) => (
-                <View key={row.weightKg} style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  paddingVertical: 11,
-                  borderTopWidth: index ? 1 : 0,
-                  borderColor: colors.line,
-                }}>
-                  <View style={{ width: 82 }}>
-                    <Text weight="semibold" tone="lime">{bodyweight ? signedWeight(row.weightKg, unit) : roundWeight(kgToUnit(row.weightKg, unit))} {unit}</Text>
+              <View style={{ flexDirection: "row", paddingHorizontal: 4, marginBottom: 4 }}>
+                {[bodyweight ? t("stats.addedLoad") : t("detail.weight"), t("detail.sets"), t("detail.avg"), t("detail.med"), t("detail.mode")].map((heading, index) => (
+                  <Text key={index} variant="micro" tone="muted" numberOfLines={1}
+                    style={{ flex: index === 0 ? 1.2 : 0.7, textAlign: index === 0 ? "left" : "center", fontSize: 10, letterSpacing: 0.3 }}>{heading}</Text>
+                ))}
+              </View>
+              {repStats.map((row, index) => (
+                <View key={row.weightKg} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10, paddingHorizontal: 4, borderTopWidth: index ? 1 : 0, borderColor: "rgba(42,42,49,0.5)" }}>
+                  <View style={{ flex: 1.2, flexDirection: "row", alignItems: "center", gap: 5 }}>
+                    <DotValue value={bodyweight ? signedWeight(row.weightKg, unit) : roundWeight(kgToUnit(row.weightKg, unit))} size={18} />
+                    {row.failureRate > 0 ? <Ionicons name="flame-outline" size={13} color={colors.flame} style={{ opacity: 0.4 + row.failureRate * 0.6 }} /> : null}
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text variant="caption" tone="muted">{t("detail.avg")} {row.avgReps} · {t("detail.med")} {row.medianReps}</Text>
-                  </View>
-                  <Text variant="caption" tone="muted">{row.setCount} {t("detail.sets").toLowerCase()}</Text>
+                  {[row.setCount, row.avgReps, row.medianReps, row.modeReps].map((value, cellIndex) => (
+                    <DotValue key={cellIndex} value={value} size={16} color={cellIndex === 0 ? colors.muted : colors.text}
+                      style={{ flex: 0.7, textAlign: "center" }} />
+                  ))}
                 </View>
               ))}
             </Card>
@@ -480,12 +395,9 @@ export function ExerciseDetailScreen() {
               <Pressable
                 key={entry.workoutId}
                 onPress={() => router.push({ pathname: "/workouts/[id]", params: { id: entry.workoutId } })}
-                style={{ paddingVertical: 11, borderTopWidth: index ? 1 : 0, borderColor: colors.line }}
+                style={{ paddingTop: index ? 15 : 5, paddingBottom: 5 }}
               >
-                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-                  <Text variant="caption" tone="muted">{formatDate(entry.date, lang)}</Text>
-                  <Text variant="caption" tone="faint">›</Text>
-                </View>
+                <Text variant="caption" tone="muted" style={{ marginBottom: 9 }}>{formatDate(entry.date, lang)}</Text>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                   {entry.sets.map((record, setIndex) => (
                     <View key={`${record.position}-${setIndex}`} style={{
@@ -511,6 +423,26 @@ export function ExerciseDetailScreen() {
       ) : null}
 
       <BottomSheet
+        open={weightOpen}
+        onClose={() => setWeightOpen(false)}
+        title={t("detail.workingWeight")}
+        closeLabel={t("common.close")}
+        footer={<Button variant="lime" block loading={update.isPending} onPress={saveWeight}>{t("common.save")}</Button>}
+      >
+        <Text tone="muted" style={{ fontSize: 14, lineHeight: 20, marginBottom: 16 }}>{t("detail.workingWeightHint")}</Text>
+        <Text variant="caption" tone="muted" style={{ marginBottom: 8 }}>{t("detail.weightUnit", { unit })}</Text>
+        <TextInput
+          value={weightDraft}
+          onChangeText={(value) => setWeightDraft(value.replace(/[^\d.,]/g, ""))}
+          style={[inputStyle, { fontFamily: fonts.dot, fontSize: 25, textAlign: "center" }]}
+          keyboardType="decimal-pad"
+          placeholder="60"
+          placeholderTextColor={colors.faint}
+        />
+        {weightError ? <Text tone="pink" style={{ marginBottom: 12 }}>{weightError}</Text> : null}
+      </BottomSheet>
+
+      <BottomSheet
         open={machineOpen}
         onClose={() => setMachineOpen(false)}
         title={t("machine.title")}
@@ -530,7 +462,7 @@ export function ExerciseDetailScreen() {
           </Button>
         )}
       >
-        <Text weight="semibold" style={{ marginBottom: 14 }}>{exercise.name}</Text>
+        <Text tone="muted" style={{ fontSize: 14, lineHeight: 20, marginBottom: 12 }}>{exercise.name}</Text>
         {machineEditing ? (
           <TextInput
             value={machineText}
@@ -541,20 +473,39 @@ export function ExerciseDetailScreen() {
             placeholderTextColor={colors.faint}
           />
         ) : (
-          <Text tone="muted" style={{ marginBottom: 8 }}>
-            {exercise.machine_settings || t("machine.empty")}
-          </Text>
+          <View style={{ borderRadius: radii.tile, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised, padding: 16, marginBottom: 8 }}>
+            <Text tone={exercise.machine_settings ? "primary" : "faint"} style={{ lineHeight: 24 }}>
+              {exercise.machine_settings || t("machine.empty")}
+            </Text>
+          </View>
         )}
         {machineError ? <Text tone="pink" style={{ marginTop: 8 }}>{machineError}</Text> : null}
       </BottomSheet>
 
       <BottomSheet
         open={editOpen}
-        onClose={() => setEditOpen(false)}
-        title={t("detail.editExercise")}
+        onClose={() => { setEditOpen(false); setConfirmDelete(false); }}
+        title={t(confirmDelete ? "detail.deleteTitle" : "detail.editExercise")}
         closeLabel={t("common.close")}
-        footer={<Button variant="lime" block loading={update.isPending} onPress={saveEdit}>{t("common.saveChanges")}</Button>}
+        footer={confirmDelete ? (
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <Button variant="surface" style={{ flex: 1 }} onPress={() => setConfirmDelete(false)}>{t("common.cancel")}</Button>
+            <Button variant="danger" style={{ flex: 1 }} loading={remove.isPending} onPress={deleteExercise}>{t("common.delete")}</Button>
+          </View>
+        ) : (
+          <View style={{ gap: 10 }}>
+            <Button variant="lime" block loading={update.isPending} onPress={saveEdit}>{t("common.saveChanges")}</Button>
+            <Button variant="danger" block onPress={() => setConfirmDelete(true)}>{t("detail.deleteExercise")}</Button>
+          </View>
+        )}
       >
+        {confirmDelete ? (
+          <View style={{ paddingBottom: 12 }}>
+            <Text tone="muted">{t("detail.deleteMessage")}</Text>
+            {editError ? <Text tone="pink" style={{ marginTop: 12 }}>{editError}</Text> : null}
+          </View>
+        ) : (
+        <>
         <Text variant="micro" tone="muted" style={{ marginBottom: 7 }}>{t("picker.name")}</Text>
         <TextInput value={name} onChangeText={setName} style={inputStyle} placeholder={t("picker.namePlaceholder")} placeholderTextColor={colors.faint} />
 
@@ -601,20 +552,9 @@ export function ExerciseDetailScreen() {
           <Chip selected={unitChoice === "lb"} onPress={() => chooseUnit("lb")}>lb</Chip>
         </View>
 
-        {equipment !== "bodyweight" ? (
-          <>
-            <Text variant="micro" tone="muted" style={{ marginBottom: 7 }}>{t("detail.weightUnit", { unit: editUnit })}</Text>
-            <TextInput
-              value={weight}
-              onChangeText={(value) => setWeight(value.replace(/[^\d.,]/g, ""))}
-              style={[inputStyle, { fontFamily: fonts.dot, fontSize: 25, textAlign: "center" }]}
-              keyboardType="decimal-pad"
-              placeholder="60"
-              placeholderTextColor={colors.faint}
-            />
-          </>
-        ) : null}
         {editError ? <Text tone="pink" style={{ marginBottom: 12 }}>{editError}</Text> : null}
+        </>
+        )}
       </BottomSheet>
     </Screen>
   );

@@ -14,7 +14,7 @@ import { cn } from "@/shared/lib/cn";
 import { BrandMark, Button, PageLoader } from "@/shared/ui";
 import styles from "./product-experience.module.scss";
 
-const PUBLIC_PATHS = ["/login", "/offline", "/auth"];
+const PUBLIC_PATHS = ["/login", "/offline", "/auth", "/privacy"];
 
 export function ProductExperience({
   children,

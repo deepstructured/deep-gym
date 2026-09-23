@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import {
   ScrollView,
   View,
@@ -18,6 +18,8 @@ export interface ScreenProps
   contentStyle?: StyleProp<ViewStyle>;
   /** Reserve space for the floating tab bar when this screen uses tabs. */
   bottomPadding?: number;
+  /** Optional handle for programmatic scrolling during drag gestures. */
+  scrollRef?: Ref<ScrollView>;
 }
 
 export function Screen({
@@ -27,6 +29,7 @@ export function Screen({
   style,
   contentStyle,
   bottomPadding = 0,
+  scrollRef,
   ...scrollProps
 }: ScreenProps) {
   const content: StyleProp<ViewStyle> = [
@@ -38,6 +41,7 @@ export function Screen({
     <SafeAreaView edges={edges} style={[{ flex: 1, backgroundColor: colors.background }, style]}>
       {scroll ? (
         <ScrollView
+          ref={scrollRef}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={content}

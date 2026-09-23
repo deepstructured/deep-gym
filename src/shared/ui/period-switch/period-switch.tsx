@@ -14,12 +14,18 @@ interface PeriodSwitchProps {
 /** 1M · 3M · 6M · 1Y · All — the look-back window of a chart. */
 export function PeriodSwitch({ value, onChange, className }: PeriodSwitchProps) {
   const { t } = useI18n();
+  const selectedIndex = Math.max(0, PERIOD_KEYS.indexOf(value));
   return (
     <div
       role="group"
       aria-label={t("period.label")}
       className={cn(styles.group, className)}
     >
+      <span
+        className={styles.thumb}
+        style={{ transform: `translateX(${selectedIndex * 100}%)` }}
+        aria-hidden="true"
+      />
       {PERIOD_KEYS.map((period) => (
         <button
           key={period}

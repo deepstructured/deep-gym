@@ -1,11 +1,13 @@
-import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import { translateCount } from "@deepgym/core/i18n";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, TextInput, View } from "react-native";
 import type { Equipment } from "@deepgym/core/workout";
 import { EQUIPMENT_OPTIONS } from "@deepgym/core/workout";
-import { formatWeight, parseWeight, unitToKg } from "@deepgym/core/weight";
+import { formatWeight, parseWeight, unitToKg, type Unit } from "@deepgym/core/weight";
 import { colors, fonts, radii } from "../theme";
-import { BottomSheet, Button, Card, Chip, Screen, Segmented, Text } from "../ui";
+import { BottomSheet, Button, Card, Chip, DotValue, Screen, Segmented, Text } from "../ui";
 import {
   useCreateExercise,
   useCreateTemplate,
@@ -21,7 +23,8 @@ import { ErrorState, Header, LoadingState } from "./common";
 type LibraryTab = "exercises" | "templates";
 
 export function LibraryScreen() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const params = useLocalSearchParams<{ tab?: string; create?: string }>();
   const profile = useProfile();
   const exercises = useExercises();
   const groups = useMuscleGroups();
@@ -35,10 +38,31 @@ export function LibraryScreen() {
   const [name, setName] = useState("");
   const [type, setType] = useState("Full Body");
   const [groupId, setGroupId] = useState<string | null>(null);
-  const [equipment, setEquipment] = useState<Equipment>("machine");
+  const [equipment, setEquipment] = useState<Equipment>("free_weight");
   const [weight, setWeight] = useState("");
+  const [machineSettings, setMachineSettings] = useState("");
+  const [unitChoice, setUnitChoice] = useState<"default" | Unit>("default");
   const [picked, setPicked] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
+  const pendingCreatedDetail = useRef<{ kind: "exercise" | "template"; id: string } | null>(null);
+
+  useEffect(() => {
+    if (params.tab === "exercises" || params.tab === "templates") {
+      setTab(params.tab);
+      setSearch("");
+    }
+  }, [params.tab]);
+
+  useEffect(() => {
+    if (params.create !== "1") return;
+    setTab("templates");
+    setSearch("");
+    setName("");
+    setPicked([]);
+    setFormError(null);
+    setCreateOpen(true);
+    router.setParams({ tab: "templates", create: "0" });
+  }, [params.create]);
 
   const visibleExercises = useMemo(() =>
     (exercises.data ?? []).filter((exercise) =>
@@ -48,12 +72,16 @@ export function LibraryScreen() {
   const visibleTemplates = (templates.data ?? []).filter((template) =>
     template.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
   );
-  const groupById = new Map((groups.data ?? []).map((group) => [group.id, group.name]));
+  const displayUnit = profile.data?.unit ?? "kg";
+  const effectiveUnit = unitChoice === "default" ? displayUnit : unitChoice;
 
   function openCreate() {
     setName("");
     setWeight("");
-    setGroupId(groups.data?.[0]?.id ?? null);
+    setGroupId(focusGroup ?? groups.data?.[0]?.id ?? null);
+    setEquipment("free_weight");
+    setMachineSettings("");
+    setUnitChoice("default");
     setPicked([]);
     setFormError(null);
     setCreateOpen(true);
@@ -68,18 +96,22 @@ export function LibraryScreen() {
           return;
         }
         const parsed = parseWeight(weight);
-        await createExercise.mutateAsync({
+        const created = await createExercise.mutateAsync({
           name: name.trim(),
           muscle_group_id: groupId,
           equipment,
-          working_weight_kg: parsed == null ? null : unitToKg(parsed, profile.data?.unit ?? "kg"),
-          machine_settings: null,
-          unit: null,
+          working_weight_kg: equipment === "bodyweight" || parsed == null
+            ? null : Math.round(unitToKg(parsed, effectiveUnit) * 100) / 100,
+          machine_settings: equipment === "machine" ? machineSettings.trim() || null : null,
+          unit: unitChoice === "default" ? null : unitChoice,
         });
+        pendingCreatedDetail.current = { kind: "exercise", id: created.id };
+        setCreateOpen(false);
       } else {
-        await createTemplate.mutateAsync({ name: name.trim(), type, exerciseIds: picked });
+        const id = await createTemplate.mutateAsync({ name: name.trim(), type, exerciseIds: picked });
+        pendingCreatedDetail.current = { kind: "template", id };
+        setCreateOpen(false);
       }
-      setCreateOpen(false);
     } catch (error) {
       setFormError(userErrorMessage(t, error));
     }
@@ -90,35 +122,38 @@ export function LibraryScreen() {
       <Header
         title={t("nav.library")}
         profile={profile.data}
-        action={<Button variant="lime" size="sm" iconOnly onPress={openCreate}>+</Button>}
+        action={<Button variant="lime" size="sm" iconOnly onPress={openCreate} accessibilityLabel={tab === "exercises" ? t("picker.createNew") : t("templates.new")}><Ionicons name="add" size={20} color={colors.black} /></Button>}
       />
       <Segmented
+        accessibilityLabel={t("nav.library")}
         value={tab}
-        onChange={(value) => { setTab(value); setSearch(""); }}
+        onChange={(next) => { setTab(next); setSearch(""); router.setParams({ tab: next }); }}
         options={[
           { value: "exercises", label: t("exercises.title") },
           { value: "templates", label: t("templates.title") },
         ]}
-        style={{ marginTop: 10, marginBottom: 18 }}
+        style={{ marginTop: 20, marginBottom: 18 }}
       />
-      <TextInput
-        value={search}
-        onChangeText={setSearch}
-        placeholder={tab === "exercises" ? t("exercises.title") : t("templates.title")}
-        placeholderTextColor={colors.faint}
-        style={{
-          backgroundColor: colors.raised,
-          borderRadius: radii.medium,
-          borderWidth: 1,
-          borderColor: colors.line,
-          color: colors.text,
-          fontFamily: fonts.regular,
-          fontSize: 15,
-          paddingHorizontal: 18,
-          height: 52,
-          marginBottom: 13,
-        }}
-      />
+      {tab === "exercises" ? (
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder={t("picker.search")}
+          placeholderTextColor={colors.faint}
+          style={{
+            backgroundColor: colors.raised,
+            borderRadius: radii.medium,
+            borderWidth: 1,
+            borderColor: colors.line,
+            color: colors.text,
+            fontFamily: fonts.regular,
+            fontSize: 15,
+            paddingHorizontal: 18,
+            height: 52,
+            marginBottom: 13,
+          }}
+        />
+      ) : null}
 
       {tab === "exercises" ? (
         <>
@@ -133,8 +168,8 @@ export function LibraryScreen() {
           {(groups.data ?? []).filter((group) =>
             visibleExercises.some((exercise) => exercise.muscle_group_id === group.id),
           ).map((group) => (
-            <View key={group.id} style={{ marginBottom: 20, gap: 9 }}>
-              <Text variant="micro" tone="muted" style={{ marginBottom: 2 }}>
+            <View key={group.id} style={{ marginBottom: 24, gap: 8 }}>
+              <Text tone="muted" weight="semibold" style={{ fontSize: 13, lineHeight: 18, letterSpacing: 0.32, textTransform: "uppercase", marginBottom: 2 }}>
                 {group.name} · {visibleExercises.filter((exercise) => exercise.muscle_group_id === group.id).length}
               </Text>
               {visibleExercises.filter((exercise) => exercise.muscle_group_id === group.id).map((exercise) => (
@@ -142,19 +177,26 @@ export function LibraryScreen() {
                   key={exercise.id}
                   onPress={() => router.push({ pathname: "/exercises/[id]", params: { id: exercise.id } })}
                 >
-                  <Card radius={19} padding={16}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Card radius={radii.tile} padding={14}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                       <View style={{ flex: 1 }}>
-                        <Text weight="semibold" numberOfLines={1}>{exercise.name}</Text>
-                        <Text variant="caption" tone="muted">{t(`equipment.${exercise.equipment}`)}</Text>
+                        <Text weight="medium" numberOfLines={1}>{exercise.name}</Text>
+                        <View style={{ alignSelf: "flex-start", marginTop: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: radii.pill, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised }}>
+                          <Text variant="caption" tone="muted">{t(`equipment.${exercise.equipment}`)}</Text>
+                        </View>
                       </View>
                       <View style={{ alignItems: "flex-end" }}>
-                        <Text variant="micro" tone="faint">{t("exercises.working")}</Text>
-                        <Text tone="lime" weight="semibold">
-                          {formatWeight(exercise.working_weight_kg, exercise.unit ?? profile.data?.unit ?? "kg")}
-                        </Text>
+                        <Text variant="micro" tone="faint" style={{ fontSize: 10, letterSpacing: 0.3 }}>{exercise.equipment === "bodyweight" ? t("bodyWeight.title") : t("exercises.working")}</Text>
+                        <DotValue
+                          value={exercise.equipment === "bodyweight"
+                            ? profile.data?.body_weight_kg == null ? "—" : formatWeight(profile.data.body_weight_kg, exercise.unit ?? displayUnit).replace(` ${exercise.unit ?? displayUnit}`, "")
+                            : exercise.working_weight_kg == null ? "—" : formatWeight(exercise.working_weight_kg, exercise.unit ?? displayUnit).replace(` ${exercise.unit ?? displayUnit}`, "")}
+                          suffix={(exercise.equipment === "bodyweight" ? profile.data?.body_weight_kg : exercise.working_weight_kg) == null ? undefined : exercise.unit ?? displayUnit}
+                          size={20}
+                          color={colors.lime}
+                        />
                       </View>
-                      <Text tone="faint">›</Text>
+                      <Ionicons name="chevron-forward" size={18} color={colors.faint} />
                     </View>
                   </Card>
                 </Pressable>
@@ -162,7 +204,7 @@ export function LibraryScreen() {
             </View>
           ))}
           {!visibleExercises.length && !exercises.isLoading ? (
-            <Card><Text tone="muted">{t("exercises.emptyTitle")}</Text></Card>
+            <Card><Text weight="semibold">{t("exercises.emptyTitle")}</Text><Text tone="muted" style={{ marginTop: 7 }}>{t("exercises.emptyHint")}</Text></Card>
           ) : null}
         </>
       ) : (
@@ -170,40 +212,54 @@ export function LibraryScreen() {
           {templates.isLoading ? <LoadingState /> : null}
           {templates.error ? <ErrorState message={templates.error.message} retry={() => templates.refetch()} /> : null}
           {visibleTemplates.map((template) => (
-            <Pressable
-              key={template.id}
-              onPress={() => router.push({ pathname: "/templates/[id]", params: { id: template.id } })}
-            >
-              <Card radius={20} padding={16}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text weight="semibold">{template.name}</Text>
-                    <Text variant="caption" tone="muted">{template.type} · {template.exerciseCount} exercises</Text>
+            <Card key={template.id} radius={radii.tile} padding={6}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Pressable
+                  onPress={() => router.push({ pathname: "/templates/[id]", params: { id: template.id } })}
+                  accessibilityRole="button"
+                  style={{ flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 12, padding: 10 }}
+                >
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text weight="semibold" numberOfLines={1}>{template.name}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 8 }}>
+                      <View style={{ paddingHorizontal: 9, paddingVertical: 4, borderRadius: radii.pill, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised }}>
+                        <Text variant="caption" tone="muted">{template.type}</Text>
+                      </View>
+                      <Text variant="caption" tone="muted">{translateCount(lang, "count.exercises", template.exerciseCount)}</Text>
+                    </View>
                   </View>
-                  <Button
-                    variant="lime"
-                    size="sm"
-                    onPress={() => router.push({ pathname: "/new", params: { template: template.id } })}
-                  >
-                    {t("templates.start")}
-                  </Button>
-                </View>
-              </Card>
-            </Pressable>
+                  <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+                </Pressable>
+                <Button variant="lime" size="sm" leading={<Ionicons name="play" size={13} color={colors.black} />} onPress={() => router.push({ pathname: "/new", params: { template: template.id } })}>{t("templates.start")}</Button>
+              </View>
+            </Card>
           ))}
           {!visibleTemplates.length && !templates.isLoading ? (
-            <Card><Text tone="muted">{t("templates.emptyTitle")}</Text></Card>
+            <Card><Text weight="semibold">{t("templates.emptyTitle")}</Text><Text tone="muted" style={{ marginTop: 7 }}>{t("templates.emptyHint")}</Text></Card>
           ) : null}
         </View>
       )}
 
       <BottomSheet
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        title={tab === "exercises" ? t("workout.addExercise") : t("templates.new")}
+        onClose={() => {
+          pendingCreatedDetail.current = null;
+          setCreateOpen(false);
+        }}
+        onClosed={() => {
+          const destination = pendingCreatedDetail.current;
+          pendingCreatedDetail.current = null;
+          if (!destination) return;
+          if (destination.kind === "exercise") {
+            router.push({ pathname: "/exercises/[id]", params: { id: destination.id } });
+          } else {
+            router.push({ pathname: "/templates/[id]", params: { id: destination.id } });
+          }
+        }}
+        title={tab === "exercises" ? t("picker.newTitle") : t("templates.new")}
         closeLabel={t("common.close")}
         footer={<Button variant="lime" block loading={createExercise.isPending || createTemplate.isPending} onPress={submitCreate}>
-          {tab === "exercises" ? t("common.add") : t("templates.create")}
+          {tab === "exercises" ? t("picker.createNew") : t("templates.create")}
         </Button>}
       >
         <Text variant="micro" tone="muted" style={{ marginBottom: 7 }}>
@@ -230,12 +286,24 @@ export function LibraryScreen() {
                 <Chip key={value} selected={equipment === value} onPress={() => setEquipment(value)}>{t(`equipment.${value}`)}</Chip>
               ))}
             </View>
+            {equipment === "machine" ? (
+              <>
+                <Text variant="micro" tone="muted" style={{ marginBottom: 7 }}>{t("picker.machineSetupOptional")}</Text>
+                <TextInput value={machineSettings} onChangeText={setMachineSettings} multiline textAlignVertical="top" style={[inputStyle, { minHeight: 98 }]} placeholder={t("picker.machineSetupPlaceholder")} placeholderTextColor={colors.faint} />
+              </>
+            ) : null}
+            <Text variant="micro" tone="muted" style={{ marginBottom: 9 }}>{t("picker.unitForExercise")}</Text>
+            <View style={chipWrap}>
+              <Chip selected={unitChoice === "default"} onPress={() => setUnitChoice("default")}>{t("picker.unitDefault", { unit: displayUnit })}</Chip>
+              <Chip selected={unitChoice === "kg"} onPress={() => setUnitChoice("kg")}>kg</Chip>
+              <Chip selected={unitChoice === "lb"} onPress={() => setUnitChoice("lb")}>lb</Chip>
+            </View>
             {equipment !== "bodyweight" ? (
               <>
                 <Text variant="micro" tone="muted" style={{ marginBottom: 7 }}>
-                  {t("picker.workingWeight", { unit: profile.data?.unit ?? "kg" })}
+                  {t("picker.workingWeight", { unit: effectiveUnit })}
                 </Text>
-                <TextInput value={weight} onChangeText={setWeight} keyboardType="decimal-pad" style={inputStyle} placeholder="0" placeholderTextColor={colors.faint} />
+                <TextInput value={weight} onChangeText={(value) => setWeight(value.replace(/[^\d.,]/g, ""))} keyboardType="decimal-pad" style={inputStyle} placeholder="60" placeholderTextColor={colors.faint} />
               </>
             ) : null}
           </>

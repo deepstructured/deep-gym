@@ -1,10 +1,11 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Alert, Pressable, TextInput, View } from "react-native";
+import { Pressable, ScrollView, TextInput, View } from "react-native";
 import { BASE_WORKOUT_TYPES } from "@deepgym/core/workout";
 import { translateCount } from "@deepgym/core/i18n";
 import { colors, fonts, radii } from "../theme";
-import { BottomSheet, Button, Card, Chip, Screen, Text } from "../ui";
+import { BottomSheet, Button, Card, Chip, DotValue, Screen, Text } from "../ui";
 import {
   useDeleteTemplate,
   useExercises,
@@ -37,12 +38,26 @@ export function TemplateDetailScreen() {
   const update = useUpdateTemplate();
   const remove = useDeleteTemplate();
   const [editing, setEditing] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerGroup, setPickerGroup] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [name, setName] = useState("");
   const [type, setType] = useState("");
   const [exerciseIds, setExerciseIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const template = query.data;
   const groupName = new Map((groups.data ?? []).map((group) => [group.id, group.name]));
+  const typeOptions = Array.from(new Set([
+    ...BASE_WORKOUT_TYPES,
+    ...(groups.data ?? []).map((group) => `Split ${group.name}`),
+    type,
+  ]));
+  const pickerExercises = (exercises.data ?? []).filter((exercise) =>
+    !exerciseIds.includes(exercise.id) &&
+    (!pickerGroup || exercise.muscle_group_id === pickerGroup) &&
+    exercise.name.toLocaleLowerCase().includes(pickerSearch.trim().toLocaleLowerCase()),
+  );
 
   function openEditor() {
     if (!template) return;
@@ -50,6 +65,7 @@ export function TemplateDetailScreen() {
     setType(template.type);
     setExerciseIds(template.workout_template_exercises.map((entry) => entry.exercise_id));
     setError(null);
+    setPickerOpen(false);
     setEditing(true);
   }
 
@@ -66,18 +82,21 @@ export function TemplateDetailScreen() {
     }
   }
 
-  function confirmDelete() {
+  function openDeleteConfirmation() {
     if (!template) return;
-    Alert.alert(t("templates.deleteTitle"), t("templates.deleteMessage"), [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("templates.delete"), style: "destructive",
-        onPress: () => remove.mutate(template.id, {
-          onSuccess: () => router.replace("/library"),
-          onError: (failure) => Alert.alert(t("common.error"), userErrorMessage(t, failure)),
-        }),
-      },
-    ]);
+    setError(null);
+    setConfirmDelete(true);
+  }
+
+  async function deleteTemplate() {
+    if (!template) return;
+    try {
+      await remove.mutateAsync(template.id);
+      setConfirmDelete(false);
+      router.replace("/library");
+    } catch (failure) {
+      setError(userErrorMessage(t, failure));
+    }
   }
 
   function move(index: number, direction: -1 | 1) {
@@ -93,7 +112,7 @@ export function TemplateDetailScreen() {
       <Header
         title={template?.name ?? t("templates.title")}
         back
-        action={template ? <Button size="sm" variant="surface" onPress={openEditor}>{t("templates.edit")}</Button> : null}
+        action={template ? <Button size="compact" iconOnly variant="surface" onPress={openEditor} accessibilityLabel={t("templates.edit")}><Ionicons name="create-outline" size={18} color={colors.muted} /></Button> : null}
       />
       {query.isLoading ? <LoadingState /> : null}
       {query.error ? <ErrorState message={query.error.message} retry={() => query.refetch()} /> : null}
@@ -101,91 +120,120 @@ export function TemplateDetailScreen() {
         <ErrorState message={t("templates.notFound")} translated />
       ) : null}
       {template ? (
-        <View style={{ gap: 13, paddingTop: 18 }}>
-          <Card variant="live" padding={20}>
-            <Text variant="micro" tone="lime">{template.type}</Text>
-            <Text variant="heading" style={{ marginTop: 12 }}>{template.name}</Text>
-            <Text tone="muted" style={{ marginTop: 6 }}>
-              {translateCount(lang, "count.exercises", template.workout_template_exercises.length)}
-            </Text>
-          </Card>
+        <View style={{ gap: 8, paddingTop: 16 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 13 }}>
+            <View style={{ paddingHorizontal: 11, paddingVertical: 6, borderRadius: radii.pill, borderWidth: 1, borderColor: "rgba(215,246,81,0.28)", backgroundColor: "rgba(215,246,81,0.09)" }}>
+              <Text variant="caption" tone="lime">{template.type}</Text>
+            </View>
+            <Text variant="caption" tone="muted">{translateCount(lang, "count.exercises", template.workout_template_exercises.length)}</Text>
+          </View>
 
-          <Text variant="micro" tone="muted" style={{ marginTop: 20 }}>
+          <Text variant="micro" tone="muted" style={{ marginBottom: 2 }}>
             {t("templates.exercises")}
           </Text>
           {template.workout_template_exercises.length ? template.workout_template_exercises.map((entry, index) => (
-            <Pressable
-              key={entry.id}
-              onPress={() => router.push({ pathname: "/exercises/[id]", params: { id: entry.exercise_id } })}
-            >
-              <Card radius={19} padding={16}>
-                <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-                  <Text variant="micro" tone="lime">{String(index + 1).padStart(2, "0")}</Text>
+            <Card key={entry.id} radius={radii.tile} padding={14}>
+                <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
+                  <DotValue value={String(index + 1).padStart(2, "0")} size={15} color={colors.lime} />
                   <View style={{ flex: 1 }}>
-                    <Text weight="semibold">{entry.exercise?.name ?? t("exercises.title")}</Text>
-                    <Text variant="caption" tone="muted">
+                    <Text weight="medium" numberOfLines={1}>{entry.exercise?.name ?? t("exercises.title")}</Text>
+                    <Text variant="caption" tone="muted" style={{ marginTop: 4 }}>
                       {groupName.get(entry.exercise?.muscle_group_id ?? "") ?? ""}
                       {entry.exercise ? ` · ${t(`equipment.${entry.exercise.equipment}`)}` : ""}
                     </Text>
                   </View>
-                  <Text tone="faint">›</Text>
                 </View>
-              </Card>
-            </Pressable>
-          )) : <Card><Text tone="muted">{t("templates.emptyExercises")}</Text></Card>}
+            </Card>
+          )) : <View style={{ borderRadius: radii.tile, borderWidth: 1, borderStyle: "dashed", borderColor: colors.line, padding: 20 }}><Text tone="muted" style={{ textAlign: "center", fontSize: 14 }}>{t("templates.emptyExercises")}</Text></View>}
 
           <Button
             variant="gradient" size="lg" block
             disabled={!template.workout_template_exercises.length}
             onPress={() => router.push({ pathname: "/new", params: { template: template.id } })}
+            leading={<Ionicons name="add" size={18} color={colors.white} />}
             style={{ marginTop: 18 }}
           >
             {t("templates.startWorkout")}
           </Button>
-          <Button variant="danger" size="lg" block loading={remove.isPending} onPress={confirmDelete}>
+          <Button variant="danger" size="lg" block loading={remove.isPending} onPress={openDeleteConfirmation}>
             {t("templates.delete")}
           </Button>
+          {error && !editing && !confirmDelete ? <Text tone="pink">{error}</Text> : null}
         </View>
       ) : null}
 
       <BottomSheet
         open={editing}
-        onClose={() => setEditing(false)}
+        onClose={() => { if (pickerOpen) setPickerOpen(false); else setEditing(false); }}
         closeLabel={t("common.close")}
-        title={t("templates.edit")}
-        footer={<Button variant="lime" size="lg" block loading={update.isPending} onPress={save}>{t("common.saveChanges")}</Button>}
+        title={t(pickerOpen ? "workout.addExercise" : "templates.edit")}
+        footer={pickerOpen ? undefined : <Button variant="gradient" size="lg" block loading={update.isPending} onPress={save}>{t("common.saveChanges")}</Button>}
       >
-        <View style={{ gap: 13, paddingBottom: 12 }}>
-          <Text variant="micro" tone="muted">{t("templates.name")}</Text>
-          <TextInput value={name} onChangeText={setName} style={inputStyle} placeholder={t("templates.namePlaceholder")} placeholderTextColor={colors.faint} />
-          <Text variant="micro" tone="muted">{t("workout.type")}</Text>
-          <TextInput value={type} onChangeText={setType} style={inputStyle} />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {BASE_WORKOUT_TYPES.map((value) => <Chip key={value} selected={type === value} onPress={() => setType(value)}>{value}</Chip>)}
+        {pickerOpen ? (
+          <View style={{ gap: 16, paddingBottom: 12 }}>
+            <TextInput value={pickerSearch} onChangeText={setPickerSearch} style={inputStyle} placeholder={t("picker.search")} placeholderTextColor={colors.faint} />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              <Chip selected={pickerGroup === null} onPress={() => setPickerGroup(null)}>{t("common.all")}</Chip>
+              {(groups.data ?? []).map((group) => <Chip key={group.id} selected={pickerGroup === group.id} onPress={() => setPickerGroup(group.id)}>{group.name}</Chip>)}
+            </ScrollView>
+            <View style={{ gap: 8 }}>
+              {pickerExercises.map((exercise) => (
+                <Pressable key={exercise.id} onPress={() => { setExerciseIds((ids) => [...ids, exercise.id]); setPickerOpen(false); setPickerSearch(""); setPickerGroup(null); }}
+                  accessibilityRole="button" style={{ flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: colors.line, borderRadius: radii.tile, backgroundColor: colors.raised, paddingHorizontal: 16, paddingVertical: 14 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text weight="medium" numberOfLines={1}>{exercise.name}</Text>
+                    <Text variant="caption" tone="muted" style={{ marginTop: 3 }}>{groupName.get(exercise.muscle_group_id) ?? ""} · {t(`equipment.${exercise.equipment}`)}</Text>
+                  </View>
+                  <Ionicons name="add" size={19} color={colors.lime} />
+                </Pressable>
+              ))}
+              {!pickerExercises.length ? <Text tone="muted" style={{ textAlign: "center", paddingVertical: 24 }}>{pickerSearch.trim() ? t("picker.emptyFor", { query: pickerSearch.trim() }) : t("picker.empty")}</Text> : null}
+            </View>
           </View>
-          <Text variant="micro" tone="muted" style={{ marginTop: 12 }}>{t("templates.exercises")}</Text>
-          {exerciseIds.map((exerciseId, index) => {
-            const exercise = exercises.data?.find((candidate) => candidate.id === exerciseId);
-            return (
-              <Card key={`${exerciseId}-${index}`} radius={15} padding={10}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Text style={{ flex: 1 }}>{exercise?.name ?? exerciseId}</Text>
-                  <Button size="sm" iconOnly onPress={() => move(index, -1)} disabled={index === 0}>↑</Button>
-                  <Button size="sm" iconOnly onPress={() => move(index, 1)} disabled={index === exerciseIds.length - 1}>↓</Button>
-                  <Button size="sm" iconOnly variant="danger" onPress={() => setExerciseIds((ids) => ids.filter((_, position) => position !== index))}>×</Button>
-                </View>
-              </Card>
-            );
-          })}
-          {(exercises.data ?? []).filter((exercise) => !exerciseIds.includes(exercise.id)).map((exercise) => (
-            <Pressable key={exercise.id} onPress={() => setExerciseIds((ids) => [...ids, exercise.id])}>
-              <Card variant="raised" radius={14} padding={12}>
-                <Text>{exercise.name} <Text tone="lime">+</Text></Text>
-              </Card>
-            </Pressable>
-          ))}
-          {error ? <Text tone="pink">{error}</Text> : null}
-        </View>
+        ) : (
+          <View style={{ gap: 16, paddingBottom: 12 }}>
+            <View style={{ gap: 8 }}>
+              <Text variant="caption" tone="muted">{t("templates.name")}</Text>
+              <TextInput value={name} onChangeText={(value) => { setName(value); setError(null); }} style={inputStyle} placeholder={t("templates.namePlaceholder")} placeholderTextColor={colors.faint} maxLength={100} />
+            </View>
+            <View style={{ gap: 8 }}>
+              <Text variant="caption" tone="muted">{t("workout.type")}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {typeOptions.map((value) => <Chip key={value} selected={type === value} onPress={() => setType(value)}>{value}</Chip>)}
+              </ScrollView>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, marginTop: 4 }}>
+              <Text variant="micro" tone="muted">{t("templates.exercises")}</Text>
+              <DotValue value={exerciseIds.length} size={12} color={colors.faint} />
+            </View>
+            <View style={{ gap: 8 }}>
+              {exerciseIds.map((exerciseId, index) => {
+                const exercise = exercises.data?.find((candidate) => candidate.id === exerciseId);
+                return (
+                  <View key={`${exerciseId}-${index}`} style={{ flexDirection: "row", alignItems: "center", gap: 9, borderRadius: radii.tile, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, paddingVertical: 12, paddingLeft: 14, paddingRight: 10 }}>
+                    <DotValue value={String(index + 1).padStart(2, "0")} size={14} color={colors.lime} />
+                    <View style={{ flex: 1 }}>
+                      <Text weight="medium" numberOfLines={1}>{exercise?.name ?? exerciseId}</Text>
+                      <Text variant="caption" tone="muted" numberOfLines={1} style={{ marginTop: 3 }}>{groupName.get(exercise?.muscle_group_id ?? "") ?? ""}</Text>
+                    </View>
+                    <Button size="sm" iconOnly onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={t("templates.moveUp", { name: exercise?.name ?? exerciseId })}><Ionicons name="chevron-up" size={17} color={colors.muted} /></Button>
+                    <Button size="sm" iconOnly onPress={() => move(index, 1)} disabled={index === exerciseIds.length - 1} accessibilityLabel={t("templates.moveDown", { name: exercise?.name ?? exerciseId })}><Ionicons name="chevron-down" size={17} color={colors.muted} /></Button>
+                    <Button size="sm" iconOnly variant="ghost" onPress={() => setExerciseIds((ids) => ids.filter((_, position) => position !== index))} accessibilityLabel={t("templates.removeExercise", { name: exercise?.name ?? exerciseId })}><Ionicons name="trash-outline" size={17} color={colors.flameText} /></Button>
+                  </View>
+                );
+              })}
+              {!exerciseIds.length ? <View style={{ borderRadius: radii.tile, borderWidth: 1, borderStyle: "dashed", borderColor: colors.line, padding: 16 }}><Text tone="muted" style={{ textAlign: "center" }}>{t("templates.emptyExercises")}</Text></View> : null}
+            </View>
+            <Button variant="surface" block dashed leading={<Ionicons name="add" size={18} color={colors.text} />} onPress={() => { setPickerSearch(""); setPickerGroup(null); setPickerOpen(true); }}>{t("workout.addExercise")}</Button>
+            {error ? <Text tone="pink">{error}</Text> : null}
+          </View>
+        )}
+      </BottomSheet>
+
+      <BottomSheet open={confirmDelete} onClose={() => setConfirmDelete(false)} title={t("templates.deleteTitle")} closeLabel={t("common.close")}
+        footer={<View style={{ flexDirection: "row", gap: 10 }}><Button variant="surface" style={{ flex: 1 }} onPress={() => setConfirmDelete(false)}>{t("common.cancel")}</Button><Button variant="danger" style={{ flex: 1 }} loading={remove.isPending} onPress={deleteTemplate}>{t("templates.delete")}</Button></View>}>
+        <Text tone="muted" style={{ paddingBottom: 12 }}>{t("templates.deleteMessage")}</Text>
+        {error ? <Text tone="pink" style={{ marginTop: 8 }}>{error}</Text> : null}
       </BottomSheet>
     </Screen>
   );

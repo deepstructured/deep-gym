@@ -5,6 +5,8 @@ export * from "./types";
 export * from "./i18n";
 export * from "./dates";
 export * from "./analytics";
+export * from "./weekly-activity";
 export * from "./next-workout";
 export * from "./home-layout";
 export * from "./releases";
+export * from "./privacy-policy";

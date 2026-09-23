@@ -16,17 +16,19 @@ export interface BodyWeightMeasurement {
 export function useBodyWeightMeasurements({
   limit = 365,
   enabled = true,
-}: { limit?: number; enabled?: boolean } = {}) {
+  to,
+}: { limit?: number; enabled?: boolean; to?: string } = {}) {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ["body-weight-measurements", user?.id, limit],
+    queryKey: ["body-weight-measurements", user?.id, limit, to ?? null],
     enabled: enabled && Boolean(user),
     queryFn: async (): Promise<BodyWeightMeasurement[]> => {
       if (!user) return [];
-      const { data, error } = await supabase
+      const base = supabase
         .from("body_weight_measurements")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user.id);
+      const { data, error } = await (to ? base.lte("measured_at", to) : base)
         .order("measured_at", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(Math.max(1, limit));

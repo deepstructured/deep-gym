@@ -10,6 +10,8 @@ export interface BarChartBar {
   label: string;
   /** Label used in the scrub pill; defaults to `label`. */
   title?: string;
+  /** Full spoken label for an interactive column. */
+  ariaLabel?: string;
   value: number;
 }
 
@@ -19,8 +21,12 @@ interface BarChartProps {
   formatValue: (value: number) => string;
   /** Emphasized bar, e.g. the current week. */
   highlightIndex?: number;
+  /** Persistently selected bar, including after touch or pointer leave. */
+  selectedIndex?: number;
   /** Show every nth axis label (the last one is always shown). */
   labelEvery?: number;
+  showPill?: boolean;
+  showAxisLabels?: boolean;
   onActiveChange?: (index: number | null) => void;
   interactive?: boolean;
   className?: string;
@@ -33,7 +39,10 @@ export function BarChart({
   height = 132,
   formatValue,
   highlightIndex,
+  selectedIndex,
   labelEvery = 1,
+  showPill = true,
+  showAxisLabels = true,
   onActiveChange,
   interactive = true,
   className,
@@ -98,14 +107,14 @@ export function BarChart({
   return (
     <div
       ref={ref}
-      role="img"
+      role={interactive ? "group" : "img"}
       aria-label={ariaLabel}
       data-gesture={interactive ? "scrub" : undefined}
-      className={cn(styles.chart, interactive && styles.interactive, className)}
+      className={cn(styles.chart, interactive && styles.interactive, !showPill && styles.noPill, className)}
       style={{ height }}
       {...handlers}
     >
-      {active != null && bars[active] && (
+      {showPill && active != null && bars[active] && (
         <div
           className={styles.pill}
           style={{
@@ -134,7 +143,16 @@ export function BarChart({
             index === bars.length - 1 ||
             (bars.length - 1 - index) % labelEvery === 0;
           return (
-            <div key={bar.key} className={styles.column}>
+            <button
+              key={bar.key}
+              type="button"
+              className={styles.column}
+              disabled={!interactive}
+              aria-label={bar.ariaLabel ?? `${bar.title ?? bar.label}: ${formatValue(bar.value)}`}
+              aria-pressed={interactive ? index === selectedIndex : undefined}
+              onFocus={() => interactive && update(index)}
+              onClick={() => interactive && update(index)}
+            >
               <div className={styles.track}>
                 <span
                   className={cn(
@@ -142,13 +160,14 @@ export function BarChart({
                     bar.value === 0 && styles.barEmpty,
                     index === highlightIndex && styles.barHighlight,
                     index === active && styles.barActive,
+                    index === selectedIndex && styles.barSelected,
                     active != null && index !== active && styles.barDim,
                   )}
                   style={{ height: `${Math.max(ratio * 100, bar.value > 0 ? 6 : 3)}%` }}
                 />
               </div>
-              <span className={styles.label}>{showLabel ? bar.label : ""}</span>
-            </div>
+              {showAxisLabels && <span className={styles.label}>{showLabel ? bar.label : ""}</span>}
+            </button>
           );
         })}
       </div>

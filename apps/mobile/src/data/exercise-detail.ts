@@ -205,3 +205,21 @@ export function useUpdateExerciseDetail() {
     },
   });
 }
+
+export function useDeleteExerciseDetail() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!user) throw new Error("Not signed in");
+      const { error } = await supabase.from("exercises")
+        .delete().eq("id", id).eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exercises", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["workouts", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["templates", user?.id] });
+    },
+  });
+}

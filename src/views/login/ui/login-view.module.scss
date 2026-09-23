@@ -78,17 +78,92 @@
   margin-bottom: 1.25rem;
 }
 
-.methodSwitch {
-  margin-bottom: 1.5rem;
+.providerActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.botNote {
-  margin-top: 2rem;
+.telegramButtonOpen.telegramButtonOpen {
+  border-color: rgba($lime, 0.52);
+  background: rgba($lime, 0.1);
+}
+
+.applePlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0 1rem;
+  border: 1px solid $line;
+  border-radius: 9999px;
+  background: $raised;
+  color: $text;
+  font: inherit;
+  font-size: 0.9375rem;
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.comingSoon {
+  color: $muted;
+  font-size: 0.75rem;
+}
+
+.telegramHelp {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid $line;
+  border-radius: 1rem;
+  background: $surface;
+  color: $text;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4rem;
+}
+
+.botLink {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  font-size: 0.75rem;
-  line-height: 1rem;
-  color: $faint;
+  min-height: 2.75rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid rgba($lime, 0.42);
+  border-radius: 0.75rem;
+  background: rgba($lime, 0.12);
+  color: $lime;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color $tr, border-color $tr;
+
+  &:hover {
+    border-color: $lime;
+    background: rgba($lime, 0.19);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $lime;
+    outline-offset: 2px;
+  }
+}
+
+.telegramPanel {
+  margin-top: 1.25rem;
+}
+
+.privacyLink {
+  align-self: center;
+  margin-top: 1.25rem;
+  color: $muted;
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+
+  &:hover {
+    color: $text;
+  }
 }

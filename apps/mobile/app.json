@@ -17,7 +17,6 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "app.deepgym.mobile",
-      "usesAppleSignIn": true,
       "infoPlist": {
         "CFBundleAllowMixedLocalizations": true
       }
@@ -29,6 +28,15 @@
         "backgroundColor": "#0a0a0c"
       }
     },
-    "plugins": ["expo-router", "expo-apple-authentication"]
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow DeepGym to select a profile photo from your library.",
+          "microphonePermission": false
+        }
+      ]
+    ]
   }
 }

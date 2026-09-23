@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { View, type StyleProp, type ViewProps, type ViewStyle } from "react-native";
 import { colors, radii, spacing } from "../theme";
-import { GradientSurface, type GradientVariant } from "./gradient-surface";
+import { GradientSurface, WellSurface, type GradientVariant } from "./gradient-surface";
 
-export type CardVariant = "surface" | "raised" | "stat" | "live";
+export type CardVariant = "surface" | "raised" | "stat" | "live" | "explorer";
 
 export interface CardProps extends Omit<ViewProps, "children" | "style"> {
   children: ReactNode;
@@ -35,6 +35,11 @@ const surfaceStyles: Record<CardVariant, ViewStyle> = {
     borderColor: "rgba(215,246,81,0.35)",
     borderWidth: 1,
   },
+  explorer: {
+    backgroundColor: colors.surface,
+    borderColor: "rgba(255,255,255,0.045)",
+    borderWidth: 1,
+  },
 };
 
 export function Card({
@@ -55,20 +60,7 @@ export function Card({
         style,
       ]}
     >
-      {variant === "live" ? (
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            top: -90,
-            left: -90,
-            width: 240,
-            height: 240,
-            borderRadius: 120,
-            backgroundColor: "rgba(215,246,81,0.045)",
-          }}
-        />
-      ) : null}
+      <WellSurface variant={variant} />
       <View style={[{ flexGrow: 1, padding }, contentStyle]}>{children}</View>
     </View>
   );

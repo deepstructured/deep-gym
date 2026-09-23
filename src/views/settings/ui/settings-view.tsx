@@ -244,6 +244,11 @@ export function SettingsView() {
             value={CURRENT_RELEASE.label}
             onClick={() => setWhatsNewOpen(true)}
           />
+          <Row
+            icon={<IconInfo size={18} />}
+            title={t('settings.privacyPolicy')}
+            href="/privacy"
+          />
         </Group>
 
         <SignOutButton />

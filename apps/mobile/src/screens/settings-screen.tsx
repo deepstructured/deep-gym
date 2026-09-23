@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { PRESET_AVATARS } from "@deepgym/core/avatar-presets";
+import { CURRENT_RELEASE } from "@deepgym/core/releases";
 import {
   LANGUAGE_OPTIONS,
   type Lang,
@@ -13,20 +14,25 @@ import {
 import type { Profile } from "@deepgym/core/types";
 import { BASE_WORKOUT_TYPES } from "@deepgym/core/workout";
 import { kgToUnit, parseWeight, roundWeight, unitToKg, type Unit } from "@deepgym/core/weight";
+import { decode } from "base64-arraybuffer";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
+import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   Image,
-  Linking,
+  Platform,
   Pressable,
   ScrollView,
   Switch,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
-import Svg, { Circle, Defs, LinearGradient, Line, Path, Stop } from "react-native-svg";
+import Svg, { Circle, Defs, LinearGradient, Line, Path, Rect, Stop } from "react-native-svg";
 import {
   useBodyWeightMeasurements,
   useLogBodyWeight,
@@ -42,10 +48,13 @@ import { useAuth } from "../providers/auth-provider";
 import { useI18n } from "../providers/locale-provider";
 import { colors, fonts, radii } from "../theme";
 import { BottomSheet, Button, Card, Chip, DotValue, Screen, Segmented, Text } from "../ui";
+import { ReleaseNotesSheet } from "../ui/release-notes-sheet";
 import { ErrorState, Header, LoadingState } from "./common";
 
 type SheetKey = "profile" | "weight" | "schedule" | "plates" | "groups" | "language";
 const SHEETS: readonly SheetKey[] = ["profile", "weight", "schedule", "plates", "groups", "language"];
+const AVATAR_SIZE = 384;
+const AVATAR_BUCKET = "avatars";
 
 const WORKOUT_TYPE_KEYS = {
   Upper: "workoutType.upper",
@@ -87,10 +96,24 @@ function toMeasuredAt(datePart: string, timePart: string): string | null {
   return value.toISOString();
 }
 
+async function removeOwnedStoredAvatar(url: string | null, ownerId: string) {
+  const marker = `/storage/v1/object/public/${AVATAR_BUCKET}/`;
+  const at = url?.indexOf(marker) ?? -1;
+  if (at < 0) return;
+  try {
+    const path = decodeURIComponent(url!.slice(at + marker.length).split("?")[0]);
+    if (path.startsWith(`${ownerId}/`)) {
+      await supabase.storage.from(AVATAR_BUCKET).remove([path]);
+    }
+  } catch {
+    // The profile change has already succeeded; stale storage cleanup is best effort.
+  }
+}
+
 function SettingsGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <View style={{ marginTop: 23 }}>
-      <Text variant="micro" tone="faint" style={{ marginLeft: 15, marginBottom: 9 }}>{title}</Text>
+    <View style={{ marginTop: 20 }}>
+      <Text variant="micro" tone="faint" style={{ marginLeft: 16, marginBottom: 8, fontSize: 11, lineHeight: 15, letterSpacing: 0.28, fontFamily: fonts.medium }}>{title}</Text>
       <Card radius={radii.tile} padding={0}>
         {children}
       </Card>
@@ -98,9 +121,30 @@ function SettingsGroup({ title, children }: { title: string; children: ReactNode
   );
 }
 
+type SettingsGlyphName = "scale" | "calendar" | "plates" | "muscle" | "globe" | "info" | "widgets" | "sparkles" | "chevron" | "chevronDown";
+
+/** The settings glyphs use the same paths as the PWA icon set. */
+function SettingsGlyph({ name, color, size = 18 }: { name: SettingsGlyphName; color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      {name === "scale" ? <><Rect x={3.5} y={3.5} width={17} height={17} rx={4} /><Path d="M8 9a5 5 0 018 0M12 9.5l1.4-2" /></> : null}
+      {name === "calendar" ? <><Rect x={3} y={5} width={18} height={16} rx={3} /><Path d="M8 3v4M16 3v4M3 10h18" /></> : null}
+      {name === "plates" ? <><Circle cx={12} cy={12} r={9} /><Circle cx={12} cy={12} r={4.5} /><Circle cx={12} cy={12} r={1} /></> : null}
+      {name === "muscle" ? <><Path d="M5 17.5c1.5-4.5 2-8.5 1.2-12.5 2 .3 3.2 1.5 3.6 3.5" /><Path d="M9.5 9.3c2.8-1.4 6.3-.8 8.3 1.6 2 2.5 1.7 5.9-.6 7.6-2.8 2-7.8 1.6-12.2-1" /><Path d="M12.5 13.5c1.2-.7 2.8-.6 3.8.3" /></> : null}
+      {name === "globe" ? <><Circle cx={12} cy={12} r={9} /><Path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18" /></> : null}
+      {name === "info" ? <><Circle cx={12} cy={12} r={9} /><Path d="M12 11v5M12 8h.01" /></> : null}
+      {name === "widgets" ? <><Rect x={3.5} y={3.5} width={7} height={7} rx={2} /><Rect x={13.5} y={3.5} width={7} height={7} rx={2} /><Rect x={3.5} y={13.5} width={17} height={7} rx={2} /></> : null}
+      {name === "sparkles" ? <><Path d="M11 3l1.8 4.7L17.5 9.5l-4.7 1.8L11 16l-1.8-4.7L4.5 9.5l4.7-1.8L11 3z" /><Path d="M18.5 14.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z" /></> : null}
+      {name === "chevron" ? <Path d="M9 18l6-6-6-6" /> : null}
+      {name === "chevronDown" ? <Path d="M6 9l6 6 6-6" /> : null}
+    </Svg>
+  );
+}
+
 function SettingsRow({
   icon,
   iconFill = "rgba(255,255,255,0.06)",
+  iconBorder = "rgba(255,255,255,0.08)",
   title,
   value,
   onPress,
@@ -109,6 +153,7 @@ function SettingsRow({
 }: {
   icon: ReactNode;
   iconFill?: string;
+  iconBorder?: string;
   title: string;
   value?: string;
   onPress?: () => void;
@@ -125,16 +170,16 @@ function SettingsRow({
         justifyContent: "center",
         backgroundColor: iconFill,
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.08)",
+        borderColor: iconBorder,
         marginRight: 12,
       }}>
         {icon}
       </View>
-      <Text style={{ flex: 1 }} numberOfLines={1}>{title}</Text>
+      <Text weight="medium" style={{ flex: 1, fontSize: 15, lineHeight: 21 }} numberOfLines={1}>{title}</Text>
       {trailing ?? (
         <View style={{ flexDirection: "row", alignItems: "center", gap: 9, maxWidth: "48%" }}>
-          {value ? <Text variant="caption" tone="muted" numberOfLines={1}>{value}</Text> : null}
-          {onPress ? <Ionicons name="chevron-forward" size={15} color={colors.faint} /> : null}
+          {value ? <Text variant="caption" tone="muted" numberOfLines={1} style={{ fontSize: 13, lineHeight: 18 }}>{value}</Text> : null}
+          {onPress ? <SettingsGlyph name="chevron" size={17} color={colors.faint} /> : null}
         </View>
       )}
     </>
@@ -166,12 +211,14 @@ function SettingInput({
   onChangeText,
   placeholder,
   keyboardType,
+  onBlur,
 }: {
   label: string;
   value: string;
   onChangeText: (value: string) => void;
   placeholder?: string;
   keyboardType?: "default" | "decimal-pad" | "numbers-and-punctuation";
+  onBlur?: () => void;
 }) {
   return (
     <View style={{ gap: 8 }}>
@@ -179,6 +226,7 @@ function SettingInput({
       <TextInput
         value={value}
         onChangeText={onChangeText}
+        onBlur={onBlur}
         placeholder={placeholder}
         placeholderTextColor={colors.faint}
         keyboardType={keyboardType}
@@ -245,6 +293,8 @@ function BodyWeightChart({ rows, accessibilityLabel }: { rows: BodyWeightMeasure
 
 export function SettingsScreen() {
   const { t, lang, setLang } = useI18n();
+  const { width: screenWidth } = useWindowDimensions();
+  const compactSheet = screenWidth <= 420;
   const { signOut, user } = useAuth();
   const profileQuery = useProfile();
   const groupsQuery = useMuscleGroups();
@@ -253,6 +303,7 @@ export function SettingsScreen() {
   const createGroup = useCreateMuscleGroup();
   const deleteGroup = useDeleteMuscleGroup();
   const [sheet, setSheet] = useState<SheetKey | null>(null);
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const weightQuery = useBodyWeightMeasurements({ limit: 365, enabled: sheet === "weight" });
   const logWeight = useLogBodyWeight();
   const params = useLocalSearchParams<{ open?: string }>();
@@ -267,20 +318,23 @@ export function SettingsScreen() {
   const [plateDraft, setPlateDraft] = useState("");
   const [plateUnit, setPlateUnit] = useState<Unit>("kg");
   const [newGroupDraft, setNewGroupDraft] = useState("");
+  const [showAvatarPresets, setShowAvatarPresets] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
   const profile = profileQuery.data;
-  const privacyPolicyUrl = process.env.EXPO_PUBLIC_PRIVACY_POLICY_URL;
   const unit = profile?.unit ?? "kg";
   const schedule = normalizeTrainingSchedule(profile?.training_schedule);
   const scheduleSummary = schedule
     .map((type, index) => type
-      ? new Date(2024, 0, 1 + index).toLocaleDateString(lang, { weekday: "short" })
+      ? new Date(2024, 0, 1 + index).toLocaleDateString(lang, { weekday: "short" }).replace(/\.$/, "").slice(0, 2)
       : null)
     .filter(Boolean)
     .join(" · ");
+  const scheduleDirty = WEEKDAY_INDICES.some((index) => scheduleDraft[index] !== schedule[index]);
+  const scheduleIncomplete = scheduleDraft.some((type) => type !== null && !type.trim());
   const workoutTypes = useMemo(() => Array.from(new Set([
     ...BASE_WORKOUT_TYPES,
     ...(groupsQuery.data?.map((group) => `Split ${group.name}`) ?? []),
@@ -291,7 +345,10 @@ export function SettingsScreen() {
     setError(null);
     setSuccess(null);
     setSheet(next);
-    if (next === "profile") setNameDraft(current.display_name ?? "");
+    if (next === "profile") {
+      setNameDraft(current.display_name ?? "");
+      setShowAvatarPresets(false);
+    }
     if (next === "weight") {
       setWeightDraft(current.body_weight_kg == null ? "" : String(roundWeight(kgToUnit(current.body_weight_kg, current.unit))));
       const now = localDateTimeParts();
@@ -318,7 +375,7 @@ export function SettingsScreen() {
 
   async function saveName() {
     const name = nameDraft.trim();
-    if (!name || !profile) return;
+    if (!name || !profile || uploadingAvatar) return;
     if (name !== profile.display_name) {
       try { await updateProfile.mutateAsync({ display_name: name }); }
       catch { setError(t("common.error")); return; }
@@ -336,20 +393,69 @@ export function SettingsScreen() {
   }
 
   async function chooseAvatar(url: string | null) {
-    if (!profile || !user || profile.avatar_url === url) return;
+    if (!profile || !user || profile.avatar_url === url || uploadingAvatar || updateProfile.isPending) return;
     const previous = profile.avatar_url;
     try {
       await updateProfile.mutateAsync({ avatar_url: url });
-      const marker = "/storage/v1/object/public/avatars/";
-      const at = previous?.indexOf(marker) ?? -1;
-      if (at >= 0) {
-        const path = decodeURIComponent(previous!.slice(at + marker.length).split("?")[0]);
-        if (path.startsWith(`${user.id}/`)) {
-          await supabase.storage.from("avatars").remove([path]);
-        }
-      }
+      await removeOwnedStoredAvatar(previous, user.id);
       setError(null);
     } catch { setError(t("common.error")); }
+  }
+
+  async function uploadAvatar() {
+    if (!profile || !user || uploadingAvatar || updateProfile.isPending) return;
+    setUploadingAvatar(true);
+    setError(null);
+    try {
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 1,
+      });
+      if (picked.canceled || !picked.assets[0]) return;
+
+      const asset = picked.assets[0];
+      const side = Math.min(asset.width, asset.height);
+      if (side <= 0) throw new Error("Could not process image");
+      const image = ImageManipulator.manipulate(asset.uri);
+      image.crop({
+        originX: Math.floor((asset.width - side) / 2),
+        originY: Math.floor((asset.height - side) / 2),
+        width: side,
+        height: side,
+      });
+      if (side > AVATAR_SIZE) image.resize({ width: AVATAR_SIZE, height: AVATAR_SIZE });
+      const rendered = await image.renderAsync();
+      const jpeg = await rendered.saveAsync({
+        format: SaveFormat.JPEG,
+        compress: 0.86,
+        base64: true,
+      });
+      if (!jpeg.base64) throw new Error("Could not process image");
+
+      const path = `${user.id}/avatar-${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage.from(AVATAR_BUCKET)
+        .upload(path, decode(jpeg.base64), {
+          contentType: "image/jpeg",
+          cacheControl: "31536000",
+        });
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
+      const { data: previous } = await supabase.from("profiles")
+        .select("avatar_url").eq("id", user.id).single();
+      try {
+        await updateProfile.mutateAsync({ avatar_url: publicUrl });
+      } catch (failure) {
+        await supabase.storage.from(AVATAR_BUCKET).remove([path]).catch(() => undefined);
+        throw failure;
+      }
+      await removeOwnedStoredAvatar(previous?.avatar_url ?? null, user.id);
+    } catch (failure) {
+      setError(userErrorMessage(t, failure));
+    } finally {
+      setUploadingAvatar(false);
+    }
   }
 
   async function addGroup() {
@@ -383,7 +489,7 @@ export function SettingsScreen() {
   }
 
   async function saveSchedule() {
-    if (scheduleDraft.some((type) => type !== null && !type.trim())) {
+    if (scheduleIncomplete) {
       setError(t("settings.chooseTypeForEnabled"));
       return;
     }
@@ -391,6 +497,21 @@ export function SettingsScreen() {
       await updateProfile.mutateAsync({ training_schedule: scheduleForStorage(scheduleDraft) });
       close();
     } catch { setError(t("common.error")); }
+  }
+
+  function pickWorkoutType(index: number, day: string) {
+    if (Platform.OS !== "ios") return;
+    const labels = workoutTypes.map((type) => type in WORKOUT_TYPE_KEYS ? t(WORKOUT_TYPE_KEYS[type as keyof typeof WORKOUT_TYPE_KEYS]) : type);
+    ActionSheetIOS.showActionSheetWithOptions(
+      { title: day, options: [t("common.cancel"), ...labels], cancelButtonIndex: 0 },
+      (selected) => {
+        if (selected <= 0) return;
+        const next = [...scheduleDraft] as TrainingSchedule;
+        next[index] = workoutTypes[selected - 1];
+        setScheduleDraft(next);
+        setError(null);
+      },
+    );
   }
 
   async function recordWeight() {
@@ -461,6 +582,7 @@ export function SettingsScreen() {
   if (!profile) return <Screen><Header title={t("settings.title")} back /><ErrorState message={t("common.error")} retry={() => profileQuery.refetch()} /></Screen>;
 
   const avatarImage = avatarSource(profile.avatar_url);
+  const avatarBusy = uploadingAvatar || updateProfile.isPending;
   const plates = [
     ...profile.plates_kg.map((value) => ({ value, unit: "kg" as Unit, kg: value })),
     ...(profile.plates_lb ?? []).map((value) => ({ value, unit: "lb" as Unit, kg: unitToKg(value, "lb") })),
@@ -472,18 +594,18 @@ export function SettingsScreen() {
       {error && !sheet ? <Text tone="pink" style={{ marginVertical: 8 }}>{error}</Text> : null}
 
       <Pressable onPress={() => open("profile", profile)} style={{ marginTop: 14 }} accessibilityRole="button">
-        <Card padding={15}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 13 }}>
+        <Card padding={14}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
             <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.raised, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
               <Image source={avatarImage} style={{ width: 56, height: 56 }} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text weight="semibold" numberOfLines={1}>{profile.display_name || t("settings.yourName")}</Text>
-              <Text variant="caption" tone="muted" numberOfLines={1} style={{ marginTop: 3 }}>
+              <Text weight="semibold" numberOfLines={1} style={{ fontSize: 17, lineHeight: 23 }}>{profile.display_name || t("settings.yourName")}</Text>
+              <Text variant="caption" tone="muted" numberOfLines={1} style={{ fontSize: 13, lineHeight: 18 }}>
                 {profile.telegram_username ? `@${profile.telegram_username}` : t("settings.editProfile")}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.faint} />
+            <SettingsGlyph name="chevron" size={18} color={colors.faint} />
           </View>
         </Card>
       </Pressable>
@@ -491,44 +613,53 @@ export function SettingsScreen() {
       <SettingsGroup title={t("settings.groupBody")}>
         <SettingsRow first title={t("bodyWeight.title")}
           value={profile.body_weight_kg == null ? t("settings.notSet") : `${roundWeight(kgToUnit(profile.body_weight_kg, unit))} ${unit}`}
-          icon={<Ionicons name="scale-outline" size={17} color={colors.lime} />}
-          iconFill="rgba(215,246,81,0.1)" onPress={() => open("weight", profile)} />
+          icon={<SettingsGlyph name="scale" color={colors.lime} />}
+          iconFill="rgba(215,246,81,0.1)" iconBorder="rgba(215,246,81,0.2)" onPress={() => open("weight", profile)} />
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.groupTraining")}>
         <SettingsRow first title={t("settings.trainingWeek")}
           value={scheduleSummary || t("settings.flexible")}
-          icon={<Ionicons name="calendar-outline" size={17} color={colors.cherryBright} />}
-          iconFill="rgba(211,79,61,0.14)" onPress={() => open("schedule", profile)} />
+          icon={<SettingsGlyph name="calendar" color="#ff8a78" />}
+          iconFill="rgba(211,79,61,0.15)" iconBorder="rgba(255,98,77,0.25)" onPress={() => open("schedule", profile)} />
         <SettingsRow title={t("settings.plateCalc")}
           icon={<Ionicons name="calculator-outline" size={17} color="#aeb8ff" />}
-          iconFill="rgba(24,39,136,0.35)" onPress={() => router.push("/plate-calculator")} />
+          iconFill="rgba(24,39,136,0.3)" iconBorder="rgba(64,84,214,0.25)" onPress={() => router.push("/plate-calculator")} />
         <SettingsRow title={`${t("plates.editPlates").charAt(0).toLocaleUpperCase(lang)}${t("plates.editPlates").slice(1)}`}
           value={t("settings.platesSummary", { bar: roundWeight(kgToUnit(profile.bar_weight_kg, unit)), unit, count: plates.length })}
-          icon={<Ionicons name="disc-outline" size={17} color="#aeb8ff" />}
-          iconFill="rgba(24,39,136,0.35)" onPress={() => open("plates", profile)} />
+          icon={<SettingsGlyph name="plates" color="#aeb8ff" />}
+          iconFill="rgba(24,39,136,0.3)" iconBorder="rgba(64,84,214,0.25)" onPress={() => open("plates", profile)} />
         <SettingsRow title={t("settings.muscleGroups")}
           value={String(groupsQuery.data?.length ?? "")}
-          icon={<Ionicons name="fitness-outline" size={17} color={colors.pink} />}
-          iconFill="rgba(245,103,181,0.12)" onPress={() => open("groups", profile)} />
+          icon={<SettingsGlyph name="muscle" color={colors.pink} />}
+          iconFill="rgba(245,103,181,0.12)" iconBorder="rgba(245,103,181,0.25)" onPress={() => open("groups", profile)} />
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.groupApp")}>
         <SettingsRow first title={t("settings.language")}
           value={LANGUAGE_OPTIONS.find((option) => option.value === lang)?.label}
-          icon={<Ionicons name="globe-outline" size={17} color={colors.text} />}
+          icon={<SettingsGlyph name="globe" color="rgba(255,255,255,0.7)" />}
           onPress={() => open("language", profile)} />
         <SettingsRow title={t("settings.weightUnit")}
-          icon={<Ionicons name="scale-outline" size={17} color={colors.text} />}
-          trailing={<Segmented options={[{ value: "kg", label: "kg" }, { value: "lb", label: "lb" }]} value={unit} onChange={changeUnit} style={{ width: 112, padding: 2 }} />} />
+          icon={<SettingsGlyph name="scale" color="rgba(255,255,255,0.7)" />}
+          trailing={<Segmented options={[{ value: "kg", label: "kg" }, { value: "lb", label: "lb" }]} value={unit} onChange={changeUnit} style={{ width: 112 }} />} />
+        <SettingsRow title={t("settings.homeScreen")}
+          value={t("settings.customize")}
+          icon={<SettingsGlyph name="widgets" color="rgba(255,255,255,0.7)" />}
+          onPress={() => router.push({ pathname: "/", params: { edit: "1" } })} />
+      </SettingsGroup>
+
+      <SettingsGroup title={t("settings.groupHelp")}>
         <SettingsRow title={t("settings.appGuide")}
-          icon={<Ionicons name="book-outline" size={17} color={colors.text} />}
+          first icon={<SettingsGlyph name="info" color="rgba(255,255,255,0.7)" />}
           onPress={() => router.push("/onboarding?replay=1")} />
-        {privacyPolicyUrl?.startsWith("https://") ? (
-          <SettingsRow title={t("settings.privacyPolicy")}
-            icon={<Ionicons name="shield-checkmark-outline" size={17} color={colors.text} />}
-            onPress={() => void Linking.openURL(privacyPolicyUrl).catch(() => setError(t("common.error")))} />
-        ) : null}
+        <SettingsRow title={t("settings.whatsNew")}
+          value={CURRENT_RELEASE.label}
+          icon={<SettingsGlyph name="sparkles" color="rgba(255,255,255,0.7)" />}
+          onPress={() => setWhatsNewOpen(true)} />
+        <SettingsRow title={t("settings.privacyPolicy")}
+          icon={<Ionicons name="shield-checkmark-outline" size={17} color={colors.text} />}
+          onPress={() => router.push("/privacy")} />
       </SettingsGroup>
 
       <SettingsGroup title={t("settings.groupAccount")}>
@@ -544,66 +675,107 @@ export function SettingsScreen() {
       </SettingsGroup>
 
       <BottomSheet open={sheet === "profile"} onClose={close} title={t("settings.profile")} closeLabel={t("common.close")}>
-        <View style={{ gap: 18, paddingBottom: 8 }}>
-          <SettingInput label={t("settings.displayName")} value={nameDraft} onChangeText={setNameDraft} placeholder={t("settings.yourName")} />
-          {profile.telegram_username ? <Text variant="caption" tone="muted">Telegram: @{profile.telegram_username}</Text> : null}
-          <Text variant="caption" tone="muted">{t("settings.chooseAvatar")}</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            {PRESET_AVATARS.map((preset) => {
-              const selected = profile.avatar_url === preset.url;
-              return (
-                <Pressable key={preset.id} onPress={() => void chooseAvatar(preset.url)}
-                  disabled={updateProfile.isPending}
-                  accessibilityRole="button"
-                  accessibilityLabel={t(preset.labelKey)}
-                  accessibilityState={{ selected, disabled: updateProfile.isPending }}
-                  style={{ width: 58, height: 58, borderRadius: 29, borderWidth: selected ? 2 : 1, borderColor: selected ? colors.lime : colors.line, backgroundColor: colors.raised, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-                  <Image source={avatarSource(preset.url)} style={{ width: 54, height: 54, borderRadius: 27 }} />
+        <View style={{ gap: 16, paddingBottom: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+            <Image source={avatarImage} style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.raised }} />
+            <View style={{ flex: 1, gap: 5 }}>
+              <Button variant="surface" size="sm" loading={uploadingAvatar} disabled={avatarBusy}
+                style={{ alignSelf: "flex-start" }} onPress={() => void uploadAvatar()}>
+                {t("settings.uploadPhoto")}
+              </Button>
+              {profile.avatar_url ? (
+                <Pressable onPress={() => void chooseAvatar(null)} disabled={avatarBusy} accessibilityRole="button"
+                  accessibilityState={{ disabled: avatarBusy }}>
+                  <Text variant="caption" tone="muted" style={{ fontSize: 12 }}>{t("settings.useDefault")}</Text>
                 </Pressable>
-              );
-            })}
+              ) : null}
+              <Text variant="caption" tone="faint" style={{ fontSize: 12, lineHeight: 16 }}>{t("settings.avatarHint")}</Text>
+            </View>
           </View>
+          <View>
+            <Pressable
+              onPress={() => setShowAvatarPresets((value) => !value)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showAvatarPresets }}
+              style={{ minHeight: 42, borderRadius: radii.tile, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+            >
+              <Text weight="medium" style={{ fontSize: 14 }}>{t("settings.chooseAvatar")}</Text>
+              <View style={{ transform: [{ rotate: showAvatarPresets ? "180deg" : "0deg" }] }}>
+                <SettingsGlyph name="chevronDown" size={16} color={colors.faint} />
+              </View>
+            </Pressable>
+            {showAvatarPresets ? (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", rowGap: 14, marginTop: 12 }}>
+                {PRESET_AVATARS.map((preset) => {
+                  const selected = profile.avatar_url === preset.url;
+                  return (
+                    <Pressable key={preset.id} onPress={() => void chooseAvatar(preset.url)}
+                      disabled={avatarBusy}
+                      accessibilityRole="button"
+                      accessibilityLabel={t(preset.labelKey)}
+                      accessibilityState={{ selected, disabled: avatarBusy }}
+                      style={{ width: "19%", alignItems: "center", justifyContent: "center" }}>
+                      <View style={{ width: 54, height: 54, borderRadius: 27, borderWidth: selected ? 2 : 0, borderColor: colors.lime, padding: selected ? 2 : 0 }}>
+                        <Image source={avatarSource(preset.url)} style={{ width: "100%", height: "100%", borderRadius: 25 }} />
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
+          </View>
+          <SettingInput label={t("settings.displayName")} value={nameDraft} onChangeText={setNameDraft} placeholder={t("settings.yourName")} />
+          {profile.telegram_username ? <Text variant="caption" tone="muted" style={{ fontSize: 14 }}>Telegram: <Text weight="medium">@{profile.telegram_username}</Text></Text> : null}
           {error ? <Text tone="pink">{error}</Text> : null}
-          <Button variant="lime" block disabled={!nameDraft.trim()} loading={updateProfile.isPending} onPress={saveName}>{t("common.save")}</Button>
+          <Button variant="lime" block disabled={!nameDraft.trim() || uploadingAvatar} loading={updateProfile.isPending} onPress={saveName}>{t("common.save")}</Button>
         </View>
       </BottomSheet>
 
       <BottomSheet open={sheet === "groups"} onClose={close} title={t("settings.muscleGroups")} closeLabel={t("common.close")}>
-        <View style={{ gap: 15, paddingBottom: 8 }}>
-          <Text variant="caption" tone="muted">{t("settings.muscleGroupsHint")}</Text>
+        <View style={{ gap: 16, paddingBottom: 8 }}>
+          <Text variant="caption" tone="muted" style={{ fontSize: 13, lineHeight: 19 }}>{t("settings.muscleGroupsHint")}</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {(groupsQuery.data ?? []).map((group) => (
-              <View key={group.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.raised, borderRadius: radii.pill, paddingLeft: 13, paddingRight: group.user_id ? 7 : 13, minHeight: 38 }}>
-                <Text>{group.name}</Text>
+              <View key={group.id} style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: colors.raised, borderWidth: 1, borderColor: colors.line, borderRadius: radii.pill, paddingHorizontal: 13, minHeight: 36 }}>
+                <Text style={{ fontSize: 14 }}>{group.name}</Text>
                 {group.user_id === user?.id ? (
                   <Pressable onPress={() => confirmDeleteGroup(group.id, group.name)} disabled={deleteGroup.isPending} accessibilityLabel={t("settings.deleteGroup", { name: group.name })}>
-                    <Ionicons name="close" size={17} color={colors.muted} />
+                    <Ionicons name="close" size={14} color={colors.faint} />
                   </Pressable>
                 ) : null}
               </View>
             ))}
           </View>
-          <SettingInput label={t("settings.newGroup")} value={newGroupDraft} onChangeText={setNewGroupDraft} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <TextInput
+              value={newGroupDraft}
+              onChangeText={setNewGroupDraft}
+              placeholder={t("settings.newGroup")}
+              placeholderTextColor={colors.faint}
+              selectionColor={colors.lime}
+              style={{ flex: 1, height: 40, borderRadius: radii.small, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised, color: colors.text, fontFamily: fonts.regular, fontSize: 14, paddingHorizontal: 13 }}
+            />
+            <Button variant="surface" size="compact" leading={<Ionicons name="add" size={16} color={colors.text} />} disabled={!newGroupDraft.trim()} loading={createGroup.isPending} onPress={addGroup}>{t("common.add")}</Button>
+          </View>
           {error ? <Text tone="pink">{error}</Text> : null}
-          <Button variant="lime" block disabled={!newGroupDraft.trim()} loading={createGroup.isPending} onPress={addGroup}>{t("common.add")}</Button>
         </View>
       </BottomSheet>
 
       <BottomSheet open={sheet === "weight"} onClose={close} title={t("bodyWeight.title")} closeLabel={t("common.close")}>
         <View style={{ gap: 16, paddingBottom: 12 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-            <View style={{ flex: 1 }}>
-              <Text weight="semibold">{t("bodyWeight.title")}</Text>
-              <Text variant="caption" tone="muted" style={{ marginTop: 3 }}>{t("bodyWeight.trackerHint")}</Text>
+          <View style={{ flexDirection: compactSheet ? "column" : "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+            <View style={{ flex: compactSheet ? undefined : 1 }}>
+              <Text weight="semibold" style={{ fontSize: 16 }}>{t("bodyWeight.title")}</Text>
+              <Text variant="caption" tone="muted" style={{ marginTop: 3, fontSize: 13, lineHeight: 18 }}>{t("bodyWeight.trackerHint")}</Text>
             </View>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text variant="micro" tone="faint">{t("bodyWeight.current")}</Text>
-              <DotValue value={profile.body_weight_kg == null ? "—" : roundWeight(kgToUnit(profile.body_weight_kg, unit))} suffix={profile.body_weight_kg == null ? undefined : unit} size={24} />
+            <View style={{ alignItems: compactSheet ? "flex-start" : "flex-end" }}>
+              <Text variant="micro" tone="muted" style={{ fontSize: 11, letterSpacing: 0.6 }}>{t("bodyWeight.current")}</Text>
+              <DotValue value={profile.body_weight_kg == null ? "—" : roundWeight(kgToUnit(profile.body_weight_kg, unit))} suffix={profile.body_weight_kg == null ? undefined : unit} size={20} />
             </View>
           </View>
-          <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
-            <View style={{ flex: 1 }}><SettingInput label={t("bodyWeight.inputLabel", { unit })} value={weightDraft} onChangeText={(value) => { setWeightDraft(value); setSuccess(null); }} keyboardType="decimal-pad" placeholder="80" /></View>
-            <Button variant="lime" onPress={recordWeight} loading={logWeight.isPending}>{t("bodyWeight.record")}</Button>
+          <View style={{ flexDirection: compactSheet ? "column" : "row", alignItems: compactSheet ? "stretch" : "flex-end", gap: 12 }}>
+            <View style={{ flex: compactSheet ? undefined : 1 }}><SettingInput label={t("bodyWeight.inputLabel", { unit })} value={weightDraft} onChangeText={(value) => { setWeightDraft(value); setSuccess(null); }} keyboardType="decimal-pad" placeholder="80" /></View>
+            <Button variant="lime" block={compactSheet} onPress={recordWeight} loading={logWeight.isPending}>{t("bodyWeight.record")}</Button>
           </View>
           <Text variant="caption" tone="muted">{t("bodyWeight.measuredAt")}</Text>
           <View style={{ flexDirection: "row", gap: 10 }}>
@@ -614,13 +786,16 @@ export function SettingsScreen() {
           {error ? <Text tone="pink">{error}</Text> : null}
           <View style={{ height: 1, backgroundColor: colors.line, marginVertical: 7 }} />
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text weight="semibold">{t("bodyWeight.historyTitle")}</Text>
-            {weightQuery.data?.length ? <Text variant="micro" tone="faint">{t("bodyWeight.entryCount", { count: weightQuery.data.length })}</Text> : null}
+            <Text weight="semibold" style={{ fontSize: 16 }}>{t("bodyWeight.historyTitle")}</Text>
+            {weightQuery.data?.length ? <Text variant="micro" tone="muted" style={{ fontSize: 11 }}>{t("bodyWeight.entryCount", { count: weightQuery.data.length })}</Text> : null}
           </View>
           {weightQuery.isLoading ? <ActivityIndicator color={colors.lime} /> : weightQuery.error ? (
             <Text tone="pink">{t("common.error")}</Text>
           ) : !weightQuery.data?.length ? (
-            <Text tone="muted">{t("bodyWeight.historyEmpty")}</Text>
+            <View style={{ gap: 5, paddingVertical: 14 }}>
+              <Text tone="muted">{t("bodyWeight.historyEmpty")}</Text>
+              <Text variant="caption" tone="faint">{t("bodyWeight.historyEmptyHint")}</Text>
+            </View>
           ) : (
             <>
               <BodyWeightChart
@@ -631,37 +806,42 @@ export function SettingsScreen() {
                   unit,
                 })}
               />
-              <View style={{ gap: 0 }}>
+              <ScrollView nestedScrollEnabled style={{ maxHeight: 264 }} contentContainerStyle={{ paddingBottom: 12 }}>
                 {weightQuery.data.map((row, index) => {
                   const older = weightQuery.data?.[index + 1];
                   const delta = older ? roundWeight(kgToUnit(row.weight_kg - older.weight_kg, unit)) : 0;
                   return (
-                    <View key={row.id} style={{ flexDirection: "row", alignItems: "center", borderBottomWidth: 1, borderBottomColor: colors.line, paddingVertical: 10 }}>
+                    <View key={row.id} style={{ flexDirection: "row", alignItems: "center", borderTopWidth: index === 0 ? 0 : 1, borderTopColor: colors.line, paddingVertical: 10 }}>
                       <View style={{ flex: 1 }}>
-                        <Text weight="semibold">{roundWeight(kgToUnit(row.weight_kg, unit))} {unit} {delta ? <Text variant="caption" tone={delta > 0 ? "pink" : "lime"}>{delta > 0 ? "▲" : "▼"} {Math.abs(delta)}</Text> : null}</Text>
-                        <Text variant="caption" tone="muted">{new Date(row.measured_at).toLocaleString(lang, { dateStyle: "medium", timeStyle: "short" })}</Text>
+                        <Text style={{ fontFamily: fonts.dot, fontSize: 16, lineHeight: 20 }}>
+                          {roundWeight(kgToUnit(row.weight_kg, unit))}<Text variant="caption" tone="muted" style={{ fontSize: 11 }}> {unit}</Text>
+                          {delta ? <Text variant="caption" style={{ color: delta > 0 ? colors.lime : "#aeb8ff", fontSize: 11 }}>{delta > 0 ? " ▲" : " ▼"} {Math.abs(delta)}</Text> : null}
+                        </Text>
+                        <Text variant="caption" tone="muted" style={{ marginTop: 2, fontSize: 11 }}>{new Date(row.measured_at).toLocaleString(lang, { dateStyle: "medium", timeStyle: "short" })}</Text>
                       </View>
-                      <Text variant="caption" tone="faint">{t(`bodyWeight.source.${row.source}`)}</Text>
+                      <View style={{ backgroundColor: colors.raised, borderWidth: 1, borderColor: colors.line, borderRadius: radii.pill, paddingHorizontal: 9, paddingVertical: 4 }}>
+                        <Text variant="caption" tone="muted" style={{ fontSize: 11 }}>{t(`bodyWeight.source.${row.source}`)}</Text>
+                      </View>
                     </View>
                   );
                 })}
-              </View>
+              </ScrollView>
             </>
           )}
         </View>
       </BottomSheet>
 
       <BottomSheet open={sheet === "schedule"} onClose={close} title={t("settings.trainingWeek")} closeLabel={t("common.close")}>
-        <View style={{ gap: 12, paddingBottom: 10 }}>
-          <Text variant="caption" tone="muted">{t("settings.trainingWeekHint")}</Text>
+        <View style={{ gap: 16, paddingBottom: 10 }}>
+          <Text variant="caption" tone="muted" style={{ lineHeight: 20 }}>{t("settings.trainingWeekHint")}</Text>
           {WEEKDAY_INDICES.map((index) => {
             const day = new Date(2024, 0, 1 + index).toLocaleDateString(lang, { weekday: "long" });
             const active = scheduleDraft[index] !== null;
             return (
-              <View key={index} style={{ backgroundColor: colors.raised, borderRadius: radii.medium, padding: 13, gap: 9 }}>
+              <View key={index} style={{ backgroundColor: active ? "rgba(215,246,81,0.035)" : "rgba(30,30,35,0.7)", borderColor: active ? "rgba(215,246,81,0.2)" : "rgba(42,42,49,0.7)", borderWidth: 1, borderRadius: radii.tile, paddingVertical: 12, paddingHorizontal: 14, gap: 12 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                   <View>
-                    <Text weight="semibold" style={{ textTransform: "capitalize" }}>{day}</Text>
+                    <Text weight="medium" style={{ fontSize: 14, lineHeight: 20, textTransform: "capitalize" }}>{day}</Text>
                     {!active ? <Text variant="caption" tone="faint">{t("settings.restDay")}</Text> : null}
                   </View>
                   <Switch
@@ -678,64 +858,93 @@ export function SettingsScreen() {
                   />
                 </View>
                 {active ? (
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, paddingRight: 3 }}>
-                    {workoutTypes.map((type) => (
-                      <Chip key={type} selected={scheduleDraft[index] === type} onPress={() => {
-                        const next = [...scheduleDraft] as TrainingSchedule;
-                        next[index] = type;
-                        setScheduleDraft(next);
-                        setError(null);
-                      }}>
-                        {type in WORKOUT_TYPE_KEYS ? t(WORKOUT_TYPE_KEYS[type as keyof typeof WORKOUT_TYPE_KEYS]) : type}
-                      </Chip>
-                    ))}
-                  </ScrollView>
+                  Platform.OS === "ios" ? (
+                    <Pressable
+                      onPress={() => pickWorkoutType(index, day)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("settings.workoutTypeFor", { day })}
+                      style={{ height: 44, borderRadius: radii.small, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+                    >
+                      <Text weight="medium" tone={scheduleDraft[index] ? "primary" : "muted"} style={{ fontSize: 14, flex: 1 }} numberOfLines={1}>
+                        {scheduleDraft[index]
+                          ? scheduleDraft[index] in WORKOUT_TYPE_KEYS
+                            ? t(WORKOUT_TYPE_KEYS[scheduleDraft[index] as keyof typeof WORKOUT_TYPE_KEYS])
+                            : scheduleDraft[index]
+                          : t("settings.chooseWorkoutType")}
+                      </Text>
+                      <SettingsGlyph name="chevronDown" size={16} color={colors.faint} />
+                    </Pressable>
+                  ) : (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, paddingRight: 3 }}>
+                      {workoutTypes.map((type) => (
+                        <Chip key={type} selected={scheduleDraft[index] === type} onPress={() => {
+                          const next = [...scheduleDraft] as TrainingSchedule;
+                          next[index] = type;
+                          setScheduleDraft(next);
+                          setError(null);
+                        }}>
+                          {type in WORKOUT_TYPE_KEYS ? t(WORKOUT_TYPE_KEYS[type as keyof typeof WORKOUT_TYPE_KEYS]) : type}
+                        </Chip>
+                      ))}
+                    </ScrollView>
+                  )
                 ) : null}
               </View>
             );
           })}
+          {scheduleIncomplete ? <Text variant="caption" style={{ color: colors.flame, paddingTop: 8 }}>{t("settings.chooseTypeForEnabled")}</Text> : null}
           {error ? <Text tone="pink">{error}</Text> : null}
-          <Button variant="lime" block loading={updateProfile.isPending} onPress={saveSchedule}>{t("settings.saveSchedule")}</Button>
+          <Button variant="lime" block disabled={!scheduleDirty || scheduleIncomplete} loading={updateProfile.isPending} onPress={saveSchedule}>{t("settings.saveSchedule")}</Button>
         </View>
       </BottomSheet>
 
       <BottomSheet open={sheet === "plates"} onClose={close} title={t("settings.plateCalc")} closeLabel={t("common.close")}>
         <View style={{ gap: 16, paddingBottom: 10 }}>
-          <Text variant="caption" tone="muted">{t("settings.plateCalcHint")}</Text>
-          <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
-            <View style={{ flex: 1 }}><SettingInput label={t("settings.barWeight", { unit })} value={barDraft} onChangeText={setBarDraft} keyboardType="decimal-pad" /></View>
-            <Button variant="surface" onPress={saveBar} loading={updateProfile.isPending}>{t("common.save")}</Button>
+          <Text variant="caption" tone="muted" style={{ fontSize: 13, lineHeight: 19 }}>{t("settings.plateCalcHint")}</Text>
+          <View style={{ maxWidth: 128 }}>
+            <SettingInput label={t("settings.barWeight", { unit })} value={barDraft} onChangeText={setBarDraft} onBlur={() => void saveBar()} keyboardType="decimal-pad" />
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {plates.map((plate) => (
               <Pressable key={`${plate.unit}-${plate.value}`} onPress={() => removePlate(plate.value, plate.unit)} disabled={updateProfile.isPending}
                 accessibilityLabel={t("settings.removePlate", { plate: `${plate.value} ${plate.unit}` })}
-                style={{ flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 12, minHeight: 38, borderRadius: radii.pill, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised }}>
-                <Text weight="semibold">{plate.value}</Text><Text variant="caption" tone="muted">{plate.unit}</Text>
-                <Ionicons name="close" size={15} color={colors.muted} />
+                style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingLeft: 14, paddingRight: 9, minHeight: 36, borderRadius: radii.pill, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised }}>
+                <Text style={{ fontFamily: fonts.dot, fontSize: 15, lineHeight: 20 }}>{plate.value}</Text><Text variant="caption" tone="muted">{plate.unit}</Text>
+                <Ionicons name="close" size={14} color={colors.faint} />
               </Pressable>
             ))}
           </View>
-          <SettingInput label={t("settings.plateWeight")} value={plateDraft} onChangeText={setPlateDraft} keyboardType="decimal-pad" />
-          <Segmented options={[{ value: "kg", label: "kg" }, { value: "lb", label: "lb" }]} value={plateUnit} onChange={setPlateUnit} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <TextInput
+              value={plateDraft}
+              onChangeText={setPlateDraft}
+              placeholder={t("settings.plateWeight")}
+              placeholderTextColor={colors.faint}
+              keyboardType="decimal-pad"
+              selectionColor={colors.lime}
+              style={{ flex: 1, height: 40, borderRadius: radii.small, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised, color: colors.text, fontFamily: fonts.regular, fontSize: 14, paddingHorizontal: 13 }}
+            />
+            <Segmented options={[{ value: "kg", label: "kg" }, { value: "lb", label: "lb" }]} value={plateUnit} onChange={setPlateUnit} style={{ width: 98 }} />
+            <Button variant="surface" size="compact" leading={<Ionicons name="add" size={16} color={colors.text} />} disabled={!plateDraft.trim()} onPress={addPlate} loading={updateProfile.isPending}>{t("common.add")}</Button>
+          </View>
           {error ? <Text tone="pink">{error}</Text> : null}
-          <Button variant="lime" block onPress={addPlate} loading={updateProfile.isPending}>{t("common.add")}</Button>
         </View>
       </BottomSheet>
 
       <BottomSheet open={sheet === "language"} onClose={close} title={t("settings.language")} closeLabel={t("common.close")}>
-        <View style={{ gap: 8, paddingBottom: 8 }}>
-          {LANGUAGE_OPTIONS.map((option) => (
+        <View style={{ borderRadius: radii.tile, borderWidth: 1, borderColor: colors.line, overflow: "hidden", paddingBottom: 0, marginBottom: 8 }}>
+          {LANGUAGE_OPTIONS.map((option, index) => (
             <Pressable key={option.value} onPress={() => changeLanguage(option.value)} disabled={updateProfile.isPending}
               accessibilityRole="radio" accessibilityState={{ checked: lang === option.value }}
-              style={{ minHeight: 48, borderRadius: radii.medium, backgroundColor: lang === option.value ? "rgba(215,246,81,0.12)" : colors.raised, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 15 }}>
-              <Text tone={lang === option.value ? "lime" : "primary"} weight="medium">{option.label}</Text>
+              style={{ minHeight: 52, borderTopWidth: index === 0 ? 0 : 1, borderTopColor: "rgba(42,42,49,0.7)", flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16 }}>
+              <Text tone={lang === option.value ? "lime" : "primary"} weight="medium" style={{ fontSize: 15 }}>{option.label}</Text>
               {lang === option.value ? <Ionicons name="checkmark" size={19} color={colors.lime} /> : null}
             </Pressable>
           ))}
-          {error ? <Text tone="pink">{error}</Text> : null}
         </View>
+        {error ? <Text tone="pink">{error}</Text> : null}
       </BottomSheet>
+      <ReleaseNotesSheet open={whatsNewOpen} onClose={() => setWhatsNewOpen(false)} />
     </Screen>
   );
 }

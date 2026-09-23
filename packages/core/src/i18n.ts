@@ -458,6 +458,11 @@ const en = {
   "login.signInToStart": "Sign in to start training",
   "login.googleFailed": "Google sign-in failed. Try again.",
   "login.continueGoogle": "Continue with Google",
+  "login.continueTelegram": "Continue with Telegram",
+  "login.continueApple": "Continue with Apple",
+  "login.telegramFirstStep": "To sign up with Telegram, open our bot and press Start. Then return and enter your username.",
+  "login.openTelegramBot": "Open @{username}",
+  "login.comingSoon": "Coming soon",
   "login.googleExpoGo": "Google sign-in needs an installed development build. Use Telegram in Expo Go.",
   "login.telegramUsername": "Telegram username",
   "login.firstTime":
@@ -605,6 +610,8 @@ const en = {
   "progress.vsPrevious": "vs prev.",
   "progress.weekOf": "Week of {date}",
   "progress.activity": "Weekly activity",
+  "progress.currentWeek": "This week",
+  "progress.weeklyHint": "Each bar is one Mon–Sun week. Select a bar for its dates and total.",
   "progress.exercises": "Exercises",
   "progress.records": "Personal records",
   "progress.recordsEmpty": "No new records in this period — keep pushing.",
@@ -772,6 +779,7 @@ const en = {
   // plural counts
   "count.exercises": "{n} exercise|{n} exercises",
   "count.sets": "{n} set|{n} sets",
+  "count.workouts": "{n} workout|{n} workouts",
   "count.lastWorkouts": "Last workout|Last {n} workouts",
 } as const;
 
@@ -1211,6 +1219,11 @@ const ru: Record<MessageKey, string> = {
   "login.signInToStart": "Войдите, чтобы начать тренироваться",
   "login.googleFailed": "Не удалось войти через Google. Попробуйте ещё раз.",
   "login.continueGoogle": "Продолжить с Google",
+  "login.continueTelegram": "Продолжить с Telegram",
+  "login.continueApple": "Продолжить с Apple",
+  "login.telegramFirstStep": "Чтобы зарегистрироваться через Telegram, откройте бота и нажмите «Start». Затем вернитесь и введите свой username.",
+  "login.openTelegramBot": "Открыть @{username}",
+  "login.comingSoon": "Скоро",
   "login.googleExpoGo": "Для входа через Google нужна установленная тестовая сборка. В Expo Go используйте Telegram.",
   "login.telegramUsername": "Имя пользователя Telegram",
   "login.firstTime":
@@ -1353,6 +1366,8 @@ const ru: Record<MessageKey, string> = {
   "progress.vsPrevious": "к пред.",
   "progress.weekOf": "Неделя с {date}",
   "progress.activity": "Активность по неделям",
+  "progress.currentWeek": "Эта неделя",
+  "progress.weeklyHint": "Каждый столбец — неделя с понедельника по воскресенье. Нажмите, чтобы увидеть даты и итог.",
   "progress.exercises": "Упражнения",
   "progress.records": "Личные рекорды",
   "progress.recordsEmpty": "В этом периоде новых рекордов нет — продолжайте!",
@@ -1520,6 +1535,7 @@ const ru: Record<MessageKey, string> = {
 
   "count.exercises": "{n} упражнение|{n} упражнения|{n} упражнений",
   "count.sets": "{n} подход|{n} подхода|{n} подходов",
+  "count.workouts": "{n} тренировка|{n} тренировки|{n} тренировок",
   "count.lastWorkouts":
     "Последняя тренировка|Последние {n} тренировки|Последние {n} тренировок",
 };
@@ -1959,6 +1975,11 @@ const uk: Record<MessageKey, string> = {
   "login.signInToStart": "Увійдіть, щоб почати тренуватися",
   "login.googleFailed": "Не вдалося увійти через Google. Спробуйте ще раз.",
   "login.continueGoogle": "Продовжити з Google",
+  "login.continueTelegram": "Продовжити з Telegram",
+  "login.continueApple": "Продовжити з Apple",
+  "login.telegramFirstStep": "Щоб зареєструватися через Telegram, відкрийте бота й натисніть «Start». Потім поверніться та введіть свій username.",
+  "login.openTelegramBot": "Відкрити @{username}",
+  "login.comingSoon": "Незабаром",
   "login.googleExpoGo": "Для входу через Google потрібна встановлена тестова збірка. В Expo Go використайте Telegram.",
   "login.telegramUsername": "Ім'я користувача Telegram",
   "login.firstTime":
@@ -2102,6 +2123,8 @@ const uk: Record<MessageKey, string> = {
   "progress.vsPrevious": "до попер.",
   "progress.weekOf": "Тиждень з {date}",
   "progress.activity": "Активність за тижнями",
+  "progress.currentWeek": "Цей тиждень",
+  "progress.weeklyHint": "Кожен стовпчик — тиждень від понеділка до неділі. Натисніть, щоб побачити дати й підсумок.",
   "progress.exercises": "Вправи",
   "progress.records": "Особисті рекорди",
   "progress.recordsEmpty":
@@ -2268,6 +2291,7 @@ const uk: Record<MessageKey, string> = {
 
   "count.exercises": "{n} вправа|{n} вправи|{n} вправ",
   "count.sets": "{n} підхід|{n} підходи|{n} підходів",
+  "count.workouts": "{n} тренування|{n} тренування|{n} тренувань",
   "count.lastWorkouts":
     "Останнє тренування|Останні {n} тренування|Останні {n} тренувань",
 };

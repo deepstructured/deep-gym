@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
-import * as AppleAuthentication from "expo-apple-authentication";
+import { useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
+import { useRouter } from "expo-router";
+import Svg, { Path } from "react-native-svg";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -17,7 +19,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   requestTelegramCode,
-  signInWithApple,
   signInWithGoogle,
   verifyTelegramCode,
 } from "../src/lib/native-auth";
@@ -27,49 +28,43 @@ import { useI18n } from "../src/providers/locale-provider";
 import { colors } from "../src/theme";
 import { BrandMark, GradientCard } from "../src/ui";
 
-type Method = "google" | "telegram";
 type TelegramStep = "username" | "code";
 // StoreClient also includes development builds; appOwnership singles out Expo Go.
 const isExpoGo = Constants.appOwnership === "expo";
 
+function GoogleMark() {
+  return <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45a5.52 5.52 0 01-2.4 3.62v3h3.87c2.27-2.09 3.58-5.17 3.58-8.8z" fill="#4285F4" />
+    <Path d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.87-3a7.24 7.24 0 01-10.8-3.8H1.26v3.1A12 12 0 0012 24z" fill="#34A853" />
+    <Path d="M5.27 14.28a7.2 7.2 0 010-4.56v-3.1H1.26a12 12 0 000 10.77l4.01-3.11z" fill="#FBBC05" />
+    <Path d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.43-3.43A11.98 11.98 0 001.26 6.62l4 3.1A7.17 7.17 0 0112 4.75z" fill="#EA4335" />
+  </Svg>;
+}
+
 export default function LoginScreen() {
   const { t } = useI18n();
-  const [method, setMethod] = useState<Method>(isExpoGo ? "telegram" : "google");
+  const router = useRouter();
+  const [telegramOpen, setTelegramOpen] = useState(false);
   const [step, setStep] = useState<TelegramStep>("username");
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [appleAvailable, setAppleAvailable] = useState(false);
+  const [pending, setPending] = useState<"google" | "telegram" | null>(null);
+  const busy = pending !== null;
   const [error, setError] = useState<string | null>(null);
   const botUsername = process.env.EXPO_PUBLIC_TELEGRAM_BOT_USERNAME?.replace(
     /^@/,
     "",
   );
 
-  useEffect(() => {
-    if (Platform.OS !== "ios" || isExpoGo) return;
-    let active = true;
-    void AppleAuthentication.isAvailableAsync()
-      .then((available) => {
-        if (active) setAppleAvailable(available);
-      })
-      .catch(() => {
-        if (active) setAppleAvailable(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  async function run(action: () => Promise<void>, fallback: "login.googleFailed" | "login.signInFailed" = "login.signInFailed") {
-    setBusy(true);
+  async function run(action: () => Promise<void>, fallback: "login.googleFailed" | "login.signInFailed" = "login.signInFailed", provider: "google" | "telegram" = "telegram") {
+    setPending(provider);
     setError(null);
     try {
       await action();
     } catch (cause) {
       setError(userErrorMessage(t, cause, fallback));
     } finally {
-      setBusy(false);
+      setPending(null);
     }
   }
 
@@ -114,65 +109,69 @@ export default function LoginScreen() {
             </Text>
           )}
 
-          {!isExpoGo && appleAvailable && isSupabaseConfigured ? (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
-              cornerRadius={15}
-              onPress={() => {
-                if (!busy) void run(signInWithApple);
-              }}
-              style={styles.appleButton}
-            />
-          ) : null}
-
-          <View style={styles.segmented}>
-            {(["google", "telegram"] as const).map((option) => (
-              <Pressable
-                key={option}
-                accessibilityRole="button"
-                accessibilityState={{ selected: method === option }}
-                disabled={busy}
-                onPress={() => {
-                  setMethod(option);
-                  setError(null);
-                }}
-                style={[
-                  styles.segment,
-                  method === option && styles.segmentActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    method === option && styles.segmentTextActive,
-                  ]}
-                >
-                  {option === "google" ? "Google" : "Telegram"}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {method === "google" && isExpoGo ? (
-            <Text style={styles.expoGoNote}>{t("login.googleExpoGo")}</Text>
-          ) : method === "google" ? (
+          <View style={styles.providerGroup}>
             <Pressable
               accessibilityRole="button"
-              disabled={busy || !isSupabaseConfigured}
-              onPress={() => run(signInWithGoogle, "login.googleFailed")}
+              accessibilityState={{ disabled: busy || isExpoGo || !isSupabaseConfigured }}
+              disabled={busy || isExpoGo || !isSupabaseConfigured}
+              onPress={() => void run(signInWithGoogle, "login.googleFailed", "google")}
               style={({ pressed }) => [
                 styles.primaryButton,
-                (pressed || busy || !isSupabaseConfigured) &&
+                styles.googleButton,
+                (pressed || busy || isExpoGo || !isSupabaseConfigured) &&
                   styles.buttonDimmed,
               ]}
             >
-              {busy ? <ActivityIndicator color="#14120C" /> : null}
-              <Text style={styles.primaryButtonText}>
+              {pending === "google" ? <ActivityIndicator color={colors.text} /> : <GoogleMark />}
+              <Text style={[styles.primaryButtonText, styles.googleButtonText]}>
                 {t("login.continueGoogle")}
               </Text>
             </Pressable>
-          ) : (
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: telegramOpen, disabled: busy || !isSupabaseConfigured }}
+              disabled={busy || !isSupabaseConfigured}
+              onPress={() => { setTelegramOpen((open) => !open); setError(null); }}
+              style={({ pressed }) => [styles.primaryButton, (pressed || busy || !isSupabaseConfigured) && styles.buttonDimmed]}
+            >
+              <Ionicons name="paper-plane-outline" size={20} color={colors.black} />
+              <Text style={styles.primaryButtonText}>{t("login.continueTelegram")}</Text>
+            </Pressable>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: true }}
+              disabled
+              style={styles.applePlaceholder}
+            >
+              <Ionicons name="logo-apple" size={20} color={colors.text} />
+              <Text style={styles.applePlaceholderText}>{t("login.continueApple")}</Text>
+              <Text style={styles.comingSoon}>{t("login.comingSoon")}</Text>
+            </Pressable>
+          </View>
+
+          {isExpoGo ? (
+            <Text style={styles.expoGoNote}>{t("login.googleExpoGo")}</Text>
+          ) : null}
+
+          {botUsername ? (
+            <View style={styles.telegramGuide}>
+              <Text style={styles.telegramGuideText}>{t("login.telegramFirstStep")}</Text>
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel={t("login.openTelegramBot", { username: botUsername })}
+                onPress={() => void Linking.openURL(`https://t.me/${botUsername}`)}
+                style={({ pressed }) => [styles.botLinkButton, pressed && styles.buttonDimmed]}
+              >
+                <Ionicons name="paper-plane" size={18} color={colors.lime} />
+                <Text style={styles.botLinkText}>{t("login.openTelegramBot", { username: botUsername })}</Text>
+                <Ionicons name="open-outline" size={16} color={colors.lime} />
+              </Pressable>
+            </View>
+          ) : null}
+
+          {telegramOpen ? (
             <View style={styles.telegramForm}>
               {step === "username" ? (
                 <>
@@ -192,18 +191,6 @@ export default function LoginScreen() {
                       if (username.trim()) void sendCode();
                     }}
                   />
-                  {botUsername ? (
-                    <Pressable
-                      accessibilityRole="link"
-                      onPress={() =>
-                        void Linking.openURL(`https://t.me/${botUsername}`)
-                      }
-                    >
-                      <Text style={styles.botLink}>
-                        {t("login.firstTime")} @{botUsername}
-                      </Text>
-                    </Pressable>
-                  ) : null}
                   <Pressable
                     accessibilityRole="button"
                     disabled={busy || !username.trim() || !isSupabaseConfigured}
@@ -276,7 +263,15 @@ export default function LoginScreen() {
               )}
               <Text style={styles.botNote}>{t("login.botNote")}</Text>
             </View>
-          )}
+          ) : null}
+
+          <Pressable
+            accessibilityRole="link"
+            onPress={() => router.push("/privacy")}
+            style={styles.privacyLink}
+          >
+            <Text style={styles.privacyLinkText}>{t("settings.privacyPolicy")}</Text>
+          </Pressable>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </ScrollView>
@@ -334,33 +329,70 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 26,
   },
-  appleButton: {
-    width: "100%",
-    height: 54,
-    marginBottom: 18,
-  },
-  segmented: {
+  providerGroup: { gap: 10 },
+  applePlaceholder: {
+    minHeight: 54,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.raised,
+    opacity: 0.62,
+    paddingHorizontal: 18,
     flexDirection: "row",
-    borderRadius: 15,
-    padding: 4,
-    backgroundColor: colors.surface,
-    marginBottom: 18,
-  },
-  segment: {
-    flex: 1,
-    minHeight: 42,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
+    gap: 10,
   },
-  segmentActive: { backgroundColor: colors.raised },
-  segmentText: {
+  applePlaceholderText: {
+    color: colors.text,
+    fontFamily: "Urbanist_500Medium",
+    fontSize: 15,
+  },
+  comingSoon: {
     color: colors.muted,
-    fontFamily: "Urbanist_600SemiBold",
-    fontSize: 14,
+    fontFamily: "Urbanist_500Medium",
+    fontSize: 11,
   },
-  segmentTextActive: { color: colors.text },
-  telegramForm: { gap: 10 },
+  privacyLink: { alignSelf: "center", marginTop: 18, padding: 8 },
+  privacyLinkText: {
+    color: colors.muted,
+    fontFamily: "Urbanist_500Medium",
+    fontSize: 13,
+    textDecorationLine: "underline",
+  },
+  telegramForm: { gap: 10, marginTop: 18 },
+  telegramGuide: {
+    marginTop: 18,
+    padding: 16,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+  },
+  telegramGuideText: {
+    color: colors.text,
+    fontFamily: "Urbanist_500Medium",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  botLinkButton: {
+    alignSelf: "flex-start",
+    minHeight: 42,
+    paddingHorizontal: 14,
+    gap: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(215,246,81,0.45)",
+    backgroundColor: "rgba(215,246,81,0.12)",
+  },
+  botLinkText: {
+    color: colors.lime,
+    fontFamily: "Urbanist_700Bold",
+    fontSize: 15,
+  },
   label: {
     color: colors.text,
     fontFamily: "Urbanist_600SemiBold",
@@ -393,18 +425,23 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 14,
   },
+  googleButton: {
+    backgroundColor: colors.raised,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 28,
+  },
   primaryButtonText: {
     color: "#14120C",
     fontFamily: "Urbanist_700Bold",
     fontSize: 16,
   },
-  buttonDimmed: { opacity: 0.68 },
-  botLink: {
-    color: colors.lime,
+  googleButtonText: {
+    color: colors.text,
     fontFamily: "Urbanist_500Medium",
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 15,
   },
+  buttonDimmed: { opacity: 0.68 },
   botNote: {
     color: colors.faint,
     fontFamily: "Urbanist_400Regular",
@@ -421,6 +458,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     padding: 16,
     textAlign: "center",
+    marginTop: 14,
   },
   switchUser: {
     color: colors.lime,

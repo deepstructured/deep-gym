@@ -1,19 +1,35 @@
 @use "../../styles/palette" as *;
 
 .group {
+  position: relative;
   display: flex;
-  gap: 0.125rem;
   border-radius: 9999px;
   border: 1px solid rgba(#fff, 0.05);
   background: rgba(#fff, 0.03);
   padding: 0.1875rem;
+  isolation: isolate;
 
   @include desktop {
     max-width: 22rem;
   }
 }
 
+.thumb {
+  position: absolute;
+  z-index: 0;
+  top: 0.1875rem;
+  bottom: 0.1875rem;
+  left: 0.1875rem;
+  width: calc((100% - 0.375rem) / 5);
+  border-radius: 9999px;
+  background: rgba(#fff, 0.12);
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events: none;
+}
+
 .option {
+  position: relative;
+  z-index: 1;
   height: 1.75rem;
   min-width: 0;
   flex: 1;
@@ -28,6 +44,11 @@
 }
 
 .active {
-  background: rgba(#fff, 0.12);
   color: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb {
+    transition: none;
+  }
 }

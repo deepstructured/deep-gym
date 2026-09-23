@@ -1,18 +1,34 @@
 @use "../../styles/palette" as *;
 
 .group {
+  position: relative;
   display: flex;
   border-radius: 9999px;
   border: 1px solid $line;
   background: $surface;
   padding: 0.25rem;
+  isolation: isolate;
 
   @include desktop {
     max-width: 26rem;
   }
 }
 
+.thumb {
+  position: absolute;
+  z-index: 0;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: 0.25rem;
+  border-radius: 9999px;
+  background: $lime;
+  pointer-events: none;
+  transition: transform 270ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
 .option {
+  position: relative;
+  z-index: 1;
   height: 2.75rem;
   flex: 1;
   border-radius: 9999px;
@@ -36,15 +52,22 @@
 
 /* Declared after .option so its colors win at equal specificity. */
 .active {
-  background: $lime;
+  background: transparent;
   color: #000;
 
   @include hover {
-    background: $lime;
+    background: transparent;
     color: #000;
   }
 
   &:active {
+    background: transparent;
     color: #000;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb {
+    transition: none;
   }
 }

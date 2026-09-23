@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
-import { TextInput, View } from "react-native";
+import { Pressable, TextInput, View } from "react-native";
 import {
   buildPlateSpecs,
   calcPlateVariants,
@@ -19,7 +19,7 @@ import {
 import { useProfile } from "../data/queries";
 import { useI18n } from "../providers/locale-provider";
 import { colors, fonts, radii } from "../theme";
-import { Button, Card, DotValue, GradientCard, Screen, Segmented, Text } from "../ui";
+import { Card, DotValue, GradientCard, Screen, Segmented, Text } from "../ui";
 import { ErrorState, Header, LoadingState } from "./common";
 
 type LoadMode = "free_weight" | "machine" | "dumbbell";
@@ -39,13 +39,14 @@ function percentOver(targetKg: number, currentKg: number): string {
 function PlateChip({ item }: { item: PlateCount }) {
   return (
     <View style={{
-      flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 7,
-      minHeight: 38, borderRadius: radii.pill, paddingHorizontal: 10,
+      flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 6,
+      minHeight: 31, borderRadius: radii.pill, paddingLeft: 8, paddingRight: 12,
       backgroundColor: colors.raised, borderWidth: 1, borderColor: colors.line,
     }}>
-      <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: Math.min(5, 2 + item.plate.kg / 10), borderColor: colors.lime }} />
-      <Text weight="semibold">{item.count * 2}×</Text>
-      <Text variant="caption" tone="muted">{item.plate.value} {item.plate.unit}</Text>
+      <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: Math.min(6, 2.5 + item.plate.kg / 9), borderColor: "rgba(215,246,81,0.8)" }} />
+      <DotValue value={item.count * 2} size={14} />
+      <Text variant="caption" tone="faint">×</Text>
+      <Text style={{ fontSize: 14 }}>{item.plate.value} {item.plate.unit}</Text>
     </View>
   );
 }
@@ -53,9 +54,10 @@ function PlateChip({ item }: { item: PlateCount }) {
 function EditPlatesButton() {
   const { t } = useI18n();
   return (
-    <Button variant="surface" block onPress={() => router.push({ pathname: "/settings", params: { open: "plates" } })}>
-      {t("plates.editPlates")}
-    </Button>
+    <Pressable onPress={() => router.push({ pathname: "/settings", params: { open: "plates" } })}
+      accessibilityRole="button" style={{ alignSelf: "center", paddingVertical: 12, paddingHorizontal: 16 }}>
+      <Text weight="semibold" tone="lime" style={{ fontSize: 14 }}>{t("plates.editPlates")}</Text>
+    </Pressable>
   );
 }
 
@@ -144,7 +146,7 @@ export function PlateCalculatorScreen() {
             <Text variant="caption" tone="muted" style={{ marginBottom: 7 }}>{t("detail.weightUnit", { unit })}</Text>
             <TextInput
               value={weightText}
-              onChangeText={setWeightText}
+              onChangeText={(value) => setWeightText(value.replace(/[^\d.,]/g, ""))}
               keyboardType="decimal-pad"
               autoCorrect={false}
               selectTextOnFocus
@@ -169,102 +171,113 @@ export function PlateCalculatorScreen() {
       </Card>
 
       {weightKg != null ? <>
-        <GradientCard variant="indigo" style={{ minHeight: 138, marginBottom: 14 }}>
-          <View style={{ flex: 1, justifyContent: "space-between" }}>
-            <Text variant="micro" tone="white">{title}</Text>
-            <DotValue value={roundWeight(kgToUnit(weightKg, unit))} suffix={isDumbbell ? t("plates.each", { unit }) : unit} size={46} />
+        <Text variant="micro" tone="muted" style={{ marginBottom: 9 }}>{title}</Text>
+        <GradientCard variant="indigo" radius={radii.tile} padding={20} style={{ minHeight: 124, marginBottom: 20 }}>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+            <DotValue value={roundWeight(kgToUnit(weightKg, unit))} suffix={isDumbbell ? t("plates.each", { unit }) : unit} size={48} color={colors.white} suffixStyle={{ color: colors.white, opacity: 0.7 }} />
             {isBarbell && !barCoversAll ? (
-              <Text variant="caption" tone="muted">{t("plates.includesBar", { bar: formatWeight(barKg, unit) })}</Text>
+              <Text variant="caption" tone="muted" style={{ marginTop: 8, textAlign: "center", color: "rgba(255,255,255,0.6)" }}>{t("plates.includesBar", { bar: formatWeight(barKg, unit) })}</Text>
             ) : null}
           </View>
         </GradientCard>
 
         {plateSteps.length || dumbbellSteps.length ? (
-          <Card style={{ marginBottom: 14 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-              <Ionicons name="trending-up" size={17} color={colors.lime} />
-              <Text variant="title">{t("plates.nextStep")}</Text>
+          <View style={{ marginBottom: 20, borderRadius: radii.tile, borderWidth: 1, borderColor: "rgba(215,246,81,0.3)", backgroundColor: "rgba(215,246,81,0.045)", padding: 12, gap: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{ width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(215,246,81,0.16)" }}><Ionicons name="arrow-up" size={13} color={colors.lime} /></View>
+              <Text weight="semibold" style={{ fontSize: 13 }}>{t("plates.nextStep")}</Text>
             </View>
-            <Text variant="caption" tone="muted" style={{ marginTop: 5, marginBottom: 15 }}>
+            <Text tone="faint" style={{ fontSize: 11, lineHeight: 16 }}>
               {t(isDumbbell ? "plates.nextDumbbellHint" : "plates.nextHint")}
             </Text>
             {isDumbbell ? (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                 {dumbbellSteps.map((targetKg, index) => (
-                  <View key={targetKg} style={{ backgroundColor: index === 0 ? "rgba(215,246,81,0.12)" : colors.raised, borderRadius: radii.medium, paddingHorizontal: 13, paddingVertical: 11 }}>
-                    <Text weight="semibold" tone={index === 0 ? "lime" : "primary"}>{formatWeight(targetKg, unit)}</Text>
-                    <Text variant="caption" tone="muted">{percentOver(targetKg, weightKg)}</Text>
+                  <View key={targetKg} style={{ flexDirection: "row", alignItems: "center", gap: 6, borderRadius: radii.pill, borderWidth: 1, borderColor: index === 0 ? "rgba(215,246,81,0.45)" : colors.line, backgroundColor: colors.raised, paddingHorizontal: 10, paddingVertical: 6 }}>
+                    <DotValue value={roundWeight(kgToUnit(targetKg, unit))} size={12} color={index === 0 ? colors.lime : colors.text} />
+                    <Text variant="caption" tone="muted">{unit}</Text>
+                    <Text variant="caption" tone="lime">{percentOver(targetKg, weightKg)}</Text>
                   </View>
                 ))}
               </View>
             ) : (
-              <View style={{ gap: 13 }}>
-                {plateSteps.map((step, index) => (
-                  <View key={step.deltaKg} style={{
-                    borderRadius: radii.medium, padding: 12, backgroundColor: index === 0 ? "rgba(215,246,81,0.08)" : colors.raised,
-                    borderWidth: 1, borderColor: index === 0 ? "rgba(215,246,81,0.22)" : colors.line,
-                  }}>
-                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 9 }}>
-                      <Text tone="lime" weight="bold">+</Text>
-                      <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 5 }}>
-                        {step.add.map((item) => <PlateChip key={`${item.plate.unit}-${item.plate.value}`} item={item} />)}
-                      </View>
-                      <View style={{ alignItems: "flex-end" }}>
-                        <Text weight="semibold">{formatWeight(step.targetKg, unit)}</Text>
-                        <Text variant="caption" tone="muted">{percentOver(step.targetKg, weightKg)}</Text>
-                      </View>
+              <View style={{ gap: 8 }}>
+                {plateSteps[0] ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                    <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+                      <DotValue value="+" size={18} color={colors.lime} />
+                      {plateSteps[0].add.map((item) => <PlateChip key={`${item.plate.unit}-${item.plate.value}`} item={item} />)}
+                    </View>
+                    <View style={{ alignItems: "flex-end" }}>
+                      <DotValue value={roundWeight(kgToUnit(plateSteps[0].targetKg, unit))} suffix={unit} size={20} />
+                      <Text variant="caption" tone="lime">{percentOver(plateSteps[0].targetKg, weightKg)}</Text>
                     </View>
                   </View>
-                ))}
+                ) : null}
+                {plateSteps.length > 1 ? (
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                    {plateSteps.slice(1).map((step) => (
+                      <View key={step.deltaKg} style={{ flexDirection: "row", alignItems: "center", gap: 5, borderRadius: radii.pill, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised, paddingHorizontal: 10, paddingVertical: 6 }}>
+                        <Text variant="caption" tone="faint">+{step.add.map((item) => `${item.count * 2}×${item.plate.value}`).join(" ")}</Text>
+                        <DotValue value={roundWeight(kgToUnit(step.targetKg, unit))} size={12} />
+                        <Text variant="caption" tone="muted">{unit}</Text>
+                        <Text variant="caption" tone="lime">{percentOver(step.targetKg, weightKg)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             )}
-          </Card>
+          </View>
         ) : null}
 
         {isDumbbell ? (
-          <Card style={{ marginBottom: 14 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Text weight="semibold">{t("plates.dumbbell", { weight: formatWeight(weightKg, unit) })}</Text>
-              <DotValue value="×2" size={26} color={colors.lime} />
+          <View style={{ marginBottom: 20, gap: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderRadius: radii.tile, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, paddingHorizontal: 16, paddingVertical: 12 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+                <Ionicons name="barbell-outline" size={24} color={colors.lime} />
+                <Text weight="medium" numberOfLines={2}>{t("plates.dumbbell", { weight: formatWeight(weightKg, unit) })}</Text>
+              </View>
+              <DotValue value="x2" size={20} color={colors.lime} />
             </View>
-            <Text variant="caption" tone="muted" style={{ marginTop: 10 }}>
-              {t("plates.oneEachHand")} · {roundWeight(kgToUnit(weightKg * 2, unit))} {t("plates.totalLoad", { unit })}
+            <Text tone="muted" style={{ fontSize: 14, lineHeight: 20, textAlign: "center" }}>
+              {t("plates.oneEachHand")} · <Text style={{ fontFamily: fonts.dot }}>{roundWeight(kgToUnit(weightKg * 2, unit))}</Text> {t("plates.totalLoad", { unit })}
             </Text>
-          </Card>
+          </View>
         ) : barCoversAll ? (
-          <Card style={{ marginBottom: 14 }}><Text tone="muted">{t("plates.barCovers")}</Text></Card>
+          <Text tone="muted" style={{ marginBottom: 20, textAlign: "center", fontSize: 14 }}>{t("plates.barCovers")}</Text>
         ) : variants.length ? (
-          <View style={{ marginBottom: 14 }}>
-            <Text variant="micro" tone="muted" style={{ marginBottom: 9, marginLeft: 3 }}>{t("plates.ways")}</Text>
+          <View style={{ marginBottom: 20, gap: 8 }}>
+            <Text tone="muted" weight="medium" style={{ fontSize: 13, marginBottom: 2 }}>{t("plates.ways")}</Text>
             {variants.map((variant, index) => (
-              <Card key={index} variant={index === 0 ? "live" : "surface"} padding={15} style={{ marginBottom: 8 }}>
+              <View key={index} style={{ borderRadius: radii.tile, borderWidth: 1, borderColor: index === 0 ? "rgba(215,246,81,0.4)" : colors.line, backgroundColor: index === 0 ? "rgba(215,246,81,0.05)" : colors.surface, paddingHorizontal: 16, paddingVertical: 12 }}>
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, alignItems: "center" }}>
                   {variant.counts.map((item) => <PlateChip key={`${item.plate.unit}-${item.plate.value}`} item={item} />)}
-                  {index === 0 ? <Text variant="caption" tone="lime">{t("plates.fewest")}</Text> : null}
+                  {index === 0 ? <View style={{ marginLeft: "auto", borderRadius: radii.pill, borderWidth: 1, borderColor: "rgba(215,246,81,0.28)", backgroundColor: "rgba(215,246,81,0.09)", paddingHorizontal: 10, paddingVertical: 5 }}><Text variant="caption" tone="lime">{t("plates.fewest")}</Text></View> : null}
                 </View>
-                {isBarbell ? (
-                  <Text variant="caption" tone="muted" style={{ marginTop: 10 }}>
+                {(isBarbell || Math.abs(variant.assembledKg - weightKg) > 0.05) ? (
+                  <Text variant="caption" tone="faint" style={{ marginTop: 6 }}>
+                    {isBarbell ? <>
                     {t("plates.perSide")} {variant.counts.map((item) => `${item.count} × ${item.plate.value} ${item.plate.unit}`).join(" + ")}
+                    </> : null}
+                    {Math.abs(variant.assembledKg - weightKg) > 0.05 ? `${isBarbell ? " · " : ""}≈ ${formatWeight(variant.assembledKg, unit)} ${t("plates.total")}` : null}
                   </Text>
                 ) : null}
-                {Math.abs(variant.assembledKg - weightKg) > 0.05 ? (
-                  <Text variant="caption" tone="muted" style={{ marginTop: 5 }}>≈ {formatWeight(variant.assembledKg, unit)} {t("plates.total")}</Text>
-                ) : null}
-              </Card>
+              </View>
             ))}
           </View>
         ) : closest?.counts.length ? (
-          <Card style={{ marginBottom: 14 }}>
-            <Text variant="micro" tone="muted" style={{ marginBottom: 12 }}>{t("plates.closest")}</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>
+          <View style={{ gap: 8, marginBottom: 20 }}>
+            <Text tone="muted" weight="medium" style={{ fontSize: 13 }}>{t("plates.closest")}</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, borderRadius: radii.tile, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.surface, paddingHorizontal: 16, paddingVertical: 12 }}>
               {closest.counts.map((item) => <PlateChip key={`${item.plate.unit}-${item.plate.value}`} item={item} />)}
             </View>
-            <Text variant="caption" tone="muted" style={{ marginTop: 13 }}>
+            <Text tone="muted" style={{ fontSize: 14, lineHeight: 20, textAlign: "center" }}>
               {t("plates.missing", { weight: formatWeight(closest.remainderKg, unit) })}
             </Text>
-          </Card>
+          </View>
         ) : (
-          <Card style={{ marginBottom: 14 }}><Text tone="muted">{t("plates.none")}</Text></Card>
+          <Text tone="muted" style={{ marginBottom: 20, textAlign: "center", fontSize: 14 }}>{t("plates.none")}</Text>
         )}
       </> : null}
 

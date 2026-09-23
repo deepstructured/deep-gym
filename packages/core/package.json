@@ -18,9 +18,11 @@
     "./i18n": "./src/i18n.ts",
     "./dates": "./src/dates.ts",
     "./analytics": "./src/analytics.ts",
+    "./weekly-activity": "./src/weekly-activity.ts",
     "./next-workout": "./src/next-workout.ts",
     "./avatar-presets": "./src/avatar-presets.ts",
     "./home-layout": "./src/home-layout.ts",
+    "./privacy-policy": "./src/privacy-policy.ts",
     "./releases": "./src/releases.ts"
   }
 }
