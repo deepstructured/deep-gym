@@ -2,15 +2,22 @@
   "name": "deepgym",
   "version": "1.6.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
+    "mobile": "npm run start -w @deepgym/mobile",
+    "mobile:go": "npm run go -w @deepgym/mobile",
+    "mobile:typecheck": "npm run typecheck -w @deepgym/mobile",
     "icons": "node scripts/generate-icons.mjs",
     "icons:check": "node scripts/generate-icons.mjs --check",
     "avatars:legacy": "node scripts/generate-avatars.mjs",
-    "verify": "npm run typecheck && npm run icons:check",
+    "verify": "npm run typecheck && npm run mobile:typecheck && npm run icons:check",
     "precommit": "npm run verify && git diff --check"
   },
   "dependencies": {
@@ -24,8 +31,8 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "next": "^15.3.1",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "sass": "^1.101.0",
     "zustand": "^5.0.4"
   },

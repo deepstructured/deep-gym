@@ -5,6 +5,7 @@ import { getSupabaseServer } from "@/shared/lib/supabase/server";
 import { normalizeTelegramUsername } from "@/shared/lib/telegram";
 
 const MAX_ATTEMPTS = 5;
+const MAX_OTP_CONFLICT_RETRIES = 10;
 
 function telegramEmail(telegramId: number): string {
   return `tg-${telegramId}@telegram.deepgym.app`;
@@ -21,49 +22,100 @@ export async function POST(request: NextRequest) {
 
   const admin = getSupabaseAdmin();
 
-  const { data: link } = await admin
+  const { data: link, error: linkLookupError } = await admin
     .from("telegram_links")
     .select("telegram_id, username, user_id")
     .ilike("username", username)
     .maybeSingle();
+  if (linkLookupError) {
+    return NextResponse.json({ error: "Failed to verify code" }, { status: 500 });
+  }
   if (!link) {
     return NextResponse.json({ error: "Unknown username" }, { status: 404 });
   }
 
-  const { data: otp } = await admin
-    .from("telegram_otps")
-    .select("*")
-    .eq("telegram_id", link.telegram_id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!otp || new Date(otp.expires_at).getTime() < Date.now()) {
-    return NextResponse.json(
-      { error: "Code expired. Request a new one." },
-      { status: 410 },
-    );
-  }
-  if (otp.attempts >= MAX_ATTEMPTS) {
-    return NextResponse.json(
-      { error: "Too many attempts. Request a new code." },
-      { status: 429 },
-    );
-  }
-
-  if (otp.code_hash !== hashOtp(code, link.telegram_id)) {
-    await admin
+  const submittedHash = hashOtp(code, link.telegram_id);
+  let consumed = false;
+  for (let retry = 0; retry < MAX_OTP_CONFLICT_RETRIES; retry++) {
+    const { data: otp, error: otpLookupError } = await admin
       .from("telegram_otps")
-      .update({ attempts: otp.attempts + 1 })
-      .eq("id", otp.id);
+      .select("id, code_hash, attempts, expires_at")
+      .eq("telegram_id", link.telegram_id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (otpLookupError) {
+      return NextResponse.json({ error: "Failed to verify code" }, { status: 500 });
+    }
+    if (!otp || new Date(otp.expires_at).getTime() <= Date.now()) {
+      return NextResponse.json(
+        { error: "Code expired. Request a new one." },
+        { status: 410 },
+      );
+    }
+    if (otp.attempts >= MAX_ATTEMPTS) {
+      return NextResponse.json(
+        { error: "Too many attempts. Request a new code." },
+        { status: 429 },
+      );
+    }
+
+    // Compare-and-swap on attempts: concurrent requests cannot share a try.
+    // Include expiry in the write so a code expiring after the read is rejected.
+    const stillValidAt = new Date().toISOString();
+    if (otp.code_hash !== submittedHash) {
+      const { data: updated, error: updateError } = await admin
+        .from("telegram_otps")
+        .update({ attempts: otp.attempts + 1 })
+        .eq("id", otp.id)
+        .eq("attempts", otp.attempts)
+        .gt("expires_at", stillValidAt)
+        .select("id");
+      if (updateError) {
+        return NextResponse.json({ error: "Failed to verify code" }, { status: 500 });
+      }
+      if (updated?.length) {
+        return NextResponse.json(
+          { error: `Wrong code (${MAX_ATTEMPTS - otp.attempts - 1} attempts left)` },
+          { status: 401 },
+        );
+      }
+      continue;
+    }
+
+    // Only the request that deleted this exact OTP version may mint a session.
+    const { data: deleted, error: deleteError } = await admin
+      .from("telegram_otps")
+      .delete()
+      .eq("id", otp.id)
+      .eq("attempts", otp.attempts)
+      .gt("expires_at", stillValidAt)
+      .select("id");
+    if (deleteError) {
+      return NextResponse.json({ error: "Failed to verify code" }, { status: 500 });
+    }
+    if (deleted?.length) {
+      consumed = true;
+      break;
+    }
+  }
+  if (!consumed) {
     return NextResponse.json(
-      { error: `Wrong code (${MAX_ATTEMPTS - otp.attempts - 1} attempts left)` },
-      { status: 401 },
+      { error: "Code verification was busy. Try again." },
+      { status: 409 },
     );
   }
 
-  // Code is valid — burn it
-  await admin.from("telegram_otps").delete().eq("telegram_id", link.telegram_id);
+  // Keep the original invalidation behavior if concurrent code requests ever
+  // left older OTP rows behind. None of those codes may become usable after
+  // the latest code has been consumed.
+  const { error: cleanupError } = await admin
+    .from("telegram_otps")
+    .delete()
+    .eq("telegram_id", link.telegram_id);
+  if (cleanupError) {
+    return NextResponse.json({ error: "Failed to verify code" }, { status: 500 });
+  }
 
   // Find or create the Supabase user
   const email = telegramEmail(link.telegram_id);

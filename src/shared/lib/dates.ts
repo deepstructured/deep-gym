@@ -1,5 +1,6 @@
 import { format, parseISO, type Locale } from "date-fns";
 import { enUS, ru, uk } from "date-fns/locale";
+export { fromISODate, toISODate, todayISO } from "../../../packages/core/src/dates";
 
 const DATE_LOCALES = { en: enUS, ru, uk } as const;
 export type DateLang = keyof typeof DATE_LOCALES;
@@ -19,19 +20,6 @@ export function getDateLocale(): Locale {
 /** "MMM d" reads backwards in ru/uk — those want "d MMM". */
 function dayFirst(): boolean {
   return currentLang !== "en";
-}
-
-/** ISO date (yyyy-MM-dd) for a local Date. */
-export function toISODate(date: Date): string {
-  return format(date, "yyyy-MM-dd");
-}
-
-export function todayISO(): string {
-  return toISODate(new Date());
-}
-
-export function fromISODate(iso: string): Date {
-  return parseISO(iso);
 }
 
 export function formatDay(iso: string): string {
