@@ -15,7 +15,7 @@ import { SessionLoading } from "./session-loading";
 
 /** Mirrors the web startup order: eligibility, onboarding, then release notes. */
 export function ProductExperience({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, resetLocalSession } = useAuth();
   const { t } = useI18n();
   const pathname = usePathname();
   const params = useGlobalSearchParams<{ "preview-whats-new"?: string }>();
@@ -24,6 +24,8 @@ export function ProductExperience({ children }: { children: ReactNode }) {
   const updateProfile = useUpdateProfile();
   const [releaseDismissed, setReleaseDismissed] = useState(false);
   const [previewDismissed, setPreviewDismissed] = useState(false);
+  const [resettingSession, setResettingSession] = useState(false);
+  const [sessionResetError, setSessionResetError] = useState(false);
   const profile = profileQuery.data;
   const needsWorkoutCheck = Boolean(
     profile &&
@@ -56,6 +58,43 @@ export function ProductExperience({ children }: { children: ReactNode }) {
       router.replace({ pathname: "/onboarding", params: { next: pathname } });
     }
   }, [needsOnboarding, pathname]);
+
+  if (profileQuery.isError && !profile) {
+    return (
+      <Screen scroll={false} contentStyle={{ justifyContent: "center", gap: 18 }}>
+        <Card style={{ paddingVertical: 15 }}>
+          <BrandMark size={36} />
+          <Text style={{ marginTop: 16 }}>{t("auth.profileUnavailable")}</Text>
+          <Button
+            variant="lime"
+            block
+            loading={profileQuery.isFetching}
+            onPress={() => void profileQuery.refetch()}
+            style={{ marginTop: 22 }}
+          >
+            {t("common.retry")}
+          </Button>
+          <Button
+            variant="surface"
+            block
+            loading={resettingSession}
+            onPress={() => {
+              setResettingSession(true);
+              setSessionResetError(false);
+              void resetLocalSession().catch(() => {
+                setSessionResetError(true);
+                setResettingSession(false);
+              });
+            }}
+            style={{ marginTop: 10 }}
+          >
+            {t("auth.resetLocalSession")}
+          </Button>
+          {sessionResetError ? <Text tone="pink" style={{ marginTop: 12 }}>{t("common.error")}</Text> : null}
+        </Card>
+      </Screen>
+    );
+  }
 
   if (needsWorkoutCheck && workoutCountQuery.isError) {
     return (

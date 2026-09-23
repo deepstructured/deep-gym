@@ -566,8 +566,8 @@ export function HomeScreen() {
         </Text>
       </View>
 
-      {(profile.isLoading || workouts.isLoading) && !profile.data && !workouts.data ? <LoadingState /> : null}
-      {(profile.error || workouts.error) && !profile.data && !workouts.data ? (
+      {(profile.isLoading || workouts.isLoading) && !profile.data && !workouts.data && !profile.error && !workouts.error ? <LoadingState /> : null}
+      {(!profile.data && profile.error) || (!workouts.data && workouts.error) ? (
         <ErrorState
           message={String(profile.error?.message ?? workouts.error?.message)}
           retry={() => { profile.refetch(); workouts.refetch(); }}
