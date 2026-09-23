@@ -11,6 +11,8 @@ Expo / React Native app in the same npm workspace as the Next.js web app.
 
 The app reads and writes the same Supabase project as the web app. Its auth session is stored on the device with AsyncStorage; the server's RLS policies remain the data access boundary.
 
+If Expo Go stays on a dark loading screen, wait five seconds and tap **Reset local session**. This clears only the mobile Supabase credentials and reloads the app. Expo Go starts on Telegram sign-in; Google OAuth and native Apple sign-in are available in signed development builds.
+
 `EXPO_PUBLIC_WEB_URL` must be reachable from the iPhone. `http://localhost:3000` points at the phone itself, not the laptop. Use the deployed HTTPS web API, or the laptop's Wi-Fi address if testing a local Next server. Google OAuth needs this app's custom URL scheme and therefore cannot finish inside Expo Go. Telegram OTP can be used for Expo Go when its web API is reachable; use only a demo identity while testing writes against the live database. The native Apple login should be validated in a signed development build.
 
 ## Database migration

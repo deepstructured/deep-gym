@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
   createSessionFromUrl,
@@ -8,6 +8,7 @@ import {
 } from "../../src/lib/native-auth";
 import { useAuth } from "../../src/providers/auth-provider";
 import { useI18n } from "../../src/providers/locale-provider";
+import { SessionLoading } from "../../src/providers/session-loading";
 import { userErrorMessage } from "../../src/lib/user-error";
 import { colors } from "../../src/theme";
 
@@ -52,18 +53,14 @@ export default function AuthCallbackScreen() {
     };
   }, [code, authError, error_description, router, t, user]);
 
+  if (!error) return <SessionLoading />;
+
   return (
     <View style={styles.root}>
-      {error ? (
-        <>
-          <Text style={styles.error}>{error}</Text>
-          <Pressable onPress={() => router.replace("/login")}>
-            <Text style={styles.link}>{t("login.backToSignIn")}</Text>
-          </Pressable>
-        </>
-      ) : (
-        <ActivityIndicator color={colors.lime} />
-      )}
+      <Text style={styles.error}>{error}</Text>
+      <Pressable onPress={() => router.replace("/login")}>
+        <Text style={styles.link}>{t("login.backToSignIn")}</Text>
+      </Pressable>
     </View>
   );
 }

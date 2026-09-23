@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import * as AppleAuthentication from "expo-apple-authentication";
+import Constants from "expo-constants";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -28,10 +29,12 @@ import { BrandMark, GradientCard } from "../src/ui";
 
 type Method = "google" | "telegram";
 type TelegramStep = "username" | "code";
+// StoreClient also includes development builds; appOwnership singles out Expo Go.
+const isExpoGo = Constants.appOwnership === "expo";
 
 export default function LoginScreen() {
   const { t } = useI18n();
-  const [method, setMethod] = useState<Method>("google");
+  const [method, setMethod] = useState<Method>(isExpoGo ? "telegram" : "google");
   const [step, setStep] = useState<TelegramStep>("username");
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
@@ -44,7 +47,7 @@ export default function LoginScreen() {
   );
 
   useEffect(() => {
-    if (Platform.OS !== "ios") return;
+    if (Platform.OS !== "ios" || isExpoGo) return;
     let active = true;
     void AppleAuthentication.isAvailableAsync()
       .then((available) => {
@@ -111,7 +114,7 @@ export default function LoginScreen() {
             </Text>
           )}
 
-          {appleAvailable && isSupabaseConfigured ? (
+          {!isExpoGo && appleAvailable && isSupabaseConfigured ? (
             <AppleAuthentication.AppleAuthenticationButton
               buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
               buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
@@ -151,7 +154,9 @@ export default function LoginScreen() {
             ))}
           </View>
 
-          {method === "google" ? (
+          {method === "google" && isExpoGo ? (
+            <Text style={styles.expoGoNote}>{t("login.googleExpoGo")}</Text>
+          ) : method === "google" ? (
             <Pressable
               accessibilityRole="button"
               disabled={busy || !isSupabaseConfigured}
@@ -406,6 +411,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "center",
     marginTop: 2,
+  },
+  expoGoNote: {
+    color: colors.muted,
+    backgroundColor: colors.surface,
+    borderRadius: 13,
+    fontFamily: "Urbanist_500Medium",
+    fontSize: 14,
+    lineHeight: 20,
+    padding: 16,
+    textAlign: "center",
   },
   switchUser: {
     color: colors.lime,

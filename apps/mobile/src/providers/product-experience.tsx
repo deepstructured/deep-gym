@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useGlobalSearchParams, usePathname } from "expo-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { View } from "react-native";
 
 import { useProfile, useUpdateProfile } from "../data/queries";
 import { supabase } from "../lib/supabase";
@@ -11,6 +11,7 @@ import { colors } from "../theme";
 import { BottomSheet, BrandMark, Button, Card, GradientCard, Screen, Text } from "../ui";
 import { useAuth } from "./auth-provider";
 import { useI18n } from "./locale-provider";
+import { SessionLoading } from "./session-loading";
 
 /** Mirrors the web startup order: eligibility, onboarding, then release notes. */
 export function ProductExperience({ children }: { children: ReactNode }) {
@@ -81,11 +82,7 @@ export function ProductExperience({ children }: { children: ReactNode }) {
     (needsWorkoutCheck && workoutCountQuery.isLoading) ||
     needsOnboarding
   ) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
-        <ActivityIndicator color={colors.lime} />
-      </View>
-    );
+    return <SessionLoading />;
   }
 
   const releasePending = Boolean(

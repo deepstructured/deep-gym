@@ -7,30 +7,19 @@ import {
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { colors } from "../src/theme";
 import { useAuth, AuthProvider } from "../src/providers/auth-provider";
 import { LocaleProvider } from "../src/providers/locale-provider";
 import { QueryProvider } from "../src/providers/query-provider";
+import { SessionLoading } from "../src/providers/session-loading";
 
 function RootNavigator() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: colors.background,
-        }}
-      >
-        <ActivityIndicator color={colors.lime} />
-      </View>
-    );
+    return <SessionLoading />;
   }
 
   return (
