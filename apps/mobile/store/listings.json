@@ -1,0 +1,27 @@
+{
+  "status": "draft-for-store-submission",
+  "category": "Health & Fitness",
+  "locales": {
+    "en": {
+      "title": "DeepGym: Workout Tracker",
+      "appleSubtitle": "Strength training, sets & reps",
+      "appleKeywords": "gym,weightlifting,log,journal,routine,barbell,progress,exercise,history,template",
+      "googleShortDescription": "Log sets, weights and reps. Build templates and follow your strength training.",
+      "description": "Keep your strength training in one place. DeepGym helps you record workouts, revisit past sessions and see how your training changes over time.\n\nLOG YOUR WORKOUTS\nRecord exercises, sets, weights and repetitions. Mark warm-up sets separately, add notes and pick up an unfinished workout from your saved draft.\n\nMAKE YOUR ROUTINE REPEATABLE\nCreate workout templates and your own exercise library. Choose a training schedule or keep it flexible. Use the plate calculator with your bar and plate settings.\n\nFOLLOW YOUR PROGRESS\nBrowse your workout history, explore exercise charts and personal records, and track your body-weight measurements. Customize Home with the training widgets you want to see.\n\nYOUR PREFERENCES, YOUR TRAINING\nUse kilograms or pounds and choose English, Ukrainian or Russian. Sign in to access saved training data in the mobile app and the DeepGym web app.\n\nAn account and an internet connection are required for sign-in and cloud synchronization."
+    },
+    "uk": {
+      "title": "DeepGym: Щоденник тренувань",
+      "appleSubtitle": "Підходи, вага та прогрес",
+      "appleKeywords": "зал,вправи,повторення,штанга,силові,історія,шаблони,календар,фітнес,рекорди",
+      "googleShortDescription": "Записуйте підходи, вагу й повторення. Створюйте шаблони та стежте за прогресом.",
+      "description": "Усі силові тренування в одному місці. DeepGym допомагає записувати заняття, повертатися до минулих результатів і бачити зміни у тренуваннях.\n\nЗАПИСУЙТЕ ТРЕНУВАННЯ\nДодавайте вправи, підходи, вагу та повторення. Позначайте розминкові підходи окремо, залишайте нотатки й продовжуйте незавершене тренування зі збереженої чернетки.\n\nПОВТОРЮЙТЕ СВОЮ ПРОГРАМУ\nСтворюйте шаблони тренувань і власну бібліотеку вправ. Обирайте розклад занять або тренуйтеся за гнучким графіком. Калькулятор млинців враховує ваші налаштування грифа та млинців.\n\nСТЕЖТЕ ЗА ПРОГРЕСОМ\nПереглядайте історію занять, графіки вправ і особисті рекорди. Записуйте вимірювання маси тіла та налаштовуйте головний екран із потрібними віджетами.\n\nНАЛАШТУЙТЕ ПІД СЕБЕ\nОбирайте кілограми або фунти та українську, англійську чи російську мову. Увійдіть в обліковий запис, щоб отримати доступ до збережених тренувань у мобільному застосунку та вебверсії DeepGym.\n\nДля входу та хмарної синхронізації потрібні обліковий запис і підключення до інтернету."
+    },
+    "ru": {
+      "title": "DeepGym: Дневник тренировок",
+      "appleSubtitle": "Подходы, веса и прогресс",
+      "appleKeywords": "зал,упражнения,повторения,штанга,силовые,история,шаблоны,календарь,фитнес,рекорды",
+      "googleShortDescription": "Записывайте подходы, веса и повторения. Шаблоны тренировок и история прогресса.",
+      "description": "Все силовые тренировки в одном месте. DeepGym помогает записывать занятия, возвращаться к прошлым результатам и видеть изменения в тренировках.\n\nЗАПИСЫВАЙТЕ ТРЕНИРОВКИ\nДобавляйте упражнения, подходы, веса и повторения. Отмечайте разминочные подходы отдельно, оставляйте заметки и продолжайте незавершённую тренировку из сохранённого черновика.\n\nПОВТОРЯЙТЕ СВОЮ ПРОГРАММУ\nСоздавайте шаблоны тренировок и собственную библиотеку упражнений. Выбирайте расписание занятий или тренируйтесь по гибкому графику. Калькулятор блинов учитывает ваши настройки грифа и блинов.\n\nСЛЕДИТЕ ЗА ПРОГРЕССОМ\nПросматривайте историю занятий, графики упражнений и личные рекорды. Записывайте измерения массы тела и настраивайте главный экран с нужными виджетами.\n\nНАСТРОЙТЕ ПОД СЕБЯ\nВыбирайте килограммы или фунты и русский, украинский или английский язык. Войдите в аккаунт, чтобы получить доступ к сохранённым тренировкам в мобильном приложении и веб-версии DeepGym.\n\nДля входа и облачной синхронизации нужны аккаунт и подключение к интернету."
+    }
+  }
+}

@@ -1,77 +1,49 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import { useProfile } from "@/entities/user";
-import { I18nProvider, isLang, useI18n } from "@/shared/i18n";
-import { ProductExperience } from "@/widgets/product-experience";
+import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import type { MarketingLocale } from "@/shared/config/seo";
 
-/** Applies the language stored in the user's profile once it loads
- *  (and whenever it changes, e.g. edited from another device). */
-function ProfileLanguageSync() {
-  const { data: profile } = useProfile();
-  const { lang, setLang } = useI18n();
-
-  // ref, not dep: reacting to `lang` here would revert an in-flight
-  // local switch before the profile refetches.
-  const langRef = useRef(lang);
-  langRef.current = lang;
-
-  const profileLang = profile?.language;
-  useEffect(() => {
-    if (isLang(profileLang) && profileLang !== langRef.current) {
-      setLang(profileLang);
-    }
-  }, [profileLang, setLang]);
-
-  return null;
-}
+// Public pages do not need profile requests or the authenticated app bundle.
+const ApplicationProviders = dynamic(() =>
+  import("./application-providers").then((module) => module.ApplicationProviders),
+);
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 30_000,
-            retry: 1,
-            refetchOnWindowFocus: false,
-          },
-        },
-      }),
-  );
+  const pathname = usePathname();
+  // Root is session-dependent: its server page owns the provider choice.
+  // A persistent layout prop can be stale after client-side sign-in/navigation.
+  const ownsProviders = pathname === "/" || pathname === "/uk" || pathname === "/ru" ||
+    pathname === "/about" || pathname.startsWith("/about/");
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
-
     if (process.env.NODE_ENV === "production") {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     } else {
-      // In dev a stale SW (left over from a prod run on the same port)
-      // serves outdated chunks and causes ChunkLoadError — clean it up.
-      navigator.serviceWorker
-        .getRegistrations()
-        .then((registrations) => registrations.forEach((r) => r.unregister()))
+      navigator.serviceWorker.getRegistrations()
+        .then((registrations) => registrations.forEach((registration) => registration.unregister()))
         .catch(() => {});
       if ("caches" in window) {
-        caches
-          .keys()
-          .then((keys) =>
-            keys
-              .filter((key) => key.startsWith("deepgym-"))
-              .forEach((key) => caches.delete(key)),
-          )
-          .catch(() => {});
+        caches.keys().then((keys) => keys.filter((key) => key.startsWith("deepgym-"))
+          .forEach((key) => caches.delete(key))).catch(() => {});
       }
     }
   }, []);
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <I18nProvider>
-        <ProfileLanguageSync />
-        <ProductExperience>{children}</ProductExperience>
-      </I18nProvider>
-    </QueryClientProvider>
-  );
+  return ownsProviders ? children : <ApplicationProviders>{children}</ApplicationProviders>;
+}
+
+export function AuthenticatedRoot({ children }: { children: React.ReactNode }) {
+  return <ApplicationProviders>{children}</ApplicationProviders>;
+}
+
+/** Keep <html lang> correct on client navigation where RootLayout is retained. */
+export function PublicPageLanguage({ locale, children }: {
+  locale: MarketingLocale;
+  children: React.ReactNode;
+}) {
+  useEffect(() => { document.documentElement.lang = locale; }, [locale]);
+  return children;
 }

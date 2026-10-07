@@ -6,9 +6,11 @@
 
 **Your training log, finally done right.**
 
-A fast, beautiful workout tracker that lives on your phone's home screen.
-Log sets in seconds, never forget a machine setting again, and watch your
-strength grow week after week.
+A strength-training log for your phone and desktop.
+Record sets, remember machine settings, reuse workout templates and follow
+your training history and progress.
+
+[Open DeepGym](https://www.deepgym.fit/) · [Українською](https://www.deepgym.fit/uk) · [По-русски](https://www.deepgym.fit/ru)
 
 </div>
 
@@ -16,11 +18,17 @@ strength grow week after week.
 
 ## Why DeepGym?
 
+The public homepage is `/` (English), with `/uk` and `/ru` translations.
+Signed-in users see their personal dashboard at `/`. Old `/about` links
+redirect to the corresponding homepage.
+SEO/PWA implementation and deployment follow-up: [SEO audit](docs/SEO_AUDIT.md).
+Native store preparation: [mobile ASO](docs/MOBILE_ASO.md).
+
 You're mid-workout. Rest timer is ticking. The last thing you want is a
 clunky app with 12 taps to log one set. DeepGym is built around one idea:
 **capture your training with zero friction, and turn it into insight.**
 
-- 📱 **Installs like a native app** — add it to your home screen, works offline, no app store needed.
+- 📱 **Installs from your browser** — add it to your home screen, with a local workout draft and no app-store download. Signing in, loading account data and saving workouts require internet.
 - ⚡ **Fast logging** — the first set is created automatically, the next one copies the last, your working weight is pre-filled.
 - 🧠 **Remembers what you can't** — machine seat heights, plate math, your numbers from three weeks ago.
 - 📈 **Shows real progress** — charts and stats per exercise, not just a diary.
@@ -45,10 +53,20 @@ successful log.
 
 ### Home — everything at a glance
 
-Your week, your streak, your recent sessions — and the next workout from the
-training week you configure yourself in Settings.
+Customize your Home with widgets for your week, recent sessions, exercise
+progress, body weight and the next workout from your training schedule.
+Move and resize widgets to keep the information you use within reach.
+
+The screenshots below show the **web/PWA interface** with illustrative demo
+data and English labels. They are not screenshots of the native Expo app.
 
 <img src="docs/screenshots/home.png" width="300" alt="Home screen" />
+
+The desktop layout gives the same widgets more room and keeps quick navigation
+in the bottom dock. Automatic mode follows the screen width; the layout can
+also be selected in Settings.
+
+<img src="docs/screenshots/home-desktop.png" width="100%" alt="DeepGym desktop dashboard with the current customizable widgets" />
 
 ### Log a workout in seconds
 
@@ -62,9 +80,9 @@ when you hit failure.
 Had a rough day? Attach a note to the whole workout or to a single
 exercise — *"slept 4 hours, kept it light"* — and it stays in your history.
 
-Your draft is **saved as you type** — locally and to your account: close
-the app, switch songs, even pick up your phone after starting on the
-laptop — nothing is lost.
+Your draft is **saved as you type** on the device and synchronized to your
+account while online. Return to it after closing the app, or continue on
+another device after the cloud copy has synchronized.
 
 Repeating a session? **Copy last** offers your most recent workout of the
 selected type — and if your schedule runs the same type several times a
@@ -126,6 +144,14 @@ it overrides your default just for that exercise.
 
 <img src="docs/screenshots/exercises.png" width="300" alt="Exercise catalog" />
 
+### Reusable workout templates
+
+Open **Library → Templates** to keep your workout types and exercise order
+ready for the next session. Start from the list or open a template to review
+and edit it; each exercise begins with an empty set and its current weight.
+
+<img src="docs/screenshots/templates.png" width="300" alt="Workout templates in the DeepGym library" />
+
 ### Analytics that actually help
 
 Open any exercise and see:
@@ -137,6 +163,15 @@ Open any exercise and see:
   you've used, so you know when it's time to move up
 
 <img src="docs/screenshots/exercise-detail.png" width="300" alt="Exercise analytics" />
+
+### Progress across your training
+
+The **Progress** tab brings together period totals, weekly activity, exercise
+trends, personal records, muscle-group balance and body-weight measurements.
+Choose a period to review and filter by muscle group. Warm-up sets remain in
+your log and are excluded from working-set statistics.
+
+<img src="docs/screenshots/progress.png" width="300" alt="DeepGym Progress tab with period totals and training activity" />
 
 ### History you can actually browse
 
@@ -167,9 +202,10 @@ Settings whenever you want.
 
 ## Install it on your phone
 
-1. Open the app in your browser.
+1. Open [DeepGym](https://www.deepgym.fit/) in your browser.
 2. **iPhone:** Share → *Add to Home Screen*. **Android:** menu → *Install app*.
-3. That's it — full-screen, offline-ready, with its own icon.
+3. Launch it from its own icon in an app window. Keep a connection for account
+   data and workout saves; your draft also remains on the device.
 
 ---
 
@@ -183,18 +219,21 @@ Settings whenever you want.
 | Add a set / mark failure | **＋ Add set** / flame button on the set row |
 | Reorder exercises | Drag the numbered handle in the workout form |
 | Copy a workout | New workout → **Copy last** or calendar → choose copy mode |
-| Workout templates | Exercises → **Templates** |
+| Workout templates | Library → **Templates** |
 | Record body weight | Settings → **Body weight**, or the bottom of a new workout |
-| Create an exercise | Exercises → **＋** |
+| Create an exercise | Library → **Exercises** → **＋** |
+| Review training trends | **Progress** tab → select a period |
+| Customize Home | Home → edit widgets, or Settings → **Home screen** |
 | Plate breakdown | ⊚ icon next to any weight |
 | Machine setup notes | ⓘ button on machine exercises |
-| Change working weight | Exercise page → ✏️ on the pink card |
+| Change working weight | Exercise page → edit button beside the working weight |
 | kg ↔ lb (global) | Settings → Weight unit |
 | kg ↔ lb (one exercise) | Exercise page → ✏️ → Weight unit |
 | Your plates & bar | Settings → Plate calculator |
 | Plan training days | Settings → Training week |
 | Change avatar | Settings → Profile → Choose avatar |
 | Custom muscle groups | Settings → Muscle groups |
+| Phone/desktop layout | Settings → Interface; automatic mode follows screen width |
 | Notes | "Add workout note" or the 📝 icon on any exercise |
 
 ---
@@ -205,3 +244,8 @@ Want to self-host or hack on DeepGym? See **[SETUP.md](SETUP.md)** —
 Supabase setup, Google OAuth, the Telegram bot, local development and
 architecture notes (Next.js + TypeScript + SCSS modules + Supabase,
 Feature-Sliced Design).
+
+The Expo / React Native app lives in [`apps/mobile`](apps/mobile/README.md)
+and shares domain logic through `packages/core`. It is a pre-release native
+implementation; web/PWA availability does not imply App Store or Google Play
+publication.

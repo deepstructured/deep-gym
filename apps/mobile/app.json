@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "DeepGym",
+    "description": "Track strength workouts, log sets, weights and reps, build workout templates and follow your progress.",
     "slug": "deepgym",
     "scheme": "deepgym",
     "version": "0.1.0",
@@ -18,7 +19,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "app.deepgym.mobile",
       "infoPlist": {
-        "CFBundleAllowMixedLocalizations": true
+        "CFBundleAllowMixedLocalizations": true,
+        "CFBundleDevelopmentRegion": "en",
+        "CFBundleLocalizations": ["en", "uk", "ru"]
       }
     },
     "android": {
@@ -27,6 +30,11 @@
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0a0a0c"
       }
+    },
+    "locales": {
+      "en": "./locales/en.json",
+      "uk": "./locales/uk.json",
+      "ru": "./locales/ru.json"
     },
     "plugins": [
       "expo-router",
