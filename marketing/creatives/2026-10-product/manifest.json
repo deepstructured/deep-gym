@@ -1,0 +1,149 @@
+{
+  "brand": "DeepGym",
+  "campaign": "whole-product",
+  "language": "uk",
+  "date": "2026-10-07",
+  "tool": "built-in image_gen",
+  "format": {
+    "width": 1080,
+    "height": 1350,
+    "aspectRatio": "4:5",
+    "mime": "image/png"
+  },
+  "export": "sips dimension normalization; asset 05 centered crop to 4:5 before proportional resizing; no copy or UI edits",
+  "publishStatus": "local files only",
+  "destination": "https://www.deepgym.fit/uk",
+  "previousCampaign": "../2026-10/",
+  "assets": [
+    {
+      "id": "01-all-in-one-uk",
+      "label": "Усе в одному щоденнику",
+      "headline": "Твої тренування. Усе на місці.",
+      "features": [
+        "Підходи й вага",
+        "Власні шаблони",
+        "Історія та прогрес"
+      ],
+      "short": "Твої тренування в одному місці",
+      "body": "Записуй вагу, підходи й повторення, зберігай власні шаблони та переглядай історію тренувань у DeepGym. Графіки прогресу й нотатки про тренажери допоможуть тримати деталі під рукою.",
+      "concept": "Спортсмен між підходами, темна editorial-фотографія та згруповані переваги.",
+      "utm": "01_all_in_one",
+      "cta": "Почати тренування",
+      "url": "https://www.deepgym.fit/uk?utm_source=meta&utm_medium=paid_social&utm_campaign=deepgym_product_uk_2026_10&utm_content=01_all_in_one",
+      "file": "01-all-in-one-uk.png",
+      "original": "originals/01-all-in-one-uk.png",
+      "originalDimensions": {
+        "width": 1122,
+        "height": 1402
+      },
+      "reference": null,
+      "sourceReference": null,
+      "promptFile": "prompts.md",
+      "visuallyVerified": true
+    },
+    {
+      "id": "02-log-plan-progress-uk",
+      "label": "Запис, план і прогрес",
+      "headline": "Записуй. Плануй. Бач прогрес.",
+      "features": [
+        "Вага та повторення",
+        "Твої шаблони",
+        "Історія тренувань"
+      ],
+      "short": "Щоденник, який збирає все разом",
+      "body": "Від першого записаного підходу до власних шаблонів тренувань — усе в DeepGym. Фіксуй вагу та повторення, повертайся до свого плану й дивись історію та графіки в одному застосунку.",
+      "concept": "Лаймова типографіка й предметна зйомка спорядження.",
+      "utm": "02_log_plan_progress",
+      "cta": "Почати тренування",
+      "url": "https://www.deepgym.fit/uk?utm_source=meta&utm_medium=paid_social&utm_campaign=deepgym_product_uk_2026_10&utm_content=02_log_plan_progress",
+      "file": "02-log-plan-progress-uk.png",
+      "original": "originals/02-log-plan-progress-uk.png",
+      "originalDimensions": {
+        "width": 1122,
+        "height": 1402
+      },
+      "reference": null,
+      "sourceReference": null,
+      "promptFile": "prompts.md",
+      "visuallyVerified": true
+    },
+    {
+      "id": "03-your-system-uk",
+      "label": "Власна система",
+      "headline": "Від першого підходу до власної системи.",
+      "features": [
+        "Запис тренувань",
+        "Власні шаблони",
+        "Графіки прогресу"
+      ],
+      "short": "Побудуй власний щоденник тренувань",
+      "body": "Складай власні шаблони, записуй вправи та підходи, переглядай історію і графіки прогресу. DeepGym збирає твій план і деталі тренувань в одному щоденнику — разом із налаштуваннями тренажерів.",
+      "concept": "Спортсменка в залі, природне світло та три ключові можливості.",
+      "utm": "03_your_system",
+      "cta": "Почати тренування",
+      "url": "https://www.deepgym.fit/uk?utm_source=meta&utm_medium=paid_social&utm_campaign=deepgym_product_uk_2026_10&utm_content=03_your_system",
+      "file": "03-your-system-uk.png",
+      "original": "originals/03-your-system-uk.png",
+      "originalDimensions": {
+        "width": 1122,
+        "height": 1402
+      },
+      "reference": null,
+      "sourceReference": null,
+      "promptFile": "prompts.md",
+      "visuallyVerified": true
+    },
+    {
+      "id": "04-your-plan-uk",
+      "label": "План і всі записи поруч",
+      "headline": "Тренуйся зі своїм планом.",
+      "features": [
+        "Запис підходів",
+        "Власні шаблони",
+        "Історія та графіки"
+      ],
+      "short": "Твій план і твоя історія",
+      "body": "DeepGym поєднує журнал підходів, власні шаблони, історію тренувань і графіки. Зберігай деталі, які важливі саме тобі, та повертайся до них на наступному занятті. Поруч — нотатки про тренажери й калькулятор дисків.",
+      "concept": "Концептуальна 3D-композиція знака застосунку та трьох функцій.",
+      "utm": "04_your_plan",
+      "cta": "Почати тренування",
+      "url": "https://www.deepgym.fit/uk?utm_source=meta&utm_medium=paid_social&utm_campaign=deepgym_product_uk_2026_10&utm_content=04_your_plan",
+      "file": "04-your-plan-uk.png",
+      "original": "originals/04-your-plan-uk.png",
+      "originalDimensions": {
+        "width": 1122,
+        "height": 1402
+      },
+      "reference": "references/app-icon.png",
+      "sourceReference": "public/icons/icon-512.png",
+      "promptFile": "prompts.md",
+      "visuallyVerified": true
+    },
+    {
+      "id": "05-your-deepgym-uk",
+      "label": "Твій DeepGym",
+      "headline": "Твій зал. Твої правила.",
+      "features": [
+        "Підходи й вага",
+        "Власні шаблони",
+        "Історія та прогрес"
+      ],
+      "short": "DeepGym — твій щоденник тренувань",
+      "body": "Тренування, власні шаблони та історія прогресу — у DeepGym. Записуй вагу й підходи, зберігай налаштування тренажерів та переглядай минулі заняття. Відкривай у браузері або додавай на головний екран телефона.",
+      "concept": "Реальний екран застосунку в чистій продуктовій композиції.",
+      "utm": "05_your_deepgym",
+      "cta": "Почати тренування",
+      "url": "https://www.deepgym.fit/uk?utm_source=meta&utm_medium=paid_social&utm_campaign=deepgym_product_uk_2026_10&utm_content=05_your_deepgym",
+      "file": "05-your-deepgym-uk.png",
+      "original": "originals/05-your-deepgym-uk.png",
+      "originalDimensions": {
+        "width": 1092,
+        "height": 1440
+      },
+      "reference": "references/home-uk.webp",
+      "sourceReference": "public/screenshots/uk/home.webp",
+      "promptFile": "prompts.md",
+      "visuallyVerified": true
+    }
+  ]
+}

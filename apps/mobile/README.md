@@ -37,6 +37,10 @@ Account deletion in mobile Settings calls `DELETE /api/account/delete` on `EXPO_
 
 `app.json` currently uses the **provisional** iOS bundle ID `app.deepgym.mobile` and Android package `app.deepgym.mobile`. Confirm the final identifier before the first App Store/TestFlight build; changing it later creates a different app identity. `assets/icon.png` is the existing approved 512 px PWA icon copied for development. A 1024 px App Store icon export from the brand source is still needed for submission.
 
+Native metadata declares English, Ukrainian and Russian; `locales/` translates the iOS photo-library permission prompt and keeps the DeepGym home-screen name consistent. These configuration changes require a new native build. The in-app language remains controlled by the existing profile preference.
+
+Localized App Store and Google Play listing drafts are in [`store/listings.json`](store/listings.json). They are preparation files, not automatic store uploads. See [`docs/MOBILE_ASO.md`](../../docs/MOBILE_ASO.md) for the verified feature scope, screenshot copy and remaining submission steps.
+
 The root `app/` and `src/` directories remain the Next.js app. Shared, platform independent logic lives in `packages/core`; mobile routes live in `apps/mobile/app` and mobile implementation in `apps/mobile/src`.
 
 ## Current port status

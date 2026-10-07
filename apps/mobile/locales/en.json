@@ -1,0 +1,9 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "DeepGym",
+    "NSPhotoLibraryUsageDescription": "Allow DeepGym to select a profile photo from your library."
+  },
+  "android": {
+    "app_name": "DeepGym"
+  }
+}

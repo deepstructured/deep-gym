@@ -10,6 +10,8 @@ import {
 } from "@/features/auth";
 import { isSupabaseConfigured, TELEGRAM_BOT_USERNAME } from "@/shared/config/env";
 import { useI18n } from "@/shared/i18n";
+import { marketingCopy } from "@/shared/i18n/marketing";
+import { marketingPath } from "@/shared/config/seo";
 import { cn } from "@/shared/lib/cn";
 import {
   BrandMark,
@@ -36,7 +38,7 @@ function AppleMark() {
 }
 
 function LoginContent() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const searchParams = useSearchParams();
   const [telegramOpen, setTelegramOpen] = useState(false);
   const botUsername = TELEGRAM_BOT_USERNAME.trim().replace(/^@+/, "");
@@ -118,6 +120,9 @@ function LoginContent() {
         </div>
       )}
 
+      <Link className={styles.privacyLink} href={marketingPath(lang)}>
+        {marketingCopy[lang].aboutLink}
+      </Link>
       <Link className={styles.privacyLink} href="/privacy">
         {t("settings.privacyPolicy")}
       </Link>
