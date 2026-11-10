@@ -54,6 +54,7 @@ import {
   IconSettings,
   Input,
   PageLoader,
+  QueryError,
   Segmented,
 } from "@/shared/ui";
 import styles from "./onboarding-view.module.scss";
@@ -83,7 +84,7 @@ interface StoredDraft {
 
 export function OnboardingView() {
   const router = useRouter();
-  const { data: profile, isLoading } = useProfile();
+  const { data: profile, isLoading, isFetching, error, refetch } = useProfile();
   const [mode, setMode] = useState<RouteMode>({
     ready: false,
     replay: false,
@@ -106,18 +107,29 @@ export function OnboardingView() {
 
   const alreadyComplete =
     (profile?.onboarding_version ?? 0) >= CURRENT_ONBOARDING_VERSION;
+  // A successful save updates the profile before finish() navigates to the
+  // chosen destination. Only redirect users who were complete on entry.
+  const completeOnEntry = useRef<boolean | null>(null);
+  if (profile && completeOnEntry.current === null) completeOnEntry.current = alreadyComplete;
+  const redirectCompleted = completeOnEntry.current === true && alreadyComplete;
   useEffect(() => {
     if (!mode.ready || !profile) return;
-    if (alreadyComplete && !mode.replay && !mode.preview) {
+    if (redirectCompleted && !mode.replay && !mode.preview) {
       router.replace("/");
     }
-  }, [alreadyComplete, mode, profile, router]);
+  }, [redirectCompleted, mode, profile, router]);
+
+  if (!isLoading && (error || !profile)) {
+    return <div className={styles.loader}>
+      <QueryError onRetry={() => void refetch()} retrying={isFetching} />
+    </div>;
+  }
 
   if (
     isLoading ||
     !profile ||
     !mode.ready ||
-    (alreadyComplete && !mode.replay && !mode.preview)
+    (redirectCompleted && !mode.replay && !mode.preview)
   ) {
     return (
       <div className={styles.loader}>

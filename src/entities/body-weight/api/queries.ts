@@ -2,6 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
+import { requireAuthUserId, useAuthSession } from "@/shared/lib/auth-session";
+import { readAllPages } from "@/shared/lib/supabase/pagination";
 import type {
   BodyWeightMeasurement,
   LogBodyWeightInput,
@@ -14,7 +16,8 @@ export const BODY_WEIGHT_MEASUREMENTS_QUERY_KEY = [
 export interface BodyWeightMeasurementsQuery {
   from?: string;
   to?: string;
-  limit?: number;
+  /** null loads the complete selected period (charts), otherwise newest N. */
+  limit?: number | null;
   enabled?: boolean;
 }
 
@@ -26,25 +29,26 @@ export function useBodyWeightMeasurements({
   limit = 90,
   enabled = true,
 }: BodyWeightMeasurementsQuery = {}) {
+  const { userId } = useAuthSession();
   return useQuery({
-    queryKey: [...BODY_WEIGHT_MEASUREMENTS_QUERY_KEY, { from, to, limit }],
-    queryFn: async (): Promise<BodyWeightMeasurement[]> => {
+    queryKey: [...BODY_WEIGHT_MEASUREMENTS_QUERY_KEY, userId, { from, to, limit }],
+    queryFn: async ({ signal }): Promise<BodyWeightMeasurement[]> => {
       const supabase = getSupabaseBrowser();
-      let query = supabase
+      const maximum = limit == null ? Infinity : Math.max(1, Math.trunc(limit));
+      return readAllPages<BodyWeightMeasurement>(async ({ from: offset, to: end, count }) => {
+        let query = supabase
         .from("body_weight_measurements")
-        .select("*")
+        .select("*", { count }).eq("user_id", userId!)
         .order("measured_at", { ascending: false })
         .order("created_at", { ascending: false })
-        .limit(Math.max(1, limit));
-
-      if (from) query = query.gte("measured_at", from);
-      if (to) query = query.lte("measured_at", to);
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as BodyWeightMeasurement[];
+        .order("id", { ascending: false });
+        if (from) query = query.gte("measured_at", from);
+        if (to) query = query.lte("measured_at", to);
+        const result = await query.range(offset, Math.min(end, maximum - 1)).abortSignal(signal);
+        return { ...result, count: result.count == null ? null : Math.min(result.count, maximum) };
+      }, signal);
     },
-    enabled,
+    enabled: enabled && Boolean(userId),
   });
 }
 
@@ -59,6 +63,7 @@ export function useLogBodyWeight() {
       measuredAt,
       source = "settings",
     }: LogBodyWeightInput): Promise<BodyWeightMeasurement> => {
+      requireAuthUserId();
       if (!Number.isFinite(weightKg) || weightKg <= 0) {
         throw new Error("Body weight must be greater than zero");
       }

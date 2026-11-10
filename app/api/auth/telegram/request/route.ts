@@ -2,6 +2,10 @@ import { randomInt } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { hashOtp } from "@/shared/lib/otp";
 import { getSupabaseAdmin } from "@/shared/lib/supabase/admin";
+import { ownAuthEnabled } from "@/server/auth";
+import { telegramAuth } from "@/server/telegram-auth";
+import { readAuthRequest } from "@/server/auth-request";
+import { RequestBodyError } from "@/server/request-body";
 import {
   normalizeTelegramUsername,
   sendTelegramMessage,
@@ -11,7 +15,12 @@ const OTP_TTL_MS = 5 * 60_000;
 const RESEND_COOLDOWN_MS = 60_000;
 
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => ({}));
+  if (ownAuthEnabled()) return telegramAuth(request, "request");
+  let body;
+  try { body = await readAuthRequest(request); }
+  catch (error) {
+    return NextResponse.json({ error: "Invalid request body or origin" }, { status: error instanceof RequestBodyError ? error.status : 400 });
+  }
   const username = normalizeTelegramUsername(String(body.username ?? ""));
   if (!username) {
     return NextResponse.json(
@@ -35,6 +44,9 @@ export async function POST(request: NextRequest) {
       },
       { status: 404 },
     );
+  }
+  if (String(link.chat_id) !== String(link.telegram_id)) {
+    return NextResponse.json({ error: "Open a private chat with the Telegram bot and press Start" }, { status: 400 });
   }
 
   const { data: recent } = await admin

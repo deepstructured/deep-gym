@@ -123,6 +123,46 @@ function enqueueDraftWrite(userId: string, write: () => Promise<void>): Promise<
 
 export class DraftChangedBeforeSaveError extends Error {}
 
+function nextDraftTimestamp(previous: string | null): string {
+  const previousMs = previous ? Date.parse(previous) : NaN;
+  return new Date(Math.max(Date.now(), Number.isFinite(previousMs) ? previousMs + 1 : 0)).toISOString();
+}
+
+/** Same atomic snapshot/tombstone protocol as the web app (migration 0011).
+ * The outer deadline also bounds an SDK auth lock that ignores abortSignal. */
+async function writeRemoteDraft(userId: string, draft: WorkoutDraft, updatedAt: string): Promise<void> {
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const { data, error } = await Promise.race([
+      supabase.rpc("save_workout_draft", {
+        p_owner_id: userId, p_draft: draft, p_updated_at: updatedAt,
+      }).abortSignal(controller.signal).single(),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => {
+          controller.abort();
+          reject(new Error("Draft sync timed out"));
+        }, 12_000);
+      }),
+    ]);
+    if (error) throw error;
+    if (!data) throw new Error("Draft sync returned no row");
+    const remote = data as { draft: WorkoutDraft; updated_at: string };
+    if (serializeDraft(remote.draft) !== serializeDraft(draft) ||
+      Date.parse(remote.updated_at) !== Date.parse(updatedAt)) {
+      const current = useWorkoutDraft.getState();
+      if (current.ownerId === userId && current.draft === draft) {
+        useWorkoutDraft.setState({ cloudVerified: false, pendingRemote: {
+          ownerId: userId, draft: remote.draft, updatedAt: remote.updated_at,
+        } });
+      }
+      throw new DraftChangedBeforeSaveError("Another device has a newer draft");
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /** Confirm that the cloud copy carries this exact key before creating a workout. */
 export async function flushWorkoutDraftBeforeSave(
   userId: string,
@@ -143,18 +183,7 @@ export async function flushWorkoutDraftBeforeSave(
     ) {
       throw new DraftChangedBeforeSaveError("Draft changed before cloud sync");
     }
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12_000);
-    try {
-      const { error } = await supabase.from("workout_drafts").upsert({
-        user_id: userId,
-        draft: expectedDraft,
-        updated_at: expectedUpdatedAt,
-      }).abortSignal(controller.signal);
-      if (error) throw error;
-    } finally {
-      clearTimeout(timeout);
-    }
+    await writeRemoteDraft(userId, expectedDraft, expectedUpdatedAt);
   });
 }
 
@@ -201,7 +230,7 @@ export function exerciseToDraft(
 
 export const useWorkoutDraft = create<DraftState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       draft: emptyDraft(),
       ownerId: null,
       updatedAt: null,
@@ -244,7 +273,16 @@ export const useWorkoutDraft = create<DraftState>()(
       resolveConflict: (ownerId, useRemote) => set((state) => {
         const remote = state.pendingRemote;
         if (!remote || remote.ownerId !== ownerId || state.ownerId !== ownerId) return state;
-        if (!useRemote) return { pendingRemote: null, cloudVerified: true };
+        if (!useRemote) {
+          const newer = remote.updatedAt > (state.updatedAt ?? "") ? remote.updatedAt : state.updatedAt;
+          const updatedAt = nextDraftTimestamp(newer);
+          return {
+            pendingRemote: null, cloudVerified: true, updatedAt,
+            draftsByOwner: { ...state.draftsByOwner, [ownerId]: {
+              draft: state.draft, updatedAt, createKey: state.draft.createKey,
+            } },
+          };
+        }
         const draft = withCreateKey(remote.draft, state.draftsByOwner[ownerId]?.createKey);
         return {
           pendingRemote: null,
@@ -274,7 +312,8 @@ export const useWorkoutDraft = create<DraftState>()(
         }),
       edit: (ownerId, change) =>
         set((state) => {
-          const now = new Date().toISOString();
+          const now = nextDraftTimestamp(state.ownerId === ownerId
+            ? state.updatedAt : state.draftsByOwner[ownerId]?.updatedAt ?? null);
           const previous = state.ownerId === ownerId
             ? state.draft
             : state.draftsByOwner[ownerId]?.draft ?? emptyDraft();
@@ -300,17 +339,27 @@ export const useWorkoutDraft = create<DraftState>()(
             },
           };
         }),
-      reset: (ownerId) => set((state) => {
-        const draft = withCreateKey(emptyDraft());
-        const updatedAt = new Date().toISOString();
-        return {
-          draft, ownerId, updatedAt,
-          draftsByOwner: {
-            ...state.draftsByOwner,
-            [ownerId]: { draft, updatedAt, createKey: draft.createKey },
-          },
-        };
-      }),
+      reset: (ownerId) => {
+        set((state) => {
+          const draft = withCreateKey(emptyDraft());
+          const updatedAt = nextDraftTimestamp(state.ownerId === ownerId
+            ? state.updatedAt : state.draftsByOwner[ownerId]?.updatedAt ?? null);
+          return {
+            draft, ownerId, updatedAt, pendingRemote: null,
+            draftsByOwner: {
+              ...state.draftsByOwner,
+              [ownerId]: { draft, updatedAt, createKey: draft.createKey },
+            },
+          };
+        });
+        // Saving immediately navigates away. Do not depend on an 800ms effect
+        // timer surviving that unmount to publish the empty tombstone.
+        const snapshot = get();
+        void enqueueDraftWrite(ownerId, async () => {
+          if (get().ownerId !== ownerId) return;
+          await writeRemoteDraft(ownerId, snapshot.draft, snapshot.updatedAt!);
+        }).catch(() => { /* Local tombstone stays persisted for the next visit. */ });
+      },
     }),
     {
       name: "deepgym-native-workout-draft",
@@ -438,14 +487,8 @@ export function useWorkoutDraftSync(): { ready: boolean } {
           current.pendingRemote
         ) return;
         try {
-          const { error } = draftIsEmpty(draft)
-            ? await supabase.from("workout_drafts").delete().eq("user_id", user.id)
-            : await supabase.from("workout_drafts").upsert({
-                user_id: user.id,
-                draft,
-                updated_at: updatedAt,
-              });
-          if (!error && useWorkoutDraft.getState().ownerId === user.id) {
+          await writeRemoteDraft(user.id, draft, updatedAt);
+          if (useWorkoutDraft.getState().ownerId === user.id) {
             lastSynced.current = serialized;
           }
         } catch {

@@ -118,6 +118,8 @@ const en = {
     "An exercise in this draft changed its load mode or is no longer available. Re-add that exercise and save again.",
   "workout.serverUpdateRequired":
     "Workout saving requires a server update. Try again after migration 0009 is applied.",
+  "workout.atomicUnavailable": "Saving is temporarily unavailable. Please try again later.",
+  "workout.createConflict": "This workout may already be saved. Check History before saving again.",
   "workout.alreadySavedConflict":
     "This draft was already saved with different details. Your edits remain here. Open the saved workout in History to update it.",
   "workout.draftNotReady": "Workout draft is not ready. Try again.",
@@ -484,6 +486,15 @@ const en = {
   "auth.sessionSlow": "Loading is taking too long",
   "auth.resetLocalSession": "Reset local session",
   "auth.profileUnavailable": "We couldn't open your profile. Retry or reset the local session.",
+  "auth.unavailableTitle": "Sign-in is unavailable",
+  "auth.unavailableMessage": "We couldn't confirm your session. Check your connection and try again, or return to sign-in.",
+  "login.authUnavailable": "The sign-in service is temporarily unavailable. Please try again.",
+  "common.backToLogin": "Back to sign-in",
+  "draft.syncPending": "Your draft is saved on this device. Cloud sync will retry when the connection returns.",
+  "draft.syncConflict": "This draft differs from another device. Choose which copy to keep.",
+  "draft.keepLocal": "Keep this device’s draft",
+  "draft.useRemote": "Use cloud draft",
+  "draft.storageUnavailable": "Browser storage is unavailable. Keep this page open until the draft is synced or the workout is saved.",
   "login.telegramUsernameRequired": "Enter your Telegram username.",
   "login.telegramNotLinked": "Open the DeepGym bot, press Start, then try again.",
   "login.telegramRateLimit": "Code already sent. Wait a minute before trying again.",
@@ -744,21 +755,21 @@ const en = {
   "stats.trend": "Trend",
   "stats.perMonthUnit": "/mo",
 
-  "whatsNew.releaseTitle": "Your home, your way.",
+  "whatsNew.releaseTitle": "Fixes for everyday training.",
   "whatsNew.releaseBody":
-    "Build your home screen from widgets, explore progress on interactive charts and log warm-ups without skewing your stats.",
-  "whatsNew.home.title": "Customizable home",
+    "This update focuses on sign-in, loading data and saving workouts.",
+  "whatsNew.home.title": "Sign-in fixes",
   "whatsNew.home.body":
-    "18 widgets in three sizes: drag, resize, remove and add them — the grid packs itself like a phone home screen.",
-  "whatsNew.progress.title": "Progress tab & interactive charts",
+    "Improved session handling and recovery when sign-in fails or a session expires.",
+  "whatsNew.progress.title": "Clearer loading states",
   "whatsNew.progress.body":
-    "Hold and slide to read any session, switch from a month to all time, and open charts full screen with trend lines and records.",
-  "whatsNew.workout.title": "Warm-ups & next weight",
+    "Key screens offer a retry if loading fails. Switching tabs keeps recently loaded data.",
+  "whatsNew.workout.title": "Workout saving",
   "whatsNew.workout.body":
-    "Add warm-up sets that never count toward progress, and see the lightest plates to your next weight with the jump in percent.",
-  "whatsNew.library.title": "Library & tidier settings",
+    "Improved save retries and draft recovery after connection problems.",
+  "whatsNew.library.title": "Stability improvements",
   "whatsNew.library.body":
-    "Exercises and templates live together in Library, discarding a draft moved to the top, and settings open section by section.",
+    "Reduced repeated requests and fixed issues when switching accounts and refreshing data.",
 
   "workout.warmupsUnsupported":
     "Warm-up sets need a database update (migration 0008). Remove the warm-ups or apply the migration, then save again.",
@@ -890,6 +901,8 @@ const ru: Record<MessageKey, string> = {
     "Упражнение из черновика сменило режим нагрузки или больше недоступно. Добавьте его заново и повторите сохранение.",
   "workout.serverUpdateRequired":
     "Для сохранения тренировок нужно обновить сервер. Повторите попытку после применения миграции 0009.",
+  "workout.atomicUnavailable": "Сохранение временно недоступно. Попробуйте позже.",
+  "workout.createConflict": "Возможно, тренировка уже сохранена. Проверьте историю перед повторным сохранением.",
   "workout.alreadySavedConflict":
     "Этот черновик уже был сохранён с другими данными. Ваши правки остались здесь. Откройте сохранённую тренировку в истории, чтобы изменить её.",
   "workout.draftNotReady": "Черновик тренировки ещё не готов. Повторите попытку.",
@@ -1245,6 +1258,15 @@ const ru: Record<MessageKey, string> = {
   "auth.sessionSlow": "Загрузка затянулась",
   "auth.resetLocalSession": "Сбросить локальную сессию",
   "auth.profileUnavailable": "Не удалось открыть профиль. Попробуйте ещё раз или сбросьте локальную сессию.",
+  "auth.unavailableTitle": "Вход недоступен",
+  "auth.unavailableMessage": "Не удалось подтвердить сессию. Проверьте подключение и повторите попытку или вернитесь ко входу.",
+  "login.authUnavailable": "Сервис входа временно недоступен. Попробуйте ещё раз.",
+  "common.backToLogin": "Вернуться ко входу",
+  "draft.syncPending": "Черновик сохранён на этом устройстве. Синхронизация повторится после восстановления подключения.",
+  "draft.syncConflict": "Черновик отличается от версии на другом устройстве. Выберите, какую копию сохранить.",
+  "draft.keepLocal": "Сохранить черновик этого устройства",
+  "draft.useRemote": "Использовать черновик из облака",
+  "draft.storageUnavailable": "Хранилище браузера недоступно. Не закрывайте страницу, пока черновик не синхронизируется или тренировка не сохранится.",
   "login.telegramUsernameRequired": "Введите имя пользователя Telegram.",
   "login.telegramNotLinked": "Откройте бот DeepGym, нажмите Start и попробуйте ещё раз.",
   "login.telegramRateLimit": "Код уже отправлен. Подождите минуту перед повторной попыткой.",
@@ -1501,21 +1523,21 @@ const ru: Record<MessageKey, string> = {
   "stats.trend": "Тренд",
   "stats.perMonthUnit": "/мес",
 
-  "whatsNew.releaseTitle": "Главная — по-вашему.",
+  "whatsNew.releaseTitle": "Меньше сбоев в тренировках.",
   "whatsNew.releaseBody":
-    "Соберите главную из виджетов, изучайте прогресс на интерактивных графиках и записывайте разминку, не искажая статистику.",
-  "whatsNew.home.title": "Настраиваемая главная",
+    "В этом обновлении исправили ошибки входа, загрузки данных и сохранения тренировок.",
+  "whatsNew.home.title": "Вход в аккаунт",
   "whatsNew.home.body":
-    "18 виджетов трёх размеров: перетаскивайте, меняйте размер, убирайте и добавляйте — сетка складывается сама, как на экране телефона.",
-  "whatsNew.progress.title": "Вкладка «Прогресс» и живые графики",
+    "Исправили ряд ошибок авторизации и упростили повторный вход, если сессия истекла.",
+  "whatsNew.progress.title": "Понятнее ошибки загрузки",
   "whatsNew.progress.body":
-    "Зажмите и ведите пальцем по графику, переключайте период от месяца до всего времени и открывайте графики на весь экран с трендом и рекордами.",
-  "whatsNew.workout.title": "Разминка и следующий вес",
+    "Если данные не загрузились, основные экраны предлагают повторить попытку. При переходе между вкладками уже загруженные данные сохраняются.",
+  "whatsNew.workout.title": "Сохранение тренировок",
   "whatsNew.workout.body":
-    "Добавляйте разминочные подходы, которые не идут в прогресс, и смотрите минимальные блины до следующего веса с приростом в процентах.",
-  "whatsNew.library.title": "Библиотека и аккуратные настройки",
+    "Улучшили повторное сохранение и восстановление черновиков после проблем с соединением.",
+  "whatsNew.library.title": "Стабильнее работа",
   "whatsNew.library.body":
-    "Упражнения и шаблоны теперь вместе в Библиотеке, удаление черновика — наверху, а настройки открываются по разделам.",
+    "Сократили лишние запросы и исправили ошибки при смене аккаунта и обновлении данных.",
 
   "workout.warmupsUnsupported":
     "Для разминочных подходов нужно обновить базу (миграция 0008). Уберите разминку или примените миграцию и сохраните снова.",
@@ -1645,6 +1667,8 @@ const uk: Record<MessageKey, string> = {
     "Вправа з чернетки змінила режим навантаження або більше недоступна. Додайте її заново й повторіть збереження.",
   "workout.serverUpdateRequired":
     "Для збереження тренувань потрібно оновити сервер. Повторіть спробу після застосування міграції 0009.",
+  "workout.atomicUnavailable": "Збереження тимчасово недоступне. Спробуйте пізніше.",
+  "workout.createConflict": "Можливо, тренування вже збережено. Перевірте історію перед повторним збереженням.",
   "workout.alreadySavedConflict":
     "Цю чернетку вже збережено з іншими даними. Ваші правки залишилися тут. Відкрийте збережене тренування в історії, щоб змінити його.",
   "workout.draftNotReady": "Чернетка тренування ще не готова. Повторіть спробу.",
@@ -2001,6 +2025,15 @@ const uk: Record<MessageKey, string> = {
   "auth.sessionSlow": "Завантаження затягнулося",
   "auth.resetLocalSession": "Скинути локальну сесію",
   "auth.profileUnavailable": "Не вдалося відкрити профіль. Спробуйте ще раз або скиньте локальну сесію.",
+  "auth.unavailableTitle": "Вхід недоступний",
+  "auth.unavailableMessage": "Не вдалося підтвердити сесію. Перевірте з’єднання й повторіть спробу або поверніться до входу.",
+  "login.authUnavailable": "Сервіс входу тимчасово недоступний. Спробуйте ще раз.",
+  "common.backToLogin": "Повернутися до входу",
+  "draft.syncPending": "Чернетку збережено на цьому пристрої. Синхронізація повториться після відновлення з’єднання.",
+  "draft.syncConflict": "Чернетка відрізняється від версії на іншому пристрої. Виберіть, яку копію зберегти.",
+  "draft.keepLocal": "Зберегти чернетку цього пристрою",
+  "draft.useRemote": "Використати чернетку з хмари",
+  "draft.storageUnavailable": "Сховище браузера недоступне. Не закривайте сторінку, доки чернетка не синхронізується або тренування не збережеться.",
   "login.telegramUsernameRequired": "Введіть ім'я користувача Telegram.",
   "login.telegramNotLinked": "Відкрийте бот DeepGym, натисніть Start і спробуйте ще раз.",
   "login.telegramRateLimit": "Код уже надіслано. Зачекайте хвилину перед повторною спробою.",
@@ -2257,21 +2290,21 @@ const uk: Record<MessageKey, string> = {
   "stats.trend": "Тренд",
   "stats.perMonthUnit": "/міс",
 
-  "whatsNew.releaseTitle": "Головна — по-вашому.",
+  "whatsNew.releaseTitle": "Менше збоїв під час тренувань.",
   "whatsNew.releaseBody":
-    "Зберіть головну з віджетів, досліджуйте прогрес на інтерактивних графіках і записуйте розминку, не спотворюючи статистику.",
-  "whatsNew.home.title": "Налаштовувана головна",
+    "У цьому оновленні виправили помилки входу, завантаження даних і збереження тренувань.",
+  "whatsNew.home.title": "Вхід в акаунт",
   "whatsNew.home.body":
-    "18 віджетів трьох розмірів: перетягуйте, змінюйте розмір, прибирайте й додавайте — сітка складається сама, як на екрані телефона.",
-  "whatsNew.progress.title": "Вкладка «Прогрес» і живі графіки",
+    "Виправили низку помилок авторизації та спростили повторний вхід після завершення сеансу.",
+  "whatsNew.progress.title": "Зрозуміліші помилки завантаження",
   "whatsNew.progress.body":
-    "Затисніть і ведіть пальцем по графіку, перемикайте період від місяця до всього часу й відкривайте графіки на весь екран із трендом і рекордами.",
-  "whatsNew.workout.title": "Розминка й наступна вага",
+    "Якщо дані не завантажилися, основні екрани пропонують повторити спробу. Під час переходу між вкладками вже завантажені дані зберігаються.",
+  "whatsNew.workout.title": "Збереження тренувань",
   "whatsNew.workout.body":
-    "Додавайте розминкові підходи, що не йдуть у прогрес, і дивіться мінімальні млинці до наступної ваги з приростом у відсотках.",
-  "whatsNew.library.title": "Бібліотека й охайні налаштування",
+    "Поліпшили повторне збереження та відновлення чернеток після проблем зі з’єднанням.",
+  "whatsNew.library.title": "Стабільніша робота",
   "whatsNew.library.body":
-    "Вправи й шаблони тепер разом у Бібліотеці, видалення чернетки — вгорі, а налаштування відкриваються за розділами.",
+    "Скоротили зайві запити та виправили помилки під час зміни акаунта й оновлення даних.",
 
   "workout.warmupsUnsupported":
     "Для розминкових підходів потрібно оновити базу (міграція 0008). Приберіть розминку або застосуйте міграцію й збережіть знову.",

@@ -25,3 +25,5 @@ export { MuscleBalance } from "./ui/muscle-balance";
 export { PeriodOverview } from "./ui/period-overview";
 export { RecordsList } from "./ui/records-list";
 export { WeeklyActivity } from "./ui/weekly-activity";
+
+export { activityWeeklyBuckets, activityPeriodTotals } from "./model/activity";

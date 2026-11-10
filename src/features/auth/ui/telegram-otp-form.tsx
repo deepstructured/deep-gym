@@ -1,15 +1,15 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useI18n } from "@/shared/i18n";
+import { fetchWithTimeout } from "@/shared/lib/request-timeout";
 import { Button, ErrorNote, Field, IconTelegram, Input } from "@/shared/ui";
 import styles from "./telegram-otp-form.module.scss";
 
 type Step = "username" | "code";
 
 async function post(url: string, body: unknown, fallbackError: string) {
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -20,8 +20,8 @@ async function post(url: string, body: unknown, fallbackError: string) {
 }
 
 export function TelegramOtpForm() {
-  const router = useRouter();
   const { t } = useI18n();
+  const inFlight = useRef(false);
   const [step, setStep] = useState<Step>("username");
   const [username, setUsername] = useState("");
   const [code, setCode] = useState("");
@@ -29,6 +29,8 @@ export function TelegramOtpForm() {
   const [error, setError] = useState<string | null>(null);
 
   async function requestCode() {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -41,11 +43,14 @@ export function TelegramOtpForm() {
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      inFlight.current = false;
       setLoading(false);
     }
   }
 
   async function verifyCode() {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -54,10 +59,13 @@ export function TelegramOtpForm() {
         { username, code },
         t("common.error"),
       );
-      router.push("/");
-      router.refresh();
+      // The API writes SSR cookies. Reload so both the server and the browser
+      // auth client initialize from that session, with no stale guest cache.
+      window.location.assign("/");
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      inFlight.current = false;
       setLoading(false);
     }
   }

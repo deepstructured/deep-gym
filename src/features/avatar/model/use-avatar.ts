@@ -40,10 +40,12 @@ async function toSquareJpeg(file: File): Promise<Blob> {
 }
 
 function storagePathFromUrl(url: string): string | null {
-  const marker = `/storage/v1/object/public/${BUCKET}/`;
+  const marker = url.includes(`/api/storage/${BUCKET}/`)
+    ? `/api/storage/${BUCKET}/` : `/storage/v1/object/public/${BUCKET}/`;
   const index = url.indexOf(marker);
   if (index === -1) return null;
-  return decodeURIComponent(url.slice(index + marker.length).split("?")[0]);
+  try { return decodeURIComponent(url.slice(index + marker.length).split("?")[0]); }
+  catch { return null; }
 }
 
 async function removeStoredAvatar(url: string | null | undefined) {

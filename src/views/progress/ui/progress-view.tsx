@@ -38,6 +38,7 @@ import {
   EmptyState,
   IconPlus,
   PageLoader,
+  QueryError,
   PeriodSwitch,
   Sheet,
 } from "@/shared/ui";
@@ -78,7 +79,7 @@ export function ProgressView() {
   const [groupId, setGroupId] = useState<string | null>(null);
   const { data: groups } = useMuscleGroups();
   // Fetched once and sliced client-side, so switching the period is instant.
-  const { data: workouts, isLoading } = useAllWorkouts();
+  const { data: workouts, isLoading, error, isFetching, refetch } = useAllWorkouts();
 
   // Muscle groups that appear in the history, for the focus chips.
   const groupsWithData = useMemo(() => {
@@ -123,9 +124,10 @@ export function ProgressView() {
       account
       subheader={<PeriodSwitch value={period} onChange={setPeriod} />}
     >
+      {error && <QueryError onRetry={() => void refetch()} retrying={isFetching} />}
       {isLoading ? (
         <PageLoader variant="progress" />
-      ) : (workouts ?? []).length === 0 ? (
+      ) : error && !workouts ? null : (workouts ?? []).length === 0 ? (
         <EmptyState
           title={t("progress.emptyTitle")}
           hint={t("progress.emptyHint")}

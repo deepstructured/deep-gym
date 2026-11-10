@@ -1,0 +1,96 @@
+{
+  "brand": "DeepGym",
+  "language": "uk",
+  "date": "2026-10-07",
+  "tool": "built-in image_gen",
+  "format": {
+    "width": 1080,
+    "height": 1350,
+    "aspectRatio": "4:5",
+    "mime": "image/png"
+  },
+  "originalFormat": {
+    "width": 1122,
+    "height": 1402
+  },
+  "export": "sips deterministic dimension resampling only; no content edits",
+  "imageReference": "public/icons/icon-512.png used for 05-pwa-uk",
+  "publishStatus": "local files only",
+  "assets": [
+    {
+      "id": "01-workout-log-uk",
+      "label": "Журнал тренувань",
+      "headline": "Кожен підхід має значення.",
+      "short": "Щоденник твого тренування",
+      "body": "Вага, підходи й повторення — зберігай деталі кожного тренування у DeepGym. Повертайся до історії, коли плануєш наступне заняття.",
+      "concept": "Кінематографічне фото зі штангою, чорний і лаймовий.",
+      "utm": "01_workout_log",
+      "cta": "Почати тренування",
+      "url": "https://www.deepgym.fit/uk?utm_source=meta&utm_medium=paid_social&utm_campaign=deepgym_uk_2026_10&utm_content=01_workout_log",
+      "file": "01-workout-log-uk.png",
+      "original": "originals/01-workout-log-uk.png",
+      "promptFile": "prompts.md",
+      "visuallyVerified": true
+    },
+    {
+      "id": "02-progress-uk",
+      "label": "Історія та прогрес",
+      "headline": "Бачити прогрес. Тренуватись далі.",
+      "short": "Твоя історія в одному місці",
+      "body": "Переглядай минулі тренування та графіки у DeepGym. Відстежуй зміни робочої ваги й тримай свою історію під рукою.",
+      "concept": "Спортсменка між підходами й абстрактна лінія прогресу.",
+      "utm": "02_progress",
+      "cta": "Почати тренування",
+      "url": "https://www.deepgym.fit/uk?utm_source=meta&utm_medium=paid_social&utm_campaign=deepgym_uk_2026_10&utm_content=02_progress",
+      "file": "02-progress-uk.png",
+      "original": "originals/02-progress-uk.png",
+      "promptFile": "prompts.md",
+      "visuallyVerified": true
+    },
+    {
+      "id": "03-workout-templates-uk",
+      "label": "Шаблони тренувань",
+      "headline": "Твій план. Твій ритм.",
+      "short": "Зберігай свої шаблони",
+      "body": "Збирай власні шаблони тренувань у DeepGym і повертайся до свого плану. Вправи та структура наступного заняття — в одному місці.",
+      "concept": "Яскраве лаймове поле, предметна зйомка спортивного спорядження.",
+      "utm": "03_templates",
+      "cta": "Почати тренування",
+      "url": "https://www.deepgym.fit/uk?utm_source=meta&utm_medium=paid_social&utm_campaign=deepgym_uk_2026_10&utm_content=03_templates",
+      "file": "03-workout-templates-uk.png",
+      "original": "originals/03-workout-templates-uk.png",
+      "promptFile": "prompts.md",
+      "visuallyVerified": true
+    },
+    {
+      "id": "04-gym-tools-uk",
+      "label": "Інструменти для залу",
+      "headline": "Менше згадувати. Більше тренуватись.",
+      "short": "Налаштування завжди під рукою",
+      "body": "Зберігай налаштування тренажерів і користуйся калькулятором дисків у DeepGym. Деталі, до яких зручно повернутися перед підходом.",
+      "concept": "Макрозйомка тренажера в кольорі індиго з лаймовим акцентом.",
+      "utm": "04_gym_tools",
+      "cta": "Почати тренування",
+      "url": "https://www.deepgym.fit/uk?utm_source=meta&utm_medium=paid_social&utm_campaign=deepgym_uk_2026_10&utm_content=04_gym_tools",
+      "file": "04-gym-tools-uk.png",
+      "original": "originals/04-gym-tools-uk.png",
+      "promptFile": "prompts.md",
+      "visuallyVerified": true
+    },
+    {
+      "id": "05-pwa-uk",
+      "label": "PWA на головному екрані",
+      "headline": "Твій зал. Твій щоденник.",
+      "short": "Додай DeepGym на головний екран",
+      "body": "Відкрий DeepGym у браузері та додай на головний екран телефона. Веди щоденник тренувань і повертайся до нього перед наступним заняттям.",
+      "concept": "Предметна зйомка телефона та впізнаваної іконки DeepGym.",
+      "utm": "05_pwa",
+      "cta": "Почати тренування",
+      "url": "https://www.deepgym.fit/uk?utm_source=meta&utm_medium=paid_social&utm_campaign=deepgym_uk_2026_10&utm_content=05_pwa",
+      "file": "05-pwa-uk.png",
+      "original": "originals/05-pwa-uk.png",
+      "promptFile": "prompts.md",
+      "visuallyVerified": true
+    }
+  ]
+}

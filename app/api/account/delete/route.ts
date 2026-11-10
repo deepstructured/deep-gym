@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/shared/lib/supabase/admin";
+import { clearSessionCookies, getAuthenticatedUser, ownAuthEnabled, withAuthDb, authOrigin } from "@/server/auth";
+import { removeAccountAvatars } from "@/server/avatars";
 
 const AVATAR_BATCH_SIZE = 100;
 const MAX_AVATAR_LIST_CALLS = 250;
@@ -63,6 +65,23 @@ function safeErrorCode(error: unknown): string | undefined {
  * groups are restricted by exercises and require ordered cleanup first.
  */
 export async function DELETE(request: NextRequest) {
+  if (ownAuthEnabled()) {
+    const origin = request.headers.get("origin");
+    if ((origin && origin !== authOrigin()) || request.headers.get("sec-fetch-site") === "cross-site" || (!origin && request.headers.get("cookie") && !request.headers.get("authorization"))) {
+      return NextResponse.json({ error: "Invalid request origin" }, { status: 403 });
+    }
+    try {
+      const user = await getAuthenticatedUser(request);
+      if (!user) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+      // A storage failure keeps the account available for an explicit retry.
+      // Never report deletion complete while known avatar cleanup has failed.
+      await removeAccountAvatars(user.id);
+      await withAuthDb((db) => db.query("select auth.delete_deepgym_account($1::uuid)", [user.id]).then(() => undefined));
+      const response = NextResponse.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
+      clearSessionCookies(response);
+      return response;
+    } catch { return NextResponse.json({ error: "Could not delete this account. Please try again" }, { status: 503 }); }
+  }
   const authorization = request.headers.get("authorization") ?? "";
   const token = /^Bearer (\S+)$/i.exec(authorization)?.[1];
   if (!token) {

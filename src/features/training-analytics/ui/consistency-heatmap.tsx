@@ -2,14 +2,13 @@
 
 import { addDays, format, startOfWeek } from "date-fns";
 import { useMemo } from "react";
-import type { Workout } from "@/entities/workout";
 import { cn } from "@/shared/lib/cn";
 import { getDateLocale, toISODate, todayISO } from "@/shared/lib/dates";
 import { activityByDate } from "../model/analytics";
 import styles from "./consistency-heatmap.module.scss";
 
 interface ConsistencyHeatmapProps {
-  workouts: Workout[];
+  workouts: { date: string }[];
   weeks?: number;
 }
 

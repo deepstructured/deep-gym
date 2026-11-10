@@ -14,6 +14,10 @@ const exchanges = new Map<string, Promise<void>>();
 
 export async function createSessionFromUrl(url: string): Promise<void> {
   const parsed = new URL(url);
+  const ownBackend = process.env.EXPO_PUBLIC_BACKEND === "postgres";
+  if (ownBackend && (parsed.protocol !== "deepgym:" || parsed.hostname !== "auth" || parsed.pathname !== "/callback" || parsed.username || parsed.password || parsed.port)) {
+    throw new Error("Invalid sign-in callback");
+  }
   const query = parsed.searchParams;
   const fragment = new URLSearchParams(parsed.hash.slice(1));
   const error =
@@ -40,7 +44,7 @@ export async function createSessionFromUrl(url: string): Promise<void> {
   const access_token = query.get("access_token") ?? fragment.get("access_token");
   const refresh_token =
     query.get("refresh_token") ?? fragment.get("refresh_token");
-  if (access_token && refresh_token) {
+  if (!ownBackend && access_token && refresh_token) {
     const result = await supabase.auth.setSession({
       access_token,
       refresh_token,

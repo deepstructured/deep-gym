@@ -1,0 +1,9 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "DeepGym",
+    "NSPhotoLibraryUsageDescription": "Разрешите DeepGym выбрать фото профиля из вашей медиатеки."
+  },
+  "android": {
+    "app_name": "DeepGym"
+  }
+}

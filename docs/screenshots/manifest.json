@@ -1,0 +1,79 @@
+{
+  "capturedAt": "2026-10-07T14:03:41.287Z",
+  "timezone": "Europe/Kyiv",
+  "account": "demo@deepgym.app",
+  "source": "current running development app; seeded demo data only",
+  "mobileViewport": {
+    "width": 390,
+    "height": 844,
+    "deviceScaleFactor": 2
+  },
+  "desktopViewport": {
+    "width": 1440,
+    "height": 1000,
+    "deviceScaleFactor": 1
+  },
+  "files": [
+    {
+      "file": "home.png",
+      "sha256": "5c751a6b6e04ef26fba062241b0097bd02faf71ddec6f66c16e123338e8a876a"
+    },
+    {
+      "file": "new-workout.png",
+      "sha256": "230e6d41d23ebf4c41a8c693c98d373f4250c375c70df9c188c81c8052261b2e"
+    },
+    {
+      "file": "plates-machine.png",
+      "sha256": "465e61dbff104e953d077f04ed603e22983409482ff796ea8eefa4fa0d2a50f2"
+    },
+    {
+      "file": "machine-info.png",
+      "sha256": "ef9880e2d1ab19e8da70dcbc3479b17041c8e4b9ebbb0df9580dab44e4ff7f2d"
+    },
+    {
+      "file": "exercises.png",
+      "sha256": "2d12df35821992efd1ce8467098dfa615b0a28fce01fad3e58f0076cd7c13e62"
+    },
+    {
+      "file": "exercise-detail.png",
+      "sha256": "64f8513c753093242b8bd9459ed1def9064ce59154344c5bac519a7f3e72a3bf"
+    },
+    {
+      "file": "plates-dumbbell.png",
+      "sha256": "89bf04483682df011ddc423ce59679d823210c2c8d3773a9d768ffbf7b0a4d40"
+    },
+    {
+      "file": "history-week.png",
+      "sha256": "c45782e473ae6333e58c605e553ed2b105bb9cd216f1d06937db689a177e118c"
+    },
+    {
+      "file": "history-month.png",
+      "sha256": "5e4bda27859e609ff4c5664e74c55de9917d348a9d8921a8958272c48b387ed3"
+    },
+    {
+      "file": "progress.png",
+      "sha256": "83c4de4751530de81bf01d33de427f20b0e49bc98b2aeaf3743ae5b730a3acdf"
+    },
+    {
+      "file": "templates.png",
+      "sha256": "4e7758574f6db82f0aa7491a8cb00e59b1b3c38acc876bd72241df4cf64b048b"
+    },
+    {
+      "file": "login.png",
+      "sha256": "d326694fcea5f05adb4f7f1bc717d37612ce9225642042bbd39755ac9e9d6e10"
+    },
+    {
+      "file": "home-desktop.png",
+      "sha256": "52e633aa327386a2a061c4dade060eef8d312a58dc1a35190ed40e270110cf28"
+    },
+    {
+      "file": "progress-desktop.png",
+      "sha256": "85389d57a1f7b31b5ec24e5542a028ca1446eda4f7515fbd92d4da4aa83cf272"
+    }
+  ],
+  "publicLocales": [
+    "en",
+    "uk",
+    "ru"
+  ]
+}

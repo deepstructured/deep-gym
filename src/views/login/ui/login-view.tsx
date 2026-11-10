@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useProfile } from "@/entities/user";
 import {
   GoogleSignInButton,
   TelegramOtpForm,
@@ -10,7 +11,12 @@ import {
 } from "@/features/auth";
 import { isSupabaseConfigured, TELEGRAM_BOT_USERNAME } from "@/shared/config/env";
 import { useI18n } from "@/shared/i18n";
+import { marketingCopy } from "@/shared/i18n/marketing";
+import { marketingPath } from "@/shared/config/seo";
 import { cn } from "@/shared/lib/cn";
+import { useAuthSession } from "@/shared/lib/auth-session";
+import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
+import { withTimeout } from "@/shared/lib/request-timeout";
 import {
   BrandMark,
   Button,
@@ -36,12 +42,37 @@ function AppleMark() {
 }
 
 function LoginContent() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const session = useAuthSession();
+  const profileQuery = useProfile();
   const [telegramOpen, setTelegramOpen] = useState(false);
   const botUsername = TELEGRAM_BOT_USERNAME.trim().replace(/^@+/, "");
   const botLink = useTelegramBotLink();
   const oauthFailed = searchParams.get("error") === "oauth";
+  const authUnavailable = searchParams.get("error") === "unavailable";
+  const hasLoginError = searchParams.has("error");
+
+  useEffect(() => {
+    // Keep this recovery route usable when a stored session cannot load its
+    // profile. A local cookie alone is not enough to send the user away.
+    let active = true;
+    if (!hasLoginError && session.status === "authenticated" &&
+        profileQuery.isSuccess && profileQuery.data.id === session.userId) {
+      const expectedUser = session.userId;
+      // Middleware can send an expired/revoked session back here while React
+      // still has a warm profile. Only fresh validation may redirect again.
+      void withTimeout(async (signal) => {
+        const result = await getSupabaseBrowser().auth.getUser();
+        signal.throwIfAborted();
+        return result;
+      }).then(({data,error}) => {
+        if (active && !error && data.user?.id === expectedUser) router.replace("/");
+      }).catch(() => {});
+    }
+    return () => { active = false; };
+  }, [hasLoginError, profileQuery.data, profileQuery.isSuccess, router, session.status, session.userId]);
 
   return (
     <main className={styles.main}>
@@ -71,6 +102,11 @@ function LoginContent() {
       {oauthFailed && (
         <div className={styles.notice}>
           <ErrorNote message={t("login.googleFailed")} />
+        </div>
+      )}
+      {authUnavailable && (
+        <div className={styles.notice}>
+          <ErrorNote message={t("login.authUnavailable")} />
         </div>
       )}
 
@@ -118,6 +154,9 @@ function LoginContent() {
         </div>
       )}
 
+      <Link className={styles.privacyLink} href={marketingPath(lang)}>
+        {marketingCopy[lang].aboutLink}
+      </Link>
       <Link className={styles.privacyLink} href="/privacy">
         {t("settings.privacyPolicy")}
       </Link>

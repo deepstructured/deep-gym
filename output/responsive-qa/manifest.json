@@ -1,0 +1,108 @@
+{
+  "capturedAt": "2026-10-07T14:11:30.008Z",
+  "timezone": "Europe/Kyiv",
+  "account": "demo@deepgym.app",
+  "source": "Current development web/PWA; read-only navigation, no seeding or record saves",
+  "files": [
+    {
+      "file": "01-home-desktop.png",
+      "route": "/",
+      "viewport": {
+        "width": 1440,
+        "height": 1000,
+        "deviceScaleFactor": 1
+      },
+      "sha256": "635839391802059fcd4575f50c9a481f9759f495c4ab1e13330e7aaad185f3e1"
+    },
+    {
+      "file": "02-history-desktop.png",
+      "route": "/history",
+      "viewport": {
+        "width": 1440,
+        "height": 1000,
+        "deviceScaleFactor": 1
+      },
+      "sha256": "feebe516dfc771ad3fe7419beb60420e782c8aa589c63eacfb1f3a92b51dfa68"
+    },
+    {
+      "file": "03-progress-desktop.png",
+      "route": "/progress",
+      "viewport": {
+        "width": 1440,
+        "height": 1000,
+        "deviceScaleFactor": 1
+      },
+      "sha256": "57d52b8ac330e27f63fea6e5122df3527509057d98089c731f717d65ae203e4d"
+    },
+    {
+      "file": "04-exercises-desktop.png",
+      "route": "/exercises",
+      "viewport": {
+        "width": 1440,
+        "height": 1000,
+        "deviceScaleFactor": 1
+      },
+      "sha256": "0fc0935b88eb030f33cf6b33e6151433c48b144252e310a2b67942b807fb0248"
+    },
+    {
+      "file": "05-exercise-detail-desktop.png",
+      "route": "/exercises/cf83cb56-d106-40c2-87de-cdaf06828c53",
+      "viewport": {
+        "width": 1440,
+        "height": 1000,
+        "deviceScaleFactor": 1
+      },
+      "sha256": "1253980bceebb48041fd9ca8721d5f60dbb6b93a7ca63aa529d16c473d4fbd43"
+    },
+    {
+      "file": "06-templates-desktop.png",
+      "route": "/templates",
+      "viewport": {
+        "width": 1440,
+        "height": 1000,
+        "deviceScaleFactor": 1
+      },
+      "sha256": "b5abbc17c78dfd0637c96f694d526f1852e62181d6091a36fe9d7e0ae282f7bb"
+    },
+    {
+      "file": "07-template-editor-desktop.png",
+      "route": "/templates/156ccf4c-7bd6-4c01-a802-e60888c4175d/edit",
+      "viewport": {
+        "width": 1440,
+        "height": 1000,
+        "deviceScaleFactor": 1
+      },
+      "sha256": "fc57bd40c55f6600326839ce8a3ee95205611b1105beebe9666d005ef681b851"
+    },
+    {
+      "file": "08-settings-desktop.png",
+      "route": "/settings",
+      "viewport": {
+        "width": 1440,
+        "height": 1000,
+        "deviceScaleFactor": 1
+      },
+      "sha256": "91e84a33f360d02fdb0da81eb60cf383aabefc51833238086e61786ff1f27e11"
+    },
+    {
+      "file": "09-progress-tablet.png",
+      "route": "/progress",
+      "viewport": {
+        "width": 820,
+        "height": 1180,
+        "deviceScaleFactor": 1
+      },
+      "sha256": "e49c264c6f4968c79c92e9b04d645a78fdc8b3ed16aeb1f50de5ef6464f02e57"
+    },
+    {
+      "file": "10-progress-landscape-tablet.png",
+      "route": "/progress",
+      "viewport": {
+        "width": 1024,
+        "height": 1000,
+        "deviceScaleFactor": 1
+      },
+      "sha256": "6761d6379c4a720fb19674416a71b77a5c2e9e9cba255177043573813938e065"
+    }
+  ]
+}

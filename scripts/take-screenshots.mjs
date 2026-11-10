@@ -7,11 +7,13 @@
  *
  * Usage: node scripts/take-screenshots.mjs
  */
-import { readFileSync, mkdirSync } from "node:fs";
+import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
 import { createClient } from "@supabase/supabase-js";
+import sharp from "sharp";
+import { createHash } from "node:crypto";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 for (const line of readFileSync(join(root, ".env.local"), "utf8").split("\n")) {
@@ -21,9 +23,12 @@ for (const line of readFileSync(join(root, ".env.local"), "utf8").split("\n")) {
   }
 }
 
-const BASE = "http://localhost:3000";
+const BASE = process.env.SCREENSHOT_BASE_URL || "http://localhost:3000";
+if (!["localhost", "127.0.0.1"].includes(new URL(BASE).hostname)) {
+  throw new Error("Screenshots must use the local development server and demo account");
+}
 const OUT = join(root, "docs/screenshots");
-const CHROME =
+const CHROME = process.env.CHROME_PATH ||
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 mkdirSync(OUT, { recursive: true });
@@ -42,6 +47,12 @@ const { data: users } = await admin.auth.admin.listUsers({
 });
 const demoUser = users.users.find((u) => u.email === "demo@deepgym.app");
 if (!demoUser) throw new Error("Demo user not found — run seed-demo.mjs first");
+// Only this explicitly designated demo profile is changed by the capture tool.
+const { error: demoProfileError } = await admin.from("profiles").update({
+  display_name: "Alex Demo", language: "en", unit: "kg",
+  avatar_url: "/avatars/deepgym-pixel-lifter.webp", home_widgets: null,
+}).eq("id", demoUser.id);
+if (demoProfileError) throw demoProfileError;
 const { data: exercises } = await admin
   .from("exercises")
   .select("id, name, equipment, machine_settings, working_weight_kg")
@@ -58,6 +69,7 @@ const draftExercise = (name, muscleGroupName, sets) => {
     muscleGroupName,
     equipment: exercise.equipment,
     machineSettings: exercise.machine_settings,
+    unit: "kg",
     notes: "",
     showNotes: false,
     sets: sets.map(([weight, reps, toFailure]) => ({
@@ -72,6 +84,9 @@ const draftExercise = (name, muscleGroupName, sets) => {
 const draft = {
   type: "Upper",
   date: new Date().toISOString().slice(0, 10),
+  bodyWeight: "80.65",
+  bodyWeightUnit: "kg",
+  bodyWeightAuto: false,
   notes: "",
   showNotes: false,
   exercises: [
@@ -86,12 +101,12 @@ const draft = {
     ]),
   ],
 };
-const draftJson = JSON.stringify({ state: { draft }, version: 0 });
+const draftJson = () => JSON.stringify({ state: { draft, ownerId: demoUser.id, updatedAt: new Date().toISOString() }, version: 0 });
 
 // ── browser ──────────────────────────────────────────────────────────────
 const browser = await puppeteer.launch({
   executablePath: CHROME,
-  headless: "new",
+  headless: true,
   args: ["--no-first-run"],
 });
 
@@ -116,8 +131,14 @@ async function settle(extra = 600) {
   await sleep(extra);
 }
 
+const captures = [];
 async function shot(name) {
+  await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'));
+  if (await page.evaluate(() => /Application error|Something went wrong/.test(document.body.innerText))) {
+    throw new Error(`Cannot capture an error screen: ${name}`);
+  }
   await page.screenshot({ path: join(OUT, name) });
+  captures.push(name);
   console.log(`✓ ${name}`);
 }
 
@@ -146,6 +167,10 @@ async function clickAria(label) {
 }
 
 // sign in as demo
+await page.emulateTimezone("Europe/Kyiv");
+await page.evaluateOnNewDocument(() => { localStorage.setItem("deepgym-ui-mode", "auto"); });
+
+try {
 await page.goto(`${BASE}/api/dev/login?email=demo@deepgym.app`, {
   waitUntil: "networkidle2",
   timeout: 60000,
@@ -154,7 +179,7 @@ await page.goto(`${BASE}/api/dev/login?email=demo@deepgym.app`, {
 // home
 await page.goto(`${BASE}/`, { waitUntil: "networkidle2" });
 await page.waitForFunction(
-  () => document.body.innerText.includes("Recent workouts"),
+  () => document.querySelector('[aria-label="Customize home"]') && document.body.innerText.includes("All history"),
 );
 await settle(1200);
 await shot("home.png");
@@ -162,7 +187,7 @@ await shot("home.png");
 // new workout (prefilled draft via localStorage)
 await page.evaluate((json) => {
   localStorage.setItem("deepgym-workout-draft", json);
-}, draftJson);
+}, draftJson());
 await page.goto(`${BASE}/workouts/new`, { waitUntil: "networkidle2" });
 await page.waitForFunction(
   () => document.body.innerText.includes("Chest Press"),
@@ -226,6 +251,16 @@ await clickText("Month");
 await settle(900);
 await shot("history-month.png");
 
+// New current product screens used by the README and product landing.
+await page.goto(`${BASE}/progress`, { waitUntil: "networkidle2" });
+await page.waitForFunction(() => document.body.innerText.includes("Weekly activity") && document.body.innerText.includes("Body weight"));
+await settle(900);
+await shot("progress.png");
+await page.goto(`${BASE}/templates`, { waitUntil: "networkidle2" });
+await page.waitForFunction(() => document.body.innerText.includes("Upper foundation"));
+await settle();
+await shot("templates.png");
+
 // login screen (fresh incognito context — signed out)
 const incognito = await browser.createBrowserContext();
 const loginPage = await incognito.newPage();
@@ -236,6 +271,63 @@ await hideDevBadge(loginPage);
 await sleep(900);
 await loginPage.screenshot({ path: join(OUT, "login.png") });
 console.log("✓ login.png");
+captures.push("login.png");
 
-await browser.close();
+// Every published derivative is rebuilt from a capture of the current UI.
+const publicScreenshots = join(root, "public/screenshots");
+mkdirSync(publicScreenshots, { recursive: true });
+const publicMap = { home: "home", "new-workout": "new-workout", progress: "progress", history: "history-week", templates: "templates", "exercise-detail": "exercise-detail" };
+for (const [output, source] of Object.entries(publicMap)) {
+  await sharp(join(OUT, `${source}.png`)).webp({ quality: 88 }).toFile(join(publicScreenshots, `${output}.webp`));
+}
+
+// Capture localized UI instead of displaying English screenshots on every locale.
+for (const language of ["uk", "ru"]) {
+  const { error } = await admin.from("profiles").update({ language }).eq("id", demoUser.id);
+  if (error) throw error;
+  const localizedOut = join(publicScreenshots, language);
+  mkdirSync(localizedOut, { recursive: true });
+  for (const [name, path] of Object.entries({ home: "/", "new-workout": "/workouts/new", progress: "/progress", history: "/history", templates: "/templates", "exercise-detail": `/exercises/${byName("Chest Press").id}` })) {
+    await page.goto(`${BASE}${path}`, { waitUntil: "networkidle2" });
+    await page.waitForFunction((lang) => document.documentElement.lang === lang && !document.querySelector('[aria-busy="true"]'), {}, language);
+    await settle(1100);
+    const bytes = await page.screenshot();
+    await sharp(bytes).webp({ quality: 88 }).toFile(join(localizedOut, `${name}.webp`));
+    console.log(`✓ public/screenshots/${language}/${name}.webp`);
+  }
+}
+
+// Also refresh reusable desktop previews; responsive QA has its own capture script.
+await admin.from("profiles").update({ language: "en" }).eq("id", demoUser.id);
+await page.setViewport({ width: 1440, height: 1000, deviceScaleFactor: 1 });
+await page.goto(`${BASE}/`, { waitUntil: "networkidle2" });
+await settle(1100);
+await shot("home-desktop.png");
+await page.goto(`${BASE}/progress`, { waitUntil: "networkidle2" });
+await settle(900);
+await shot("progress-desktop.png");
+
+const capturedAt = new Date().toISOString();
+const screenshotConfig = join(root, "src/shared/config/screenshots.ts");
+writeFileSync(screenshotConfig, readFileSync(screenshotConfig, "utf8").replace(
+  /export const SCREENSHOT_REVISION = "[^"]+";/,
+  `export const SCREENSHOT_REVISION = "${capturedAt.replace(/[^0-9]/g, "")}";`,
+));
+writeFileSync(join(OUT, "manifest.json"), JSON.stringify({
+  capturedAt, timezone: "Europe/Kyiv", account: "demo@deepgym.app",
+  source: "current running development app; seeded demo data only",
+  mobileViewport: { width: 390, height: 844, deviceScaleFactor: 2 },
+  desktopViewport: { width: 1440, height: 1000, deviceScaleFactor: 1 },
+  files: captures.map((file) => ({ file, sha256: createHash("sha256").update(readFileSync(join(OUT, file))).digest("hex") })),
+  publicLocales: ["en", "uk", "ru"],
+}, null, 2) + "\n");
 console.log("done ✓");
+} catch (error) {
+  console.error("Capture failed on", page.url(), await page.title());
+  console.error((await page.evaluate(() => document.body.innerText)).slice(0, 1800));
+  await page.screenshot({ path: "/private/tmp/deepgym-capture-error.png" });
+  throw error;
+} finally {
+  await admin.from("profiles").update({ language: "en" }).eq("id", demoUser.id);
+  await browser.close();
+}

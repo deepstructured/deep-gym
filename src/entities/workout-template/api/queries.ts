@@ -2,19 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
+import { requireAuthUserId, useAuthSession } from "@/shared/lib/auth-session";
+import { readAllPages } from "@/shared/lib/supabase/pagination";
 import type {
   WorkoutTemplate,
   WorkoutTemplateInput,
   WorkoutTemplateSummary,
 } from "../model/types";
-
-const WORKOUT_TEMPLATE_SELECT = `
-  *,
-  workout_template_exercises (
-    *,
-    exercise:exercises (*)
-  )
-`;
 
 function sortNested(template: WorkoutTemplate): WorkoutTemplate {
   template.workout_template_exercises.sort(
@@ -36,21 +30,21 @@ function normalizeInput(input: WorkoutTemplateInput): WorkoutTemplateInput {
 }
 
 export function useWorkoutTemplates() {
+  const { userId } = useAuthSession();
   return useQuery({
-    queryKey: ["workout-templates"],
-    queryFn: async (): Promise<WorkoutTemplateSummary[]> => {
+    queryKey: ["workout-templates", userId],
+    enabled: Boolean(userId),
+    queryFn: async ({ signal }): Promise<WorkoutTemplateSummary[]> => {
       const supabase = getSupabaseBrowser();
-      const { data, error } = await supabase
-        .from("workout_templates")
-        .select("*, workout_template_exercises(count)")
-        .order("updated_at", { ascending: false })
-        .order("name");
-      if (error) throw error;
-
       type Row = Omit<WorkoutTemplateSummary, "exerciseCount"> & {
         workout_template_exercises: { count: number }[];
       };
-      return (data as Row[]).map((row) => ({
+      const rows = await readAllPages<Row>(({ from, to, count }) => supabase
+        .from("workout_templates")
+        .select("*, workout_template_exercises(count)", { count }).eq("user_id", userId!)
+        .order("updated_at", { ascending: false }).order("name").order("id")
+        .range(from, to).abortSignal(signal), signal);
+      return rows.map((row) => ({
         id: row.id,
         user_id: row.user_id,
         name: row.name,
@@ -64,37 +58,44 @@ export function useWorkoutTemplates() {
 }
 
 export function useWorkoutTemplate(id: string) {
+  const { userId } = useAuthSession();
   return useQuery({
-    queryKey: ["workout-template", id],
-    queryFn: async (): Promise<WorkoutTemplate> => {
-      const supabase = getSupabaseBrowser();
-      const { data, error } = await supabase
-        .from("workout_templates")
-        .select(WORKOUT_TEMPLATE_SELECT)
-        .eq("id", id)
-        .single();
-      if (error) throw error;
-      return sortNested(data as WorkoutTemplate);
-    },
-    enabled: Boolean(id),
+    queryKey: ["workout-template", id, userId],
+    queryFn: ({ signal }) => getWorkoutTemplate(id, signal),
+    enabled: Boolean(id && userId),
   });
 }
 
-export async function getWorkoutTemplate(id: string): Promise<WorkoutTemplate> {
+export async function getWorkoutTemplate(id: string, signal?: AbortSignal): Promise<WorkoutTemplate> {
+  const userId = requireAuthUserId();
   const supabase = getSupabaseBrowser();
   const { data, error } = await supabase
     .from("workout_templates")
-    .select(WORKOUT_TEMPLATE_SELECT)
-    .eq("id", id)
+    .select("*")
+    .eq("id", id).eq("user_id", userId)
+    .abortSignal(signal ?? new AbortController().signal)
     .single();
   if (error) throw error;
-  return sortNested(data as WorkoutTemplate);
+  if (process.env.NEXT_PUBLIC_BACKEND === "postgres") {
+    if (requireAuthUserId() !== userId) throw new Error("Session changed");
+    return sortNested(data as WorkoutTemplate);
+  }
+  const exercises = await readAllPages<WorkoutTemplate["workout_template_exercises"][number]>(async ({ from, to, count }) => {
+    const result = await supabase.from("workout_template_exercises")
+      .select("*, exercise:exercises(*)", { count }).eq("template_id", id)
+      .order("position").order("id").range(from, to)
+      .abortSignal(signal ?? new AbortController().signal);
+    return { ...result, data: result.data as unknown as WorkoutTemplate["workout_template_exercises"] | null };
+  }, signal);
+  if (requireAuthUserId() !== userId) throw new Error("Session changed");
+  return sortNested({ ...data, workout_template_exercises: exercises } as WorkoutTemplate);
 }
 
 export function useCreateWorkoutTemplate() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: WorkoutTemplateInput): Promise<string> => {
+      requireAuthUserId();
       const supabase = getSupabaseBrowser();
       const normalized = normalizeInput(input);
       const { data, error } = await supabase.rpc("create_workout_template", {
@@ -123,6 +124,7 @@ export function useUpdateWorkoutTemplate() {
       id: string;
       input: WorkoutTemplateInput;
     }) => {
+      requireAuthUserId();
       const supabase = getSupabaseBrowser();
       const normalized = normalizeInput(input);
       const { error } = await supabase.rpc("update_workout_template", {
@@ -148,7 +150,7 @@ export function useDeleteWorkoutTemplate() {
       const { error } = await supabase
         .from("workout_templates")
         .delete()
-        .eq("id", id);
+        .eq("id", id).eq("user_id", requireAuthUserId());
       if (error) throw error;
     },
     onSuccess: (_data, id) => {

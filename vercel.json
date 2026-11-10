@@ -1,0 +1,4 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm ci --workspace=@deepgym/core --include-workspace-root --no-audit --no-fund"
+}

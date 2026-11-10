@@ -2,9 +2,14 @@
 
 Этот документ описывает, как устроено приложение DeepGym: из каких слоев оно состоит, какие экраны есть, как ходят данные, как работает авторизация, где хранится состояние и что происходит при создании или редактировании тренировки.
 
+Сверено с кодом 7 октября 2026 года. Подробные экранные сценарии ниже относятся
+к веб/PWA; особенности нативного приложения описаны в `apps/mobile/README.md`.
+
 ## 1. Что это за приложение
 
-DeepGym - мобильный PWA-трекер силовых тренировок.
+DeepGym — PWA-трекер силовых тренировок с мобильным и десктопным интерфейсом.
+В том же npm workspace разрабатывается приложение Expo / React Native для
+iOS и Android; наличие его кода не означает публикацию в магазинах.
 
 Главная задача приложения:
 
@@ -46,7 +51,7 @@ src/views/
   полноценные экраны приложения:
   home, login, onboarding, history, progress, exercises,
   exercise-detail, templates, template-detail, template-editor,
-  workout-new, workout-edit, settings
+  workout-new, workout-edit, settings, privacy, about
 
 src/widgets/
   крупные сборные блоки интерфейса:
@@ -67,6 +72,12 @@ src/entities/
 src/shared/
   переиспользуемые UI-компоненты, lib-функции,
   Supabase-клиенты, конфиги
+
+apps/mobile/
+  Expo Router routes, нативные экраны, провайдеры и assets
+
+packages/core/
+  общие типы, переводы, версии продукта и доменные расчеты для web/native
 
 supabase/migrations/
   SQL-схема базы данных, RLS-политики, дефолтные группы мышц
@@ -89,7 +100,8 @@ scripts/
 ```mermaid
 flowchart TD
   User[Пользователь в браузере/PWA] --> MW[Next middleware]
-  MW -->|нет сессии| Login[/login/]
+  MW -->|публичная страница| Public[Публичная главная /uk /ru /privacy]
+  MW -->|нет сессии, приватный путь| Login[/login/]
   MW -->|есть сессия| Route[App Router route]
   Route --> View[src/views/*]
   View --> Shell[AppShell + BottomNav]
@@ -116,15 +128,17 @@ flowchart TD
 - подключает шрифты `Urbanist` и локальный `matricha.ttf`;
 - подключает `src/app/globals.css`;
 - оборачивает приложение в `Providers`;
-- задает metadata, PWA manifest, Apple Web App настройки и viewport.
+- задает metadata, PWA manifest, Apple Web App настройки и viewport;
+- задает серверный язык документа по URL; публичные страницы содержат
+  canonical, hreflang и социальные превью.
 
 ### `src/app/providers.tsx`
 
-`Providers`:
+`Providers` отделяет публичную витрину от авторизованного приложения:
 
-- создает `QueryClient` для React Query;
-- синхронизирует язык интерфейса с профилем;
-- оборачивает приватный интерфейс в глобальный `ProductExperience`;
+- публичная главная и ее переводы не зависят от запросов профиля или onboarding;
+- для приложения подключает `src/app/application-providers.tsx`:
+  `QueryClient`, `I18nProvider`, синхронизацию языка профиля и `ProductExperience`;
 - в production регистрирует service worker `/sw.js`;
 - в development удаляет старые service workers и кеши `deepgym-*`, чтобы не ловить устаревшие чанки.
 
@@ -138,17 +152,23 @@ React Query настроен так:
 
 Middleware выполняется перед защищенными страницами:
 
-- публичные пути: `/login`, `/auth`, `/api`, `/offline`;
+- публичные пути: `/`, `/uk`, `/ru`, `/login`, `/auth`, `/api`, `/offline`, `/privacy`;
+- на `/` гость получает публичную витрину, авторизованный пользователь — свою главную;
+- старые `/about`, `/about/uk`, `/about/ru` перенаправляются на соответствующие публичные URL;
 - если Supabase env не настроены, все приватные страницы редиректятся на `/login`;
 - если пользователь не залогинен и путь не публичный, редирект на `/login`;
 - если пользователь залогинен и идет на `/login`, редирект на `/`;
-- middleware также помогает Supabase обновлять auth cookies.
+- middleware также помогает Supabase обновлять auth cookies;
+- приватные страницы получают `noindex`; robots, sitemap, manifest и публичные
+  изображения доступны без входа. Подробная политика — в `docs/SEO_AUDIT.md`.
 
 ## 5. Карта URL и экранов
 
 | URL | Файл route | View | Назначение |
 | --- | --- | --- | --- |
-| `/` | `app/page.tsx` | `HomeView` | Главная: настраиваемая сетка виджетов (`HomeDashboard`) |
+| `/` | `app/page.tsx` | `AboutView` / `HomeView` | Публичная витрина для гостя; после входа — настраиваемая сетка виджетов (`HomeDashboard`) |
+| `/uk`, `/ru` | `app/uk/page.tsx`, `app/ru/page.tsx` | `AboutView` | Украинская и русская публичные витрины |
+| `/about`, `/about/uk`, `/about/ru` | redirect routes в `app/about/` | — | Постоянные перенаправления на `/`, `/uk`, `/ru` |
 | `/login` | `app/login/page.tsx` | `LoginView` | Вход через Google или Telegram OTP |
 | `/onboarding` | `app/onboarding/page.tsx` | `OnboardingView` | Пятишаговая первоначальная настройка; требует авторизации |
 | `/history` | `app/history/page.tsx` | `HistoryView` | История тренировок: день, неделя, месяц |
@@ -163,6 +183,9 @@ Middleware выполняется перед защищенными страни
 | `/workouts/[id]/edit` | `app/workouts/[id]/edit/page.tsx` | `WorkoutEditView` | Редактирование тренировки |
 | `/settings` | `app/settings/page.tsx` | `SettingsView` | Сгруппированный список: профиль, вес тела, неделя, блины, группы мышц, язык, единицы, главный экран, гайд, What's new, выход. `?open=<section>` открывает нужный sheet |
 | `/offline` | `app/offline/page.tsx` | inline page | Offline fallback page |
+| `/privacy` | `app/privacy/page.tsx` | `PrivacyView` | Публичная политика обработки данных |
+
+Служебные публичные URL: `/robots.txt`, `/sitemap.xml`, `/manifest.webmanifest`.
 
 API routes:
 
@@ -173,6 +196,7 @@ API routes:
 | `/api/auth/telegram/verify` | Проверить Telegram OTP-код и создать Supabase-сессию |
 | `/api/telegram/webhook` | Telegram webhook, который связывает telegram user -> chat_id |
 | `/api/dev/login` | Dev-only passwordless login по email |
+| `/api/account/delete` | Авторизованный DELETE для удаления аккаунта из нативного приложения |
 
 ## 6. Навигация и оболочка
 
@@ -182,8 +206,11 @@ API routes:
 
 Общий layout для экранов:
 
-- ограничивает ширину до `max-w-md`;
-- делает мобильную колонку на всю высоту;
+- на телефоне использует узкую колонку и нижнюю навигацию;
+- на десктопе показывает верхнюю панель и плавающий dock; `wide` расширяет контент,
+  а `aside` добавляет контекстную правую колонку от 1440 px;
+- режим `auto | mobile | desktop` хранится на устройстве; `auto` переключается
+  по ширине окна, настройка доступна в Settings;
 - может показывать sticky header;
 - умеет показывать back-кнопку;
 - принимает правый action;
@@ -218,9 +245,11 @@ Add «дышит» и получает красную точку.
 
 ## 7. База данных
 
-Схема находится в `supabase/migrations/0001_init.sql`–`0008_home_widgets_warmup_sets.sql`.
+Схема находится в `supabase/migrations/0001_init.sql`–`0009_atomic_workout_write.sql`.
 Миграция 0008 добавляет `profiles.home_widgets` (раскладка главной) и
 `sets.set_type` (`working` / `warmup`).
+Миграция 0009 добавляет `public.save_workout_atomic` для атомарного сохранения
+тренировки в нативном приложении и безопасного повтора записи с тем же ключом.
 Миграции выполняются вручную в Supabase SQL Editor строго по номеру. Локальный
 `.env.local` подключен к production-проекту, поэтому для QA можно изменять
 только `demo@deepgym.app`.
@@ -646,6 +675,10 @@ CRUD hooks создают, обновляют и удаляют шаблоны �
 - вложенные упражнения и подходы удаляются cascade;
 - invalidates `["workouts"]`, `["exercise-history"]` и `["exercise-usage"]`.
 
+Выше описаны веб-хуки. Нативный клиент в `apps/mobile/src/data/` создает и
+редактирует тренировки через `save_workout_atomic`; при отсутствии миграции
+0009 он не переключается на несколько отдельных запросов записи.
+
 ### Exercise history
 
 `useExerciseHistory(exerciseId)`
@@ -792,7 +825,8 @@ Onboarding обязателен, только если одновременно:
 `/history?first=1` подтверждает успешное сохранение. Таким образом onboarding
 не превращается в длинную презентацию всех экранов.
 
-Версии определены в `src/shared/config/releases.ts`:
+Версии определены в `packages/core/src/releases.ts` и реэкспортируются
+веб-слоем `src/shared/config/releases.ts`:
 
 - `CURRENT_ONBOARDING_VERSION` — версия обязательного мастера;
 - `CURRENT_RELEASE.sequence` — монотонная последовательность подтверждений;
@@ -1401,10 +1435,11 @@ Month/week grids показывают сплошные точки по выпо�
   добавление и удаление кастомных;
 - «Приложение»: язык → список языков; единица веса — переключатель прямо в
   строке; главный экран → `/?edit=1`;
-- «Помощь»: App guide, What's new;
+- «Приложение» также содержит выбор интерфейса auto/mobile/desktop;
+- «Помощь»: App guide, What's new, публичная политика конфиденциальности;
 - sign out.
 
-`?open=profile|weight|schedule|plates|groups|language` сразу открывает
+`?open=profile|weight|schedule|plates|groups|language|interface` сразу открывает
 нужный sheet (например, виджет «Следующая тренировка» без расписания ведет
 на `?open=schedule`).
 
@@ -1429,30 +1464,34 @@ Month/week grids показывают сплошные точки по выпо�
 
 Задает:
 
-- name/short_name;
+- постоянный `id`, name/short_name и описание;
 - start_url `/`;
+- scope `/`;
 - display `standalone`;
 - colors;
-- portrait orientation;
-- icons.
+- категории и мобильные скриншоты для установки;
+- shortcuts новой тренировки, истории и прогресса;
+- обычные и maskable icons. Принудительная portrait orientation не задана.
 
 ### Service Worker
 
 `public/sw.js`
 
-Кеши:
-
-- `deepgym-v6-static`;
-- `deepgym-v6-pages`.
+Имена кешей формируются из `VERSION` в самом `public/sw.js`:
+`<VERSION>-static` и `<VERSION>-pages`. При активации удаляются прежние кеши
+DeepGym; кеши других приложений на том же origin не затрагиваются.
 
 Правила:
 
-- API, auth и cross-origin traffic не перехватываются;
+- API, auth, cross-origin traffic, robots, sitemap и manifest не перехватываются;
 - hashed Next static assets, icons, fonts и WebP-аватары кешируются cache-first;
-- page navigations работают network-first;
-- при offline fallback:
-  - сперва cached page;
-  - затем `/offline`.
+  навигация документа, HTML и redirect-ответы не попадают в кеш ресурсов;
+- навигации работают network-first; сохраняются только `/uk`, `/ru` и `/offline`.
+  Корневая `/` зависит от сессии и не кешируется даже при анонимном посещении;
+- tracking query-параметры не создают отдельные копии публичных страниц;
+- при offline публичный разрешенный документ берется из кеша, остальные
+  страницы получают `/offline`, а не ранее посещенный приватный HTML;
+- ошибка записи в кеш не подменяет успешно полученный сетевой ответ.
 
 Важно:
 
@@ -1492,12 +1531,12 @@ Approved brand/PWA/favicon sources лежат в `assets/brand/night-reverse/`.
 Визуальный стиль:
 
 - темный фон;
-- max-width mobile layout;
+- мобильная колонка и отдельная десктопная раскладка с dock;
 - яркий lime accent;
 - pink/indigo/flame gradient cards;
 - custom dot font для чисел;
 - rounded cards/sheets/chips;
-- bottom sheets вместо обычных desktop modal dialogs.
+- bottom sheets на телефоне и центрированные диалоги на десктопе.
 
 UI-кит лежит в `src/shared/ui/`: у каждого компонента своя папка с парой
 файлов, например `src/shared/ui/avatar/avatar.tsx` +
@@ -1643,10 +1682,12 @@ Zustand persist:
 - `npm run build` - production build;
 - `npm run start` - production server;
 - `npm run typecheck` - TypeScript check;
+- `npm run mobile:typecheck` - отдельная проверка TypeScript в Expo workspace;
+- `npm run mobile:go` - запуск нативного приложения через Expo Go;
 - `npm run icons` - checksum-проверка approved sources и установка brand/PWA/favicon assets;
 - `npm run icons:check` - та же проверка sources и targets без записи;
 - `npm run avatars:legacy` - регенерация старых SVG-avatar URL;
-- `npm run verify` - typecheck + `icons:check`;
+- `npm run verify` - web/mobile typecheck + `icons:check`;
 - `npm run precommit` - `verify` + `git diff --check`.
 
 Автоматических тестов и настроенного linter сейчас нет. `npm run build` нельзя
@@ -1671,11 +1712,18 @@ Zustand persist:
 
 `scripts/take-screenshots.mjs`:
 
-- переснимает скриншоты README.
+- переснимает текущий веб/PWA-интерфейс для README в `docs/screenshots/`;
+- использует только demo-аккаунт; старые снимки обновляются по тем же путям.
+
+Производные WebP в `public/screenshots/` должны соответствовать этому набору.
+`scripts/generate-social-images.mjs` формирует локализованные OG PNG и SVG
+из проверенных brand assets и актуального `public/screenshots/new-workout.webp`.
+Нативные скриншоты для магазинов снимаются отдельно на нативной сборке.
 
 `scripts/generate-icons.mjs`:
 
-- генерирует PWA icons.
+- проверяет checksum approved sources и устанавливает утвержденные иконки;
+  не перерисовывает бренд произвольно.
 
 ## 29. Env-переменные
 
@@ -1691,11 +1739,16 @@ NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
 TELEGRAM_WEBHOOK_SECRET
 
 NEXT_PUBLIC_SITE_URL
+NEXT_PUBLIC_SEO_URL
+NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+NEXT_PUBLIC_BING_SITE_VERIFICATION
 ```
 
 Разделение:
 
 - `NEXT_PUBLIC_*` можно использовать на клиенте;
+- `NEXT_PUBLIC_SEO_URL` задает production canonical origin, отдельно от OAuth
+  origin `NEXT_PUBLIC_SITE_URL`; verification-поля необязательны;
 - `SUPABASE_SERVICE_ROLE_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` только на сервере.
 
 ## 30. Важные нюансы и ограничения
@@ -1705,7 +1758,7 @@ NEXT_PUBLIC_SITE_URL
 3. `crossover` не показывает калькулятор блинов.
 4. `dumbbell` показывает вес одной гантели и общий load x2, но не считает блины.
 5. Новая тренировка имеет persisted draft, редактирование существующей тренировки - нет.
-6. Offline режим кеширует страницы и ассеты, но не синхронизирует новые сохранения в фоне.
+6. Offline режим кеширует ресурсы и разрешенные публичные страницы, но не приватный HTML и не новые сохранения в фоне.
 7. Workouts пишутся напрямую из browser Supabase client под RLS, отдельного API для CRUD тренировок нет.
 8. Telegram auth использует server API routes и service-role.
 9. При update workout вложенные строки удаляются и вставляются заново.
@@ -1728,7 +1781,7 @@ NEXT_PUBLIC_SITE_URL
 | --- | --- |
 | Защита роутов и auth redirect | `middleware.ts` |
 | Root layout, metadata, PWA settings | `app/layout.tsx`, `app/manifest.ts` |
-| React Query provider и service worker registration | `src/app/providers.tsx` |
+| Разделение public/app providers и регистрация SW | `src/app/providers.tsx`, `src/app/application-providers.tsx` |
 | Eligibility onboarding/What's new | `src/widgets/product-experience/ui/product-experience.tsx`, `src/shared/config/releases.ts` |
 | Пятишаговый onboarding | `src/views/onboarding/ui/onboarding-view.tsx` |
 | Контекстный путь первой тренировки | `src/features/first-workout/` |
@@ -1763,6 +1816,10 @@ NEXT_PUBLIC_SITE_URL
 | База и RLS | `supabase/migrations/*.sql` |
 | PWA offline cache | `public/sw.js` |
 | Approved brand assets | `assets/brand/night-reverse/`, `scripts/generate-icons.mjs` |
+| Публичная витрина и SEO | `app/page.tsx`, `src/views/about/`, `src/shared/config/seo.ts`, `src/shared/i18n/marketing.ts` |
+| Общая логика web/native | `packages/core/src/` |
+| Нативные экраны и сохранение тренировок | `apps/mobile/src/screens/`, `apps/mobile/src/data/` |
+| Privacy и удаление аккаунта | `packages/core/src/privacy-policy.ts`, `app/api/account/delete/route.ts` |
 
 ## 32. Короткая ментальная модель
 

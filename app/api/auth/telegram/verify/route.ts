@@ -3,6 +3,10 @@ import { hashOtp } from "@/shared/lib/otp";
 import { getSupabaseAdmin } from "@/shared/lib/supabase/admin";
 import { getSupabaseServer } from "@/shared/lib/supabase/server";
 import { normalizeTelegramUsername } from "@/shared/lib/telegram";
+import { ownAuthEnabled } from "@/server/auth";
+import { telegramAuth } from "@/server/telegram-auth";
+import { readAuthRequest } from "@/server/auth-request";
+import { RequestBodyError } from "@/server/request-body";
 
 const MAX_ATTEMPTS = 5;
 const MAX_OTP_CONFLICT_RETRIES = 10;
@@ -12,7 +16,12 @@ function telegramEmail(telegramId: number): string {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => ({}));
+  if (ownAuthEnabled()) return telegramAuth(request, "verify");
+  let body;
+  try { body = await readAuthRequest(request); }
+  catch (error) {
+    return NextResponse.json({ error: "Invalid request body or origin" }, { status: error instanceof RequestBodyError ? error.status : 400 });
+  }
   const username = normalizeTelegramUsername(String(body.username ?? ""));
   const code = String(body.code ?? "").trim();
 
@@ -24,7 +33,7 @@ export async function POST(request: NextRequest) {
 
   const { data: link, error: linkLookupError } = await admin
     .from("telegram_links")
-    .select("telegram_id, username, user_id")
+    .select("telegram_id, chat_id, username, user_id")
     .ilike("username", username)
     .maybeSingle();
   if (linkLookupError) {
@@ -32,6 +41,9 @@ export async function POST(request: NextRequest) {
   }
   if (!link) {
     return NextResponse.json({ error: "Unknown username" }, { status: 404 });
+  }
+  if (String(link.chat_id) !== String(link.telegram_id)) {
+    return NextResponse.json({ error: "Open a private chat with the Telegram bot and press Start" }, { status: 400 });
   }
 
   const submittedHash = hashOtp(code, link.telegram_id);

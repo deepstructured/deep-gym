@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useMuscleGroups } from "@/entities/muscle-group";
 import { useProfile } from "@/entities/user";
 import {
+  isAtomicWorkoutUnsupportedError,
   isWarmupsUnsupportedError,
   isWorkoutLoadModeMismatchError,
   useDeleteWorkout,
@@ -25,15 +26,17 @@ import { ShareWorkoutButton } from "@/features/workout-share";
 const ENABLE_WORKOUT_SHARE = false;
 import { useI18n } from "@/shared/i18n";
 import { AppShell } from "@/widgets/app-shell";
-import { Button, ConfirmSheet, ErrorNote, PageLoader } from "@/shared/ui";
+import { Button, ConfirmSheet, ErrorNote, PageLoader, QueryError } from "@/shared/ui";
 import styles from "./workout-edit-view.module.scss";
 
 export function WorkoutEditView({ workoutId }: { workoutId: string }) {
   const router = useRouter();
   const { t } = useI18n();
   const { data: profile } = useProfile();
-  const { data: workout, isLoading, error: loadError } = useWorkout(workoutId);
-  const { data: groups } = useMuscleGroups();
+  const workoutQuery = useWorkout(workoutId);
+  const { data: workout, isLoading, error: loadError } = workoutQuery;
+  const groupsQuery = useMuscleGroups();
+  const { data: groups, error: groupsError } = groupsQuery;
   const updateWorkout = useUpdateWorkout();
   const deleteWorkout = useDeleteWorkout();
 
@@ -72,7 +75,9 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
         onSuccess: () => router.back(),
         onError: (e) =>
           setError(
-            isWorkoutLoadModeMismatchError(e)
+            isAtomicWorkoutUnsupportedError(e)
+              ? t("workout.atomicUnavailable")
+              : isWorkoutLoadModeMismatchError(e)
               ? t("workout.staleExerciseMode")
               : isWarmupsUnsupportedError(e)
                 ? t("workout.warmupsUnsupported")
@@ -129,8 +134,11 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
       }
     >
       {isLoading || !draft ? (
-        loadError ? (
-          <ErrorNote message={t("workout.notFound")} />
+        loadError || groupsError ? (
+          <QueryError
+            retrying={workoutQuery.isFetching || groupsQuery.isFetching}
+            onRetry={() => { void workoutQuery.refetch(); void groupsQuery.refetch(); }}
+          />
         ) : (
           <PageLoader variant="form" />
         )

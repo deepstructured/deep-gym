@@ -9,4 +9,4 @@ export type {
   TrainingSchedule,
   WeekdayIndex,
 } from "./model/training-schedule";
-export { useProfile, useUpdateProfile } from "./api/queries";
+export { useProfile, useUpdateProfile, profileQueryKey } from "./api/queries";

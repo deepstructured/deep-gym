@@ -11,7 +11,7 @@ import { cn } from "@/shared/lib/cn";
 import { formatDay, fromISODate } from "@/shared/lib/dates";
 import { periodStart, type PeriodKey } from "@/shared/lib/period";
 import { kgToUnit, roundWeight } from "@/shared/lib/weight";
-import { DotValue } from "@/shared/ui";
+import { DotValue, QueryError } from "@/shared/ui";
 import { BodyWeightChart } from "./body-weight-chart";
 import styles from "./body-weight-trend.module.scss";
 
@@ -34,13 +34,13 @@ export function BodyWeightTrend({
   const { data: profile } = useProfile();
   const unit = profile?.unit ?? "kg";
   const from = periodStart(period);
-  const { data } = useBodyWeightMeasurements({
+  const query = useBodyWeightMeasurements({
     from: from ? fromISODate(from).toISOString() : undefined,
-    limit: 1000,
+    limit: null,
   });
   const [active, setActive] = useState<BodyWeightMeasurement | null>(null);
 
-  const rows = data ?? [];
+  const rows = query.data ?? [];
   const newest = rows[0];
   const oldest = rows.at(-1);
   const shown = active ?? newest;
@@ -49,6 +49,7 @@ export function BodyWeightTrend({
       ? roundWeight(kgToUnit(newest.weight_kg - oldest.weight_kg, unit))
       : null;
 
+  if (query.isError) return <QueryError onRetry={() => void query.refetch()} retrying={query.isFetching} />;
   if (rows.length === 0) {
     return emptyLabel ? <p className={styles.empty}>{emptyLabel}</p> : null;
   }
