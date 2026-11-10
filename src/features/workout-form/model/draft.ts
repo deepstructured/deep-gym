@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
 import type { Exercise } from "@/entities/exercise";
 import type { Workout, WorkoutInput } from "@/entities/workout";
 import {
@@ -8,6 +8,8 @@ import {
 } from "@/shared/config/workout";
 import { NEW_WORKOUT_DRAFT_STORAGE_KEY } from "@/shared/config/storage";
 import { todayISO } from "@/shared/lib/dates";
+import { nextDraftTimestamp, switchDraftOwner, type DraftSnapshot } from "./draft-sync-engine";
+import { draftStorage } from "./draft-storage";
 import {
   kgToUnit,
   parseSignedWeight,
@@ -46,6 +48,8 @@ export interface DraftExercise {
 }
 
 export interface WorkoutDraft {
+  /** Persisted create idempotency key; retained through retries and reloads. */
+  createKey?: string;
   type: string;
   date: string;
   /** Athlete body-weight snapshot in the profile display unit. */
@@ -72,9 +76,11 @@ function key(): string {
   if (typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
-  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("");
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 /** Next working set, prefilled from the previous working set. */
@@ -429,6 +435,12 @@ interface NewWorkoutDraftStore {
   /** Client-stamped time of the last local edit; null until first edit.
    *  Drives cross-device last-write-wins in the draft sync. */
   updatedAt: string | null;
+  archivedDrafts: Record<string, DraftSnapshot<WorkoutDraft>>;
+  unownedDraft: DraftSnapshot<WorkoutDraft> | null;
+  pendingRemote: DraftSnapshot<WorkoutDraft> | null;
+  activateOwner: (ownerId: string | null) => void;
+  resolveConflict: (useRemote: boolean) => void;
+  ensureCreateKey: () => string;
   setDraft: (draft: WorkoutDraft) => void;
   reset: () => void;
 }
@@ -438,23 +450,62 @@ interface NewWorkoutDraftStore {
  *  `useNewWorkoutDraftSync` so the draft follows the user across devices. */
 export const useNewWorkoutDraft = create<NewWorkoutDraftStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       draft: emptyDraft(),
       ownerId: null,
       updatedAt: null,
+      archivedDrafts: {},
+      unownedDraft: null,
+      pendingRemote: null,
+      activateOwner: (ownerId) => set((state) => state.ownerId === ownerId ? state : ({
+        ...switchDraftOwner(state, ownerId, emptyDraft), pendingRemote: null,
+      })),
+      resolveConflict: (useRemote) => set((state) => {
+        const remote = state.pendingRemote;
+        if (!remote) return state;
+        const newer = (remote.updatedAt ?? "") > (state.updatedAt ?? "")
+          ? remote.updatedAt : state.updatedAt;
+        return {
+          draft: useRemote ? remote.draft : state.draft,
+          updatedAt: useRemote ? remote.updatedAt : nextDraftTimestamp(newer),
+          pendingRemote: null,
+        };
+      }),
+      ensureCreateKey: () => {
+        const existing = get().draft.createKey;
+        if (existing) return existing;
+        const createKey = key();
+        set((state) => ({
+          draft: { ...state.draft, createKey },
+          updatedAt: nextDraftTimestamp(state.updatedAt),
+        }));
+        return createKey;
+      },
       setDraft: (draft) =>
         set((state) => {
-          const now = new Date().toISOString();
+          const now = nextDraftTimestamp(state.updatedAt);
           // Stamp the moment the draft first gets content and keep it while
           // it has any; an emptied draft is no longer "in progress".
           const startedAt = isDraftEmpty(draft)
             ? undefined
             : (draft.startedAt ?? state.draft.startedAt ?? now);
-          return { draft: { ...draft, startedAt }, updatedAt: now };
+          return {
+            draft: {
+              ...draft,
+              createKey: state.draft.createKey ?? draft.createKey ?? (isDraftEmpty(draft) ? undefined : key()),
+              startedAt,
+            },
+            updatedAt: now,
+          };
         }),
       reset: () =>
-        set({ draft: emptyDraft(), updatedAt: new Date().toISOString() }),
+        set((state) => ({ draft: emptyDraft(), updatedAt: nextDraftTimestamp(state.updatedAt), pendingRemote: null })),
     }),
-    { name: NEW_WORKOUT_DRAFT_STORAGE_KEY },
+    { name: NEW_WORKOUT_DRAFT_STORAGE_KEY, storage: createJSONStorage(() => draftStorage.storage) },
   ),
 );
+
+/** Called synchronously before a new auth identity is published to the UI. */
+export function syncDraftOwner(userId: string | null): void {
+  useNewWorkoutDraft.getState().activateOwner(userId);
+}

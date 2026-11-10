@@ -1,13 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { useAuthSession } from "@/shared/lib/auth-session";
+import { withTimeout } from "@/shared/lib/request-timeout";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
+import { syncDraftOwner, useNewWorkoutDraft, type WorkoutDraft } from "./draft";
+import { draftStorage } from "./draft-storage";
 import {
-  emptyDraft,
-  isDraftEmpty,
-  useNewWorkoutDraft,
-  type WorkoutDraft,
-} from "./draft";
+  canApplyRemote,
+  createLatestWriteQueue,
+  draftSignature,
+  draftContentSignature,
+  type DraftSnapshot,
+} from "./draft-sync-engine";
 
 const PUSH_DELAY_MS = 800;
 const PULL_TIMEOUT_MS = 2500;
@@ -16,136 +21,167 @@ interface RemoteDraftRow {
   draft: WorkoutDraft;
   updated_at: string;
 }
+interface PendingDraft extends DraftSnapshot<WorkoutDraft> {
+  ownerId: string;
+  updatedAt: string;
+}
 
-/** Cross-device sync for the new-workout draft. localStorage stays the
- *  instant/offline source of truth on each device; the `workout_drafts`
- *  row is the shared cloud copy. Conflicts resolve last-write-wins by the
- *  client-stamped edit time. Network failures are silent — the local
- *  draft keeps working and the next edit retries the push.
- *
- *  Returns `ready` once the initial pull settled (or timed out) — the
- *  form should render only after that so a fresher remote draft doesn't
- *  replace what the user is already looking at. */
-export function useNewWorkoutDraftSync(): { ready: boolean } {
-  const [ready, setReady] = useState(false);
-  // Serialized draft that matches the cloud row — skip no-op pushes and
-  // avoid echoing a pulled draft straight back.
-  const lastSynced = useRef<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+const lastSynced = new Map<string, string>();
+const syncFailures = new Set<string>();
+const listeners = new Set<() => void>();
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+};
 
-  // Pull once on mount. A slow network must not hold the form hostage,
-  // so the pull races a short timeout and the local draft wins the UI.
+function markSyncFailure(ownerId: string, failed: boolean) {
+  if (syncFailures.has(ownerId) === failed) return;
+  if (failed) syncFailures.add(ownerId);
+  else syncFailures.delete(ownerId);
+  listeners.forEach((listener) => listener());
+}
+
+function applyRemote(ownerId: string, startedSignature: string, remote: RemoteDraftRow) {
+  const current = useNewWorkoutDraft.getState();
+  lastSynced.set(ownerId, draftSignature({ draft: remote.draft, updatedAt: remote.updated_at }));
+  if (current.ownerId !== ownerId || draftSignature(current) !== startedSignature) return;
+  const differs = draftContentSignature(current.draft) !== draftContentSignature(remote.draft);
+  if (current.updatedAt && differs) {
+    // Preserve both copies, including a remote empty tombstone after another
+    // device saved the workout. Never silently overwrite unsynced local work.
+    useNewWorkoutDraft.setState({ pendingRemote: { draft: remote.draft, updatedAt: remote.updated_at } });
+  } else if (canApplyRemote(current, ownerId, startedSignature, remote.updated_at) ||
+    (!differs && remote.draft.createKey && remote.draft.createKey !== current.draft.createKey)) {
+    useNewWorkoutDraft.setState({ draft: remote.draft, updatedAt: remote.updated_at });
+  }
+}
+
+// This queue survives navigation. A delayed write from the old form cannot
+// arrive after the reset/tombstone written by its replacement. The RPC also
+// orders requests from other tabs/devices atomically (migration 0011).
+const writes = createLatestWriteQueue<PendingDraft>(async (snapshot) => {
+  const current = useNewWorkoutDraft.getState();
+  if (current.ownerId !== snapshot.ownerId || current.pendingRemote) return;
+  const signature = draftSignature(snapshot);
+  if (lastSynced.get(snapshot.ownerId) === signature) return;
+  try {
+    const { data, error } = await withTimeout((signal) =>
+      getSupabaseBrowser().rpc("save_workout_draft", {
+        p_owner_id: snapshot.ownerId,
+        p_draft: snapshot.draft,
+        p_updated_at: snapshot.updatedAt,
+      }).abortSignal(signal).single(),
+    );
+    if (error) throw error;
+    if (!data) throw new Error("Draft sync returned no row");
+    applyRemote(snapshot.ownerId, signature, data as RemoteDraftRow);
+    markSyncFailure(snapshot.ownerId, false);
+  } catch {
+    // Keep the exact local draft/idempotency key. Never fall back to an
+    // unordered upsert or delete if the migration is missing or RPC times out.
+    markSyncFailure(snapshot.ownerId, true);
+  }
+});
+
+function pushCurrent(ownerId: string) {
+  const { draft, ownerId: currentOwner, updatedAt, pendingRemote } = useNewWorkoutDraft.getState();
+  if (currentOwner !== ownerId || !updatedAt || pendingRemote) return;
+  void writes.enqueue({ draft, ownerId, updatedAt });
+}
+
+/** Before saving, persist the shared idempotency key. A delayed prior write
+ * cannot erase it because this preflight uses the same queue as autosave. */
+export async function flushWorkoutDraftBeforeSave(ownerId: string): Promise<void> {
+  const snapshot = useNewWorkoutDraft.getState();
+  if (snapshot.ownerId !== ownerId || !snapshot.updatedAt || snapshot.pendingRemote || !snapshot.draft.createKey) {
+    throw new Error("Draft is not ready to sync");
+  }
+  const signature = draftSignature(snapshot);
+  await writes.enqueue({ ownerId, draft: snapshot.draft, updatedAt: snapshot.updatedAt });
+  const current = useNewWorkoutDraft.getState();
+  if (current.ownerId !== ownerId || current.pendingRemote || draftSignature(current) !== signature ||
+    lastSynced.get(ownerId) !== signature || syncFailures.has(ownerId)) {
+    throw new Error("Draft changed or cloud sync is unavailable");
+  }
+}
+
+/** Auth initialization has its own bounded recovery state. Once identity is
+ * known, local edits become usable after at most 2.5s, even if Auth/DB stops
+ * responding. No second auth.getUser() sits outside that deadline. */
+export function useNewWorkoutDraftSync(): { ready: boolean; syncError: boolean; storageError: boolean } {
+  const { userId, status } = useAuthSession();
+  const [readyFor, setReadyFor] = useState<string | null>(null);
+  const syncError = useSyncExternalStore(
+    subscribe,
+    () => Boolean(userId && syncFailures.has(userId)),
+    () => false,
+  );
+  const storageError = useSyncExternalStore(draftStorage.subscribe, draftStorage.getSnapshot, () => false);
+
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
+    if (status !== "authenticated" || !userId) return;
+    syncDraftOwner(userId);
+    setReadyFor(null);
+    const controller = new AbortController();
+    const startedSignature = draftSignature(useNewWorkoutDraft.getState());
+    void (async () => {
       try {
-        const supabase = getSupabaseBrowser();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const localBeforePull = useNewWorkoutDraft.getState();
-        if (localBeforePull.ownerId !== user.id) {
-          // Old builds did not persist an owner. Discarding an unowned local
-          // draft is safer than exposing it after an account switch; its
-          // cloud copy, when present, is restored immediately below.
-          useNewWorkoutDraft.setState({
-            draft: emptyDraft(),
-            ownerId: user.id,
-            updatedAt: null,
-          });
-        }
-        const result = await Promise.race([
-          supabase
+        const { data, error } = await withTimeout((signal) =>
+          getSupabaseBrowser()
             .from("workout_drafts")
             .select("draft, updated_at")
-            .eq("user_id", user.id)
+            .eq("user_id", userId)
+            .abortSignal(signal)
             .maybeSingle(),
-          new Promise<null>((resolve) =>
-            setTimeout(() => resolve(null), PULL_TIMEOUT_MS),
-          ),
-        ]);
-        if (cancelled || !result || result.error || !result.data) return;
-        const remote = result.data as RemoteDraftRow;
-        const local = useNewWorkoutDraft.getState();
-        const remoteIsNewer =
-          !local.updatedAt ||
-          new Date(remote.updated_at).getTime() >
-            new Date(local.updatedAt).getTime();
-        if (remoteIsNewer) {
-          lastSynced.current = JSON.stringify(remote.draft);
-          useNewWorkoutDraft.setState({
-            draft: remote.draft,
-            ownerId: user.id,
-            updatedAt: remote.updated_at,
-          });
-        }
+          PULL_TIMEOUT_MS,
+          controller.signal,
+        );
+        if (controller.signal.aborted) return;
+        if (error) throw error;
+        if (data) applyRemote(userId, startedSignature, data as RemoteDraftRow);
+        markSyncFailure(userId, false);
       } catch {
-        // Offline or table not reachable — local draft carries on.
+        if (!controller.signal.aborted) markSyncFailure(userId, true);
       } finally {
-        if (!cancelled) setReady(true);
+        if (!controller.signal.aborted) setReadyFor(userId);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    return () => controller.abort();
+  }, [status, userId]);
 
-  // Push local edits, debounced. An emptied draft deletes the cloud row.
+  const ready = status === "authenticated" && userId !== null && readyFor === userId;
   useEffect(() => {
-    if (!ready) return;
-
-    async function push() {
-      const { draft, ownerId, updatedAt } = useNewWorkoutDraft.getState();
-      // Never edited on this device — nothing to publish, and pushing an
-      // empty default here could wipe a draft made elsewhere.
-      if (!updatedAt) return;
-      const serialized = JSON.stringify(draft);
-      if (serialized === lastSynced.current) return;
-      try {
-        const supabase = getSupabaseBrowser();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user || ownerId !== user.id) return;
-        const { error } = isDraftEmpty(draft)
-          ? await supabase
-              .from("workout_drafts")
-              .delete()
-              .eq("user_id", user.id)
-          : await supabase.from("workout_drafts").upsert({
-              user_id: user.id,
-              draft,
-              updated_at: updatedAt,
-            });
-        if (!error) lastSynced.current = serialized;
-      } catch {
-        // Offline — the next edit or visit retries.
-      }
-    }
-
-    function schedule() {
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => void push(), PUSH_DELAY_MS);
-    }
-
-    // App backgrounded mid-edit (phone locked, tab switched) — flush now.
-    function onVisibilityChange() {
-      if (document.visibilityState !== "hidden") return;
-      if (timer.current) clearTimeout(timer.current);
-      void push();
-    }
-
-    const unsubscribe = useNewWorkoutDraft.subscribe(schedule);
-    document.addEventListener("visibilitychange", onVisibilityChange);
+    if (!ready || !userId) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let previous = draftSignature(useNewWorkoutDraft.getState());
+    const flush = () => {
+      clearTimeout(timer);
+      pushCurrent(userId);
+    };
+    const unsubscribe = useNewWorkoutDraft.subscribe((state) => {
+      if (state.ownerId !== userId) return;
+      const next = draftSignature(state);
+      if (next === previous && state.pendingRemote) return;
+      previous = next;
+      clearTimeout(timer);
+      timer = setTimeout(flush, PUSH_DELAY_MS);
+    });
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    // Retry existing unsynced edits on mount/reconnect; no new keystroke is
+    // required after recovering from offline or a missing migration.
+    flush();
+    window.addEventListener("online", flush);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       unsubscribe();
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      if (timer.current) clearTimeout(timer.current);
-      void push();
+      clearTimeout(timer);
+      window.removeEventListener("online", flush);
+      document.removeEventListener("visibilitychange", onVisibility);
+      flush();
     };
-  }, [ready]);
+  }, [ready, userId]);
 
-  return { ready };
+  return { ready, syncError, storageError };
 }

@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from "react";
 import type { Profile } from "@/entities/user";
-import type { Workout } from "@/entities/workout";
+import type { HomeWorkoutSummary, Workout } from "@/entities/workout";
 import type { Unit } from "@/shared/lib/weight";
 import type {
   HomeWidget,
@@ -15,8 +15,9 @@ import type {
 export interface HomeData {
   profile: Profile | null | undefined;
   unit: Unit;
-  /** Full history, newest first (shared with the Progress page). */
+  /** Only the most recent full workouts, for cards/repeat actions. */
   workouts: Workout[];
+  summary: HomeWorkoutSummary;
   workoutsLoaded: boolean;
   workoutCount: number | undefined;
   openWeightSheet: () => void;

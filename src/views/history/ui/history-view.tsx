@@ -43,6 +43,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
   PageLoader,
+  QueryError,
   Segmented,
 } from '@/shared/ui'
 import styles from './history-view.module.scss'
@@ -90,10 +91,11 @@ export function HistoryView() {
     return { from: startOfMonth(cursor), to: endOfMonth(cursor) }
   }, [mode, cursor])
 
-  const { data: workouts, isLoading } = useWorkouts(
+  const workoutQuery = useWorkouts(
     toISODate(range.from),
     toISODate(range.to),
   )
+  const { data: workouts, isLoading, error, isFetching, refetch } = workoutQuery
 
   const scheduledWorkout = useMemo(
     () => scheduledWorkoutOn(profile?.training_schedule, toISODate(cursor)),
@@ -184,15 +186,16 @@ export function HistoryView() {
 
           {/* The wider shell has room for what the period actually adds up
               to — information the phone layout has no space for. */}
-          {mode !== 'day' && (
+          {mode !== 'day' && workouts && (
             <PeriodSummary workouts={workouts ?? []} unit={unit} />
           )}
         </div>
 
         <div className={styles.dayPane}>
+          {error && <QueryError onRetry={() => void refetch()} retrying={isFetching} />}
           {isLoading || isProfileLoading ? (
             <PageLoader variant="list" />
-          ) : (
+          ) : !error || workouts ? (
             <SelectedDayWorkouts
               cursor={cursor}
               mode={mode}
@@ -201,7 +204,7 @@ export function HistoryView() {
               unit={unit}
               actions={workoutActions}
             />
-          )}
+          ) : null}
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { reloadAppAsync } from "expo";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   createContext,
@@ -11,9 +12,10 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
-import { AppState, DevSettings, Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 
 import { authStorageKey, isSupabaseConfigured, supabase } from "../lib/supabase";
+import { credentialStorage } from "../lib/credential-storage";
 
 type AuthContextValue = {
   user: User | null;
@@ -24,7 +26,7 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-const authStorageKeys = [authStorageKey, `${authStorageKey}-code-verifier`, `${authStorageKey}-user`];
+const authStorageKeys = [authStorageKey, `${authStorageKey}-code-verifier`, `${authStorageKey}-user`, `${authStorageKey}:pkce`];
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient();
@@ -32,29 +34,40 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const deletedUserId = useRef<string | null>(null);
   const resettingSession = useRef(false);
+  const currentUserId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
 
     let active = true;
+    let sessionRevision = 0;
     const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
+        if (event === "INITIAL_SESSION" && sessionRevision > 0) return;
+        if (event !== "INITIAL_SESSION") sessionRevision++;
         if (active && !resettingSession.current) {
-          setUser(session?.user?.id === deletedUserId.current ? null : session?.user ?? null);
+          const nextUser = session?.user?.id === deletedUserId.current ? null : session?.user ?? null;
+          if (currentUserId.current !== (nextUser?.id ?? null)) {
+            void queryClient.cancelQueries();
+            queryClient.clear();
+            currentUserId.current = nextUser?.id ?? null;
+          }
+          setUser(nextUser);
           setLoading(false);
         }
       },
     );
 
+    const initialRevision = sessionRevision;
     void supabase.auth.getSession()
       .then(({ data, error }) => {
-        if (!active || resettingSession.current) return;
+        if (!active || resettingSession.current || initialRevision !== sessionRevision) return;
         const resolvedUser = error ? null : (data.session?.user ?? null);
         setUser(resolvedUser?.id === deletedUserId.current ? null : resolvedUser);
         setLoading(false);
       })
       .catch(() => {
-        if (!active || resettingSession.current) return;
+        if (!active || resettingSession.current || initialRevision !== sessionRevision) return;
         setUser(null);
         setLoading(false);
       });
@@ -82,29 +95,50 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    if (process.env.EXPO_PUBLIC_BACKEND === "postgres") await credentialStorage.removeItem(`${authStorageKey}:pkce`);
     queryClient.clear();
     setUser(null);
   }, [queryClient]);
 
   const resetLocalSession = useCallback(async () => {
-    // This recovery path must work even if the auth client's network request
-    // or internal lock is stuck. Restarting JS creates a client without tokens.
+    // Reset the own client's state directly. A legacy SDK lock may require a
+    // production-capable reload after removing its persisted credentials.
     resettingSession.current = true;
     supabase.auth.stopAutoRefresh();
+    const ownBackend = process.env.EXPO_PUBLIC_BACKEND === "postgres";
     try {
+      if (ownBackend) {
+        await (supabase.auth as unknown as { resetLocalSession(): Promise<void> }).resetLocalSession();
+        await credentialStorage.removeItem(`${authStorageKey}:pkce`);
+      } else {
+        // Local sign-out may be waiting for the SDK lock. Give it a bounded
+        // chance to clear memory, then remove persisted tokens and reload.
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve,1500);
+          void supabase.auth.signOut({ scope: "local" }).then(() => {
+            clearTimeout(timer); resolve();
+          }, () => { clearTimeout(timer); resolve(); });
+        });
+      }
       if (Platform.OS === "web") {
         authStorageKeys.forEach((key) => globalThis.localStorage?.removeItem(key));
       } else {
         await AsyncStorage.multiRemove(authStorageKeys);
       }
       queryClient.clear();
+      currentUserId.current = null;
       setUser(null);
       setLoading(false);
-      if (Platform.OS !== "web") DevSettings.reload();
+      // The own client resets its memory and generation itself. A new native
+      // sign-in can proceed immediately without restarting the application.
+      if (Platform.OS !== "web" && ownBackend) return;
+      if (Platform.OS !== "web") await reloadAppAsync("Reset local authentication session");
       else globalThis.location?.reload();
     } catch (error) {
-      resettingSession.current = false;
       throw error;
+    } finally {
+      resettingSession.current = false;
+      if (ownBackend && Platform.OS !== "web" && AppState.currentState === "active") supabase.auth.startAutoRefresh();
     }
   }, [queryClient]);
 
@@ -119,6 +153,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // Remove persisted credentials below even if the auth endpoint is down.
     }
     try {
+      if (process.env.EXPO_PUBLIC_BACKEND === "postgres") {
+        await (supabase.auth as unknown as { resetLocalSession(): Promise<void> }).resetLocalSession();
+        await credentialStorage.removeItem(`${authStorageKey}:pkce`);
+      }
       if (Platform.OS === "web") authStorageKeys.forEach((key) => globalThis.localStorage?.removeItem(key));
       else await AsyncStorage.multiRemove(authStorageKeys);
     } catch {

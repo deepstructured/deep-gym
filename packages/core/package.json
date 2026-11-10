@@ -23,6 +23,9 @@
     "./avatar-presets": "./src/avatar-presets.ts",
     "./home-layout": "./src/home-layout.ts",
     "./privacy-policy": "./src/privacy-policy.ts",
-    "./releases": "./src/releases.ts"
+    "./releases": "./src/releases.ts",
+    "./backend-data-client": "./src/backend-data-client.ts",
+    "./backend-storage-client": "./src/backend-storage-client.ts",
+    "./backend-auth-client": "./src/backend-auth-client.ts"
   }
 }

@@ -28,7 +28,7 @@ import {
   type CSSProperties,
 } from "react";
 import { useProfile } from "@/entities/user";
-import { useAllWorkouts, useWorkoutCount } from "@/entities/workout";
+import { useHomeWorkoutSummary, useRecentWorkouts } from "@/entities/workout";
 import { BodyWeightTracker } from "@/features/body-weight";
 import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
@@ -82,8 +82,8 @@ export function HomeDashboard({
   const router = useRouter();
   const { t } = useI18n();
   const { data: profile } = useProfile();
-  const { data: workouts, isSuccess, isLoading, error } = useAllWorkouts();
-  const { data: workoutCount } = useWorkoutCount();
+  const { data: workouts, isSuccess, isLoading: recentLoading, error: recentError } = useRecentWorkouts();
+  const { data: summary, isLoading, error } = useHomeWorkoutSummary();
   const { layout, save, reset, isCustom } = useHomeLayout();
 
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -147,7 +147,8 @@ export function HomeDashboard({
     unit: profile?.unit ?? "kg",
     workouts: workouts ?? [],
     workoutsLoaded: isSuccess,
-    workoutCount,
+    workoutCount: summary?.total,
+    summary: summary!,
     openWeightSheet: () => setWeightOpen(true),
   };
 
@@ -208,8 +209,8 @@ export function HomeDashboard({
 
   const activePlaced = placed.find((item) => item.widget.id === activeId);
 
-  if (isLoading) return <PageLoader variant="dashboard" />;
-  if (error && !workouts) return <ErrorNote message={t("common.error")} />;
+  if (isLoading || recentLoading) return <PageLoader variant="dashboard" />;
+  if ((!summary && error) || (!workouts && recentError) || !summary) return <ErrorNote message={t("common.error")} />;
 
   return (
     <HomeDataProvider value={data}>

@@ -9,7 +9,8 @@ import { setsByMuscleGroup } from "../model/analytics";
 import styles from "./muscle-balance.module.scss";
 
 interface MuscleBalanceProps {
-  workouts: Workout[];
+  workouts?: Workout[];
+  muscleSets?: Record<string, number>;
   limit?: number;
   compact?: boolean;
   emptyLabel?: string;
@@ -18,6 +19,7 @@ interface MuscleBalanceProps {
 /** Working sets per muscle group — spots neglected groups at a glance. */
 export function MuscleBalance({
   workouts,
+  muscleSets,
   limit,
   compact = false,
   emptyLabel,
@@ -25,7 +27,7 @@ export function MuscleBalance({
   const { tn } = useI18n();
   const { data: groups } = useMuscleGroups();
   const rows = useMemo(() => {
-    const counts = setsByMuscleGroup(workouts);
+    const counts = muscleSets ? new Map(Object.entries(muscleSets)) : setsByMuscleGroup(workouts ?? []);
     const total = [...counts.values()].reduce((sum, value) => sum + value, 0);
     return (groups ?? [])
       .map((group) => ({
@@ -36,7 +38,7 @@ export function MuscleBalance({
       }))
       .filter((row) => row.sets > 0)
       .sort((a, b) => b.sets - a.sets);
-  }, [groups, workouts]);
+  }, [groups, workouts, muscleSets]);
 
   if (rows.length === 0) {
     return emptyLabel ? <p className={styles.empty}>{emptyLabel}</p> : null;

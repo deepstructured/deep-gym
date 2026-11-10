@@ -19,9 +19,6 @@ import {
 import {
   MuscleBalance,
   RecordsList,
-  bestLifts,
-  personalRecords,
-  workoutsBetween,
 } from "@/features/training-analytics";
 import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
@@ -45,18 +42,7 @@ import styles from "./tiles.module.scss";
 
 /** Exercises with logged working sets, most recently trained first. */
 function useRecentExerciseIds() {
-  const { workouts } = useHomeData();
-  return useMemo(() => {
-    const ids: string[] = [];
-    for (const workout of workouts) {
-      for (const we of workout.workout_exercises) {
-        if (!ids.includes(we.exercise_id) && we.sets.length > 0) {
-          ids.push(we.exercise_id);
-        }
-      }
-    }
-    return ids;
-  }, [workouts]);
+  return useHomeData().summary.recentExerciseIds;
 }
 
 export function ExerciseProgressTile({
@@ -288,11 +274,8 @@ function CompactProgress({
 
 export function RecordsTile({ size }: TileProps) {
   const { t } = useI18n();
-  const { workouts, unit } = useHomeData();
-  const records = useMemo(
-    () => personalRecords(workouts, periodStart("3m")),
-    [workouts],
-  );
+  const { summary, unit } = useHomeData();
+  const records = summary.records;
   return (
     <Tile>
       <TileHead
@@ -315,11 +298,8 @@ export function RecordsTile({ size }: TileProps) {
 
 export function StrongestTile({ size }: TileProps) {
   const { t } = useI18n();
-  const { workouts, unit } = useHomeData();
-  const lifts = useMemo(
-    () => bestLifts(workouts, size === "l" ? 5 : 3),
-    [workouts, size],
-  );
+  const { summary, unit } = useHomeData();
+  const lifts = summary.lifts.slice(0, size === "l" ? 5 : 3);
   return (
     <Tile href="/progress">
       <TileHead
@@ -360,11 +340,7 @@ export function StrongestTile({ size }: TileProps) {
 
 export function MuscleTile({ size }: TileProps) {
   const { t } = useI18n();
-  const { workouts } = useHomeData();
-  const recent = useMemo(
-    () => workoutsBetween(workouts, periodStart("1m")),
-    [workouts],
-  );
+  const { summary } = useHomeData();
   return (
     <Tile href="/progress">
       <TileHead
@@ -373,7 +349,7 @@ export function MuscleTile({ size }: TileProps) {
       />
       <div className={styles.listSlot}>
         <MuscleBalance
-          workouts={recent}
+          muscleSets={summary.muscleSets}
           limit={size === "l" ? 8 : 3}
           compact
           emptyLabel={t("progress.muscleEmpty")}

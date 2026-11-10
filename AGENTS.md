@@ -22,7 +22,7 @@ node scripts/telegram-dev-poll.mjs  # local Telegram OTP (webhook can't reach lo
 node scripts/take-screenshots.mjs   # re-shoot README screenshots (needs dev server + seeded demo)
 ```
 
-There are no automated tests or configured linter. Run `npm run verify` and verify UI changes in the browser; run `npm run precommit` before handoff or commit.
+Regression tests are in `scripts/test-*.mjs`; the isolated SQL suite is `node scripts/test-database.mjs` and requires local PostgreSQL tools. There is no configured linter. Run `npm run verify` and verify UI changes in the browser; run `npm run precommit` before handoff or commit. Before publishing to the public repository, run `npm run secrets:staged` on the intended Git index. Never include real environment files, credentials, data exports, backups or private operational reports; `.gitignore` does not untrack existing files.
 
 `GET /api/dev/login?email=...` — passwordless sign-in as any user (dev builds only, 404 in production). Use `demo@deepgym.app` for testing.
 

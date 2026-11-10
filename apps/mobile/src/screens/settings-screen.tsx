@@ -97,7 +97,8 @@ function toMeasuredAt(datePart: string, timePart: string): string | null {
 }
 
 async function removeOwnedStoredAvatar(url: string | null, ownerId: string) {
-  const marker = `/storage/v1/object/public/${AVATAR_BUCKET}/`;
+  const marker = url?.includes(`/api/storage/${AVATAR_BUCKET}/`)
+    ? `/api/storage/${AVATAR_BUCKET}/` : `/storage/v1/object/public/${AVATAR_BUCKET}/`;
   const at = url?.indexOf(marker) ?? -1;
   if (at < 0) return;
   try {

@@ -2,20 +2,24 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
+import { requireAuthUserId, useAuthSession } from "@/shared/lib/auth-session";
+import { readAllPages } from "@/shared/lib/supabase/pagination";
 import type { MuscleGroup } from "../model/types";
 
 export function useMuscleGroups() {
+  const { userId } = useAuthSession();
   return useQuery({
-    queryKey: ["muscle-groups"],
-    queryFn: async (): Promise<MuscleGroup[]> => {
+    queryKey: ["muscle-groups", userId],
+    enabled: Boolean(userId),
+    queryFn: async ({ signal }): Promise<MuscleGroup[]> => {
       const supabase = getSupabaseBrowser();
-      const { data, error } = await supabase
+      return readAllPages<MuscleGroup>(({ from, to, count }) => supabase
         .from("muscle_groups")
-        .select("*")
+        .select("*", { count })
+        .or(`user_id.is.null,user_id.eq.${userId}`)
         .order("sort_order")
-        .order("name");
-      if (error) throw error;
-      return data as MuscleGroup[];
+        .order("name").order("id")
+        .range(from, to).abortSignal(signal), signal);
     },
     staleTime: 5 * 60_000,
   });
@@ -26,13 +30,10 @@ export function useCreateMuscleGroup() {
   return useMutation({
     mutationFn: async (name: string) => {
       const supabase = getSupabaseBrowser();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not signed in");
+      const userId = requireAuthUserId();
       const { error } = await supabase
         .from("muscle_groups")
-        .insert({ name: name.trim(), user_id: user.id });
+        .insert({ name: name.trim(), user_id: userId });
       if (error) throw error;
     },
     onSuccess: () =>
@@ -48,7 +49,7 @@ export function useDeleteMuscleGroup() {
       const { error } = await supabase
         .from("muscle_groups")
         .delete()
-        .eq("id", id);
+        .eq("id", id).eq("user_id", requireAuthUserId());
       if (error) throw error;
     },
     onSuccess: () =>

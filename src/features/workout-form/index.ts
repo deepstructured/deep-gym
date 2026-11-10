@@ -1,6 +1,7 @@
 export { WorkoutForm } from "./ui/workout-form";
 export {
   useNewWorkoutDraft,
+  syncDraftOwner,
   emptyDraft,
   exerciseToDraft,
   workoutToDraft,
@@ -14,7 +15,7 @@ export {
   type BodyweightDraftIssue,
   type WorkoutDraft,
 } from "./model/draft";
-export { useNewWorkoutDraftSync } from "./model/draft-sync";
+export { useNewWorkoutDraftSync, flushWorkoutDraftBeforeSave } from "./model/draft-sync";
 export {
   useActiveWorkoutDraft,
   type ActiveDraftSummary,

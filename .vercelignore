@@ -1,0 +1,44 @@
+# Upload only the web application and its workspace source/manifests.
+# Backups, decryption keys, server migration tooling and native build artifacts
+# must never be part of a Vercel source deployment.
+/*
+!app
+!src
+!public
+!packages
+!apps
+!/package.json
+!/package-lock.json
+!/next.config.ts
+!/next-env.d.ts
+!/middleware.ts
+!/tsconfig.json
+!/postcss.config.*
+!/vercel.json
+!/.vercelignore
+
+# npm's workspace lock needs the mobile manifest, but not its source/builds.
+apps/*
+!apps/mobile
+apps/mobile/*
+!apps/mobile/package.json
+packages/*
+!packages/core
+packages/core/*
+!packages/core/package.json
+!packages/core/src
+
+# Defense in depth, including sensitive files accidentally placed in source.
+**/.env*
+**/.local-secrets/**
+**/node_modules/**
+**/.next/**
+**/.expo/**
+**/*.pem
+**/*.key
+**/*.dump
+**/*.backup
+**/*.tar*
+**/*.zip
+**/*.tsbuildinfo
+**/.DS_Store

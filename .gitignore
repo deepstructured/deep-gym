@@ -16,6 +16,16 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+*.mobileprovision
+credentials.json
+service-account*.json
+*service-account*.json
+client_secret*.json
 
 # debug
 npm-debug.log*
@@ -26,6 +36,11 @@ yarn-error.log*
 # env files
 .env*
 !.env.example
+.envrc
+.direnv/
+.npmrc
+.pypirc
+.netrc
 
 # typescript
 *.tsbuildinfo
@@ -39,10 +54,66 @@ next-env.d.ts
 
 # local design-review output
 /artifacts/
+/.local-secrets/
 /design-qa.md
+
+# Local data, database exports and archives (schema migrations stay versioned)
+backups/
+exports/
+*.dump
+*.backup
+*.bak
+*.sql
+!/supabase/migrations/*.sql
+!/supabase/deploy/*.sql
+!/scripts/*-regressions.sql
+*.sql.gz
+*.sql.zip
+*.sqlite
+*.sqlite3
+*.db
+*.tar
+*.tar.gz
+*.tar.xz
+*.tar.zst
+*.tgz
+*.zip
+!/marketing/creatives/deepgym-creatives-uk-1080x1350.zip
+!/marketing/creatives/deepgym-product-creatives-uk-1080x1350.zip
+*.aes-256-gcm
+
+# Private operational material; keep it on this workstation
+/deploy/
+/Dockerfile
+/.dockerignore
+/docs/AUDIT_*.md
+/docs/DEPENDENCY_AUDIT_*.md
+/docs/DEPLOY_*.md
+/docs/SELF_HOSTING_RU.md
+/docs/LEGACY_SUPABASE_SELF_HOSTING_RU.md
+/scripts/backup-*.mjs
+/scripts/import-api-snapshot.mjs
+/scripts/prepare-postgres-target.mjs
+/scripts/rehearse-sql-backup.mjs
+/scripts/smoke-postgres-app.mjs
+/scripts/smoke-supabase-demo.mjs
+/scripts/auth-postgres-regressions.mjs
+/scripts/test-api-import.mjs
+/scripts/test-postgres-bootstrap.mjs
+/scripts/test-backup*.mjs
+/scripts/lib/api-snapshot.mjs
+/scripts/lib/encrypted-backup.mjs
+/scripts/lib/migration-target.mjs
+/scripts/lib/portable-sql-snapshot.mjs
+/scripts/lib/source-database.mjs
 
 # deployment tooling
 /.vercel/
+.supabase/
+.aws/
+.ssh/
+.agents/
+.codex/
 
 # marketing stories are local-only; docs/screenshots stays (README uses it)
 /docs/stories

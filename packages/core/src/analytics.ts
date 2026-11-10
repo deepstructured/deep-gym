@@ -41,11 +41,11 @@ export function workoutSetCount(workout: Workout): number {
 }
 
 /** Workouts whose date is inside [from, to] (inclusive; null = open). */
-export function workoutsBetween(
-  workouts: Workout[],
+export function workoutsBetween<T extends { date: string }>(
+  workouts: T[],
   from: string | null,
   to: string | null = null,
-): Workout[] {
+): T[] {
   return workouts.filter(
     (workout) =>
       (from == null || workout.date >= from) &&
@@ -154,7 +154,7 @@ export function weekStreak(dates: string[], today: Date = new Date()): number {
 }
 
 /** Number of workouts per ISO date. */
-export function activityByDate(workouts: Workout[]): Map<string, number> {
+export function activityByDate(workouts: { date: string }[]): Map<string, number> {
   const map = new Map<string, number>();
   for (const workout of workouts) {
     map.set(workout.date, (map.get(workout.date) ?? 0) + 1);

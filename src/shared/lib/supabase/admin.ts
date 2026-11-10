@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { SUPABASE_URL } from "@/shared/config/env";
+import { fetchWithTimeout } from "@/shared/lib/request-timeout";
 
 /** Service-role client. Server-side only — bypasses RLS. */
 export function getSupabaseAdmin() {
@@ -8,6 +9,7 @@ export function getSupabaseAdmin() {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
   }
   return createClient(SUPABASE_URL, serviceKey, {
+    global: { fetch: fetchWithTimeout },
     auth: { autoRefreshToken: false, persistSession: false },
   });
 }

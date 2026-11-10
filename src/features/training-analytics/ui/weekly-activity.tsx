@@ -8,17 +8,19 @@ import {
   weeklyActivityValue,
   type WeeklyActivityMetric,
 } from "@deepgym/core/weekly-activity";
-import type { Workout } from "@/entities/workout";
+import type { Workout, WorkoutActivity } from "@/entities/workout";
 import { useI18n } from "@/shared/i18n";
 import { kgToUnit, type Unit } from "@/shared/lib/weight";
 import { BarChart, Segmented } from "@/shared/ui";
+import { activityWeeklyBuckets } from "../model/activity";
 import { weeklyBuckets } from "../model/analytics";
 import styles from "./weekly-activity.module.scss";
 
 type WeeklyMetric = "workouts" | "sets" | "volume";
 
 interface WeeklyActivityProps {
-  workouts: Workout[];
+  workouts?: Workout[];
+  activity?: WorkoutActivity[];
   unit: Unit;
   weeks?: number;
   height?: number;
@@ -29,6 +31,7 @@ interface WeeklyActivityProps {
 /** Column per calendar week — workouts, working sets or volume. */
 export function WeeklyActivity({
   workouts,
+  activity,
   unit,
   weeks = 12,
   height = 140,
@@ -40,8 +43,8 @@ export function WeeklyActivity({
   const metric = fixedMetric ?? ownMetric;
   const coreMetric: WeeklyActivityMetric = metric === "volume" ? "volumeKg" : metric;
   const buckets = useMemo(
-    () => weeklyBuckets(workouts, weeks),
-    [workouts, weeks],
+    () => activity ? activityWeeklyBuckets(activity, weeks) : weeklyBuckets(workouts ?? [], weeks),
+    [activity, workouts, weeks],
   );
 
   const selectedIndex = Math.max(0, buckets.findIndex((bucket) => bucket.start === selectedWeekStart));

@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { useProfile, useUpdateProfile, type Profile } from "@/entities/user";
+import { useProfile, useUpdateProfile, profileQueryKey, type Profile } from "@/entities/user";
 import {
   DEFAULT_LAYOUT,
   normalizeLayout,
@@ -57,7 +57,7 @@ export function useHomeLayout(): {
       } catch {
         // storage unavailable — the profile copy still syncs
       }
-      queryClient.setQueryData<Profile | null>(["profile"], (current) =>
+      queryClient.setQueryData<Profile | null>(profileQueryKey(userId), (current) =>
         current ? { ...current, home_widgets: next } : current,
       );
       // Fails harmlessly until the column exists; local copy keeps working.

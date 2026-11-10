@@ -29,6 +29,7 @@ import {
   rebaseBodyweightExercises,
   useNewWorkoutDraft,
   useNewWorkoutDraftSync,
+  flushWorkoutDraftBeforeSave,
   workoutToCopiedExercises,
   type DraftExercise,
 } from "@/features/workout-form";
@@ -51,11 +52,12 @@ export function WorkoutNewView() {
   const { t } = useI18n();
   const { data: profile } = useProfile();
   const { data: groups } = useMuscleGroups();
-  const { draft, setDraft, reset } = useNewWorkoutDraft();
+  const { draft, setDraft, reset, pendingRemote, resolveConflict } = useNewWorkoutDraft();
   const createWorkout = useCreateWorkout();
   const [error, setError] = useState<string | null>(null);
   const [isFirstWorkout, setIsFirstWorkout] = useState(false);
   const [bodyWeightPending, setBodyWeightPending] = useState(false);
+  const [draftSyncPending, setDraftSyncPending] = useState(false);
   const [launchPending, setLaunchPending] = useState(false);
   // A template or "repeat workout" launch waiting for confirmation because
   // it would replace a draft that already has content.
@@ -69,7 +71,7 @@ export function WorkoutNewView() {
   // Renders a loader until the cloud draft pull settles — this both avoids
   // a hydration mismatch with the locally stored draft and stops a fresher
   // remote draft from replacing a form the user is already editing.
-  const { ready } = useNewWorkoutDraftSync();
+  const { ready, syncError, storageError } = useNewWorkoutDraftSync();
   const unit = profile?.unit ?? "kg";
   const bodyWeightCutoff = /^\d{4}-\d{2}-\d{2}$/.test(draft.date)
     ? new Date(`${draft.date}T23:59:59.999`).toISOString()
@@ -215,6 +217,8 @@ export function WorkoutNewView() {
   const canSave =
     draft.exercises.length > 0 &&
     !createWorkout.isPending &&
+    !draftSyncPending &&
+    !pendingRemote &&
     !bodyWeightPending &&
     !launchPending;
 
@@ -284,8 +288,8 @@ export function WorkoutNewView() {
     setConfirmDiscard(false);
   }
 
-  function save() {
-    if (bodyWeightPending) return;
+  async function save() {
+    if (!canSave || !profile) return;
     setError(null);
     const bodyweightIssue = bodyweightDraftIssue(draft, unit);
     if (bodyweightIssue) {
@@ -300,7 +304,20 @@ export function WorkoutNewView() {
       );
       return;
     }
-    createWorkout.mutate(draftToInput(draft, unit), {
+    const createKey = useNewWorkoutDraft.getState().ensureCreateKey();
+    setDraftSyncPending(true);
+    try {
+      await flushWorkoutDraftBeforeSave(profile.id);
+    } catch {
+      setError(t("draft.syncPending"));
+      return;
+    } finally {
+      setDraftSyncPending(false);
+    }
+    createWorkout.mutate({
+      input: draftToInput(useNewWorkoutDraft.getState().draft, unit),
+      createKey,
+    }, {
       onSuccess: () => {
         reset();
         router.push(isFirstWorkout ? "/history?first=1" : "/history");
@@ -322,7 +339,7 @@ export function WorkoutNewView() {
       back
       aside={ready ? <DraftSummary draft={draft} unit={unit} /> : undefined}
       action={
-        <div className={styles.headerActions}>
+        <fieldset disabled={draftSyncPending || createWorkout.isPending} className={styles.headerActions} style={{ border: 0, padding: 0, margin: 0 }}>
           {ready && (
             <WorkoutMetaControls
               type={draft.type}
@@ -347,18 +364,27 @@ export function WorkoutNewView() {
             size="sm"
             onClick={save}
             disabled={!canSave}
-            loading={createWorkout.isPending}
+            loading={draftSyncPending || createWorkout.isPending}
           >
             {t("common.save")}
           </Button>
-        </div>
+        </fieldset>
       }
     >
       {!ready || launchPending ? (
         <PageLoader variant="form" />
       ) : (
-        <div className={styles.stack}>
+        <fieldset disabled={draftSyncPending || createWorkout.isPending} className={styles.stack} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           {isFirstWorkout && <FirstWorkoutFormTip />}
+          {storageError && <ErrorNote message={t("draft.storageUnavailable")} />}
+          {syncError && !storageError && <ErrorNote message={t("draft.syncPending")} />}
+          {pendingRemote && (
+            <div>
+              <ErrorNote message={t("draft.syncConflict")} />
+              <Button variant="surface" onClick={() => resolveConflict(false)}>{t("draft.keepLocal")}</Button>
+              <Button variant="surface" onClick={() => resolveConflict(true)}>{t("draft.useRemote")}</Button>
+            </div>
+          )}
 
           <WorkoutForm
             value={draft}
@@ -400,12 +426,12 @@ export function WorkoutNewView() {
               className={styles.saveButton}
               onClick={save}
               disabled={!canSave}
-              loading={createWorkout.isPending}
+              loading={draftSyncPending || createWorkout.isPending}
             >
               {t("workout.save")}
             </Button>
           )}
-        </div>
+        </fieldset>
       )}
 
       <ConfirmSheet

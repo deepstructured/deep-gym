@@ -1,32 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/shared/i18n";
-import { NEW_WORKOUT_DRAFT_STORAGE_KEY } from "@/shared/config/storage";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
-import { Button, IconLogout } from "@/shared/ui";
+import { withTimeout } from "@/shared/lib/request-timeout";
+import { resetLocalAuthSession } from "@/shared/lib/auth-session";
+import { Button, ErrorNote, IconLogout } from "@/shared/ui";
 
 export function SignOutButton({ compact = false }: { compact?: boolean }) {
   const { t } = useI18n();
-  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   async function signOut() {
     setLoading(true);
-    const { error } = await getSupabaseBrowser().auth.signOut();
-    if (error) {
+    setFailed(false);
+    try {
+      const { error } = await withTimeout(async (signal) => {
+        const result = await getSupabaseBrowser().auth.signOut({ scope: "local" });
+        signal.throwIfAborted();
+        return result;
+      });
+      if (error) throw error;
+      // Auth identity subscribers clear the query cache and archive the draft.
+      window.location.assign("/login");
+    } catch {
+      setFailed(true);
+    } finally {
       setLoading(false);
-      return;
     }
-    localStorage.removeItem(NEW_WORKOUT_DRAFT_STORAGE_KEY);
-    queryClient.clear();
-    // A full navigation also clears the in-memory Zustand instance, so the
-    // removed local draft cannot survive a sign-out inside this SPA session.
-    window.location.assign("/login");
   }
 
   return (
+    <>
     <Button
       variant={compact ? "ghost" : "danger"}
       size={compact ? "sm" : "lg"}
@@ -38,5 +44,12 @@ export function SignOutButton({ compact = false }: { compact?: boolean }) {
       {!loading && <IconLogout size={19} />}
       {t("settings.signOut")}
     </Button>
+    {failed && <>
+      <ErrorNote message={t("common.error")} />
+      <Button type="button" variant="ghost" onClick={resetLocalAuthSession}>
+        {t("auth.resetLocalSession")}
+      </Button>
+    </>}
+    </>
   );
 }

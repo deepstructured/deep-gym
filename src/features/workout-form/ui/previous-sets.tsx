@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useExerciseHistory } from "@/entities/workout";
+import { usePreviousExerciseSets } from "@/entities/workout";
 import { useI18n } from "@/shared/i18n";
 import { formatDay } from "@/shared/lib/dates";
 import { kgToUnit, roundWeight, type Unit } from "@/shared/lib/weight";
@@ -30,7 +30,7 @@ export function usePreviousSession(
   bodyweight: boolean,
   bodyWeightKg: number | null,
 ): PreviousSession | null {
-  const { data: history } = useExerciseHistory(exerciseId);
+  const { data: history } = usePreviousExerciseSets(exerciseId, beforeDate);
 
   return useMemo(() => {
     if (!history?.length) return null;

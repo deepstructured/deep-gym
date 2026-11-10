@@ -9,7 +9,7 @@ import { marketingMetadata, PRIVATE_ROBOTS } from "@/shared/config/seo";
 export const dynamic = "force-dynamic";
 
 async function isAuthenticated() {
-  // Middleware overwrites this header after auth.getUser() verifies the session.
+  // Middleware overwrites this header after getClaims() verifies the session.
   return (await headers()).get("x-deepgym-authenticated") === "1";
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/shared/lib/supabase/admin";
 import { sendTelegramMessage } from "@/shared/lib/telegram";
+import { ownAuthEnabled, withAuthDb } from "@/server/auth";
 
 /**
  * Telegram bot webhook. Records chat_id/username for every user who talks
@@ -23,14 +24,25 @@ export async function POST(request: NextRequest) {
   if (!from?.id || !message?.chat?.id) {
     return NextResponse.json({ ok: true });
   }
+  // A group message must never redirect a person's future login codes to a
+  // chat where other members can read them.
+  if (message.chat.type !== "private" || String(message.chat.id) !== String(from.id)) {
+    return NextResponse.json({ ok: true });
+  }
 
-  const admin = getSupabaseAdmin();
-  await admin.from("telegram_links").upsert({
+  if (ownAuthEnabled()) {
+    try {
+      await withAuthDb((db) => db.query("insert into public.telegram_links(telegram_id,chat_id,username,updated_at) values($1,$2,$3,now()) on conflict(telegram_id) do update set chat_id=excluded.chat_id,username=excluded.username,updated_at=now()", [from.id,message.chat.id,from.username ? String(from.username).toLowerCase() : null]).then(() => undefined));
+    } catch { return NextResponse.json({ error: "Bot service unavailable" }, { status: 503 }); }
+  } else {
+    const admin = getSupabaseAdmin();
+    await admin.from("telegram_links").upsert({
     telegram_id: from.id,
     chat_id: message.chat.id,
     username: from.username ? String(from.username).toLowerCase() : null,
     updated_at: new Date().toISOString(),
   });
+  }
 
   if (typeof message.text === "string" && message.text.startsWith("/start")) {
     const name = from.first_name ?? "athlete";

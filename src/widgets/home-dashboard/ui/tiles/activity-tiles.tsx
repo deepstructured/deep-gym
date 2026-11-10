@@ -9,15 +9,15 @@ import {
 } from "date-fns";
 import { useMemo } from "react";
 import { normalizeTrainingSchedule } from "@/entities/user";
-import type { Workout } from "@/entities/workout";
+import type { WorkoutActivity } from "@/entities/workout";
 import {
   ConsistencyHeatmap,
   WeeklyActivity,
   formatCompact,
   percentChange,
-  periodTotals,
+  activityPeriodTotals as periodTotals,
   weekStreak,
-  weeklyBuckets,
+  activityWeeklyBuckets as weeklyBuckets,
   workoutsBetween,
 } from "@/features/training-analytics";
 import { ElapsedSince, useActiveWorkoutDraft } from "@/features/workout-form";
@@ -41,7 +41,7 @@ import styles from "./tiles.module.scss";
 const MONDAY = new Date(2024, 0, 1);
 
 /** Monday-based current week: which days have a workout. */
-function useThisWeek(workouts: Workout[]) {
+function useThisWeek(workouts: WorkoutActivity[]) {
   return useMemo(() => {
     const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
     const from = toISODate(monday);
@@ -149,7 +149,8 @@ export function StartTile({ size, wide }: TileProps) {
 
 export function WeekTile({ size, wide }: TileProps) {
   const { t } = useI18n();
-  const { workouts, profile } = useHomeData();
+  const { summary, profile } = useHomeData();
+  const workouts = summary.activity;
   const week = useThisWeek(workouts);
   const schedule = normalizeTrainingSchedule(profile?.training_schedule);
   const planned = schedule.filter(Boolean).length;
@@ -204,7 +205,8 @@ export function WeekTile({ size, wide }: TileProps) {
 
 export function StreakTile() {
   const { t } = useI18n();
-  const { workouts } = useHomeData();
+  const { summary } = useHomeData();
+  const workouts = summary.activity;
   const streak = useMemo(
     () => weekStreak(workouts.map((workout) => workout.date)),
     [workouts],
@@ -229,7 +231,8 @@ export function StreakTile() {
 
 export function TotalTile() {
   const { t } = useI18n();
-  const { workouts, workoutCount } = useHomeData();
+  const { summary, workoutCount } = useHomeData();
+  const workouts = summary.activity;
   const monthFrom = toISODate(startOfMonth(new Date()));
   const thisMonth = workouts.filter((w) => w.date >= monthFrom).length;
   return (
@@ -297,7 +300,8 @@ function GoalRing({
 
 export function GoalTile({ size, wide }: TileProps) {
   const { t, tn } = useI18n();
-  const { workouts, profile } = useHomeData();
+  const { summary, profile } = useHomeData();
+  const workouts = summary.activity;
   const week = useThisWeek(workouts);
   const planned = normalizeTrainingSchedule(profile?.training_schedule).filter(
     Boolean,
@@ -341,7 +345,8 @@ export function GoalTile({ size, wide }: TileProps) {
 
 export function ConsistencyTile({ size }: TileProps) {
   const { t, tn } = useI18n();
-  const { workouts } = useHomeData();
+  const { summary } = useHomeData();
+  const workouts = summary.activity;
   const weeks = size === "l" ? 26 : 20;
   const stats = useMemo(() => {
     const buckets = weeklyBuckets(workouts, weeks);
@@ -411,7 +416,8 @@ function Stat({
 
 export function WeeklyVolumeTile({ size, wide }: TileProps) {
   const { t } = useI18n();
-  const { workouts, unit } = useHomeData();
+  const { summary, unit } = useHomeData();
+  const workouts = summary.activity;
   const [previous, current] = useMemo(
     () => weeklyBuckets(workouts, 2),
     [workouts],
@@ -442,7 +448,7 @@ export function WeeklyVolumeTile({ size, wide }: TileProps) {
         {expanded && (
           <div className={styles.grow}>
             <WeeklyActivity
-              workouts={workouts}
+              activity={workouts}
               unit={unit}
               weeks={8}
               height={62}
@@ -457,7 +463,8 @@ export function WeeklyVolumeTile({ size, wide }: TileProps) {
 
 export function MonthTile() {
   const { t } = useI18n();
-  const { workouts, unit } = useHomeData();
+  const { summary, unit } = useHomeData();
+  const workouts = summary.activity;
   const { current, previous, label } = useMemo(() => {
     const now = new Date();
     const dayOfMonth = now.getDate();

@@ -83,9 +83,20 @@ Login flow: user presses **Start** in the bot once → enters `@username` in the
 | `node scripts/generate-social-images.mjs` | Regenerate localized social previews from the approved brand mark and current public workout screenshot |
 | `GET /api/dev/login?email=...` | Passwordless sign-in as any user — **dev builds only**, returns 404 in production |
 
-There are currently no automated tests or configured linter. Use
-`npm run precommit` plus browser QA for UI changes. Do not run
+Regression tests live in `scripts/test-*.mjs`; run the relevant scripts with
+Node's test runner. The isolated SQL suite, `node scripts/test-database.mjs`,
+requires local PostgreSQL command-line tools and starts its own temporary
+database without reading project credentials. There is no configured linter.
+Use `npm run precommit` plus browser QA for UI changes. Do not run
 `npm run build` while the dev server is active.
+
+`npm run precommit` also checks changed files for private artifacts and known
+local credentials. Before publishing, stage the intended files and run
+`npm run secrets:staged` to inspect the exact staged content. These checks print
+only locations and finding categories; they do not send credentials anywhere.
+Keep real configuration in ignored `.env.local` files. Only placeholder
+`.env.example` files belong in the public repository. Ignore rules do not
+remove files that Git already tracks.
 
 The demo seed marks onboarding and the current release announcement as seen so
 the standard screenshot flow is not covered by startup UI. Development-only

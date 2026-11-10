@@ -41,8 +41,12 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   // SSR always renders English; the stored choice is applied after mount
   // (and the profile's language after sign-in) to avoid hydration mismatch.
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (isLang(stored)) setLangState(stored);
+    try {
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      if (isLang(stored)) setLangState(stored);
+    } catch {
+      // Browsers may deny storage access; the in-memory language still works.
+    }
   }, []);
 
   const setLang = useCallback((next: Lang) => {

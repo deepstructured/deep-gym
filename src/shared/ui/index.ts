@@ -14,6 +14,7 @@ export { Fullscreen } from "./fullscreen/fullscreen";
 export { Input, TextArea, Field } from "./input/input";
 export { LineChart, type LineChartPoint } from "./line-chart/line-chart";
 export { PageLoader, Skeleton } from "./page-loader/page-loader";
+export { QueryError } from "./query-error/query-error";
 export { PeriodSwitch } from "./period-switch/period-switch";
 export { Segmented } from "./segmented/segmented";
 export { Sheet, ConfirmSheet } from "./sheet/sheet";
