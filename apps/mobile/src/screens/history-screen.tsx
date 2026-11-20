@@ -3,11 +3,14 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 import { scheduledWorkoutOn } from "@deepgym/core/next-workout";
+import { useLocalToday } from "@deepgym/core/use-local-today";
 import { colors, fonts, radii } from "../theme";
 import { BottomSheet, Button, Screen, Segmented, Text } from "../ui";
 import { useProfile, useWorkouts } from "../data/queries";
+import { useGymPreference, useGyms } from "../data/gyms";
 import { useI18n } from "../providers/locale-provider";
 import { fromISO, localISO } from "./format";
+import { GymSelect } from "./gym-select";
 import { ErrorState, Header, LoadingState, WorkoutCard } from "./common";
 import { ScheduledWorkoutCard } from "./scheduled-workout-card";
 
@@ -67,7 +70,14 @@ export function HistoryScreen() {
   const routeDate = validDateParam(params.date);
   const profile = useProfile();
   const workouts = useWorkouts();
-  const [selected, setSelected] = useState(() => routeDate ?? localISO());
+  const gyms = useGyms();
+  const { filter: gymFilter, isError: preferenceError, rememberFilter: setGymFilter } = useGymPreference();
+  const sessions = useMemo(() => (workouts.data ?? []).filter((workout) =>
+    !gymFilter || (workout.gym_id ?? "none") === gymFilter), [workouts.data, gymFilter]);
+  const schedule = gymFilter ? undefined : profile.data?.training_schedule;
+  const todayISO = useLocalToday();
+  const [selectedDay, setSelected] = useState<string | null>(routeDate);
+  const selected = selectedDay ?? todayISO;
   const [mode, setMode] = useState<ViewMode>("day");
   useEffect(() => {
     if (routeDate) setSelected(routeDate);
@@ -90,21 +100,20 @@ export function HistoryScreen() {
     days.slice(index * 7, index * 7 + 7));
   const byDate = useMemo(() => {
     const dates = new Map<string, number>();
-    for (const workout of workouts.data ?? []) {
+    for (const workout of sessions) {
       dates.set(workout.date, (dates.get(workout.date) ?? 0) + 1);
     }
     return dates;
-  }, [workouts.data]);
-  const selectedWorkouts = (workouts.data ?? []).filter((workout) => workout.date === selected);
+  }, [sessions]);
+  const selectedWorkouts = sessions.filter((workout) => workout.date === selected);
   const planned = selectedWorkouts.length === 0
-    ? scheduledWorkoutOn(profile.data?.training_schedule, selected)
+    ? scheduledWorkoutOn(schedule, selected)
     : null;
   const hasPlannedDates = mode !== "day" && days.some((day) => {
     const iso = localISO(day);
     if (mode === "month" && day.getMonth() !== selectedDate.getMonth()) return false;
-    return !byDate.has(iso) && scheduledWorkoutOn(profile.data?.training_schedule, iso) != null;
+    return !byDate.has(iso) && scheduledWorkoutOn(schedule, iso) != null;
   });
-  const todayISO = localISO();
 
   function shift(direction: number) {
     const next = new Date(selectedDate);
@@ -127,6 +136,7 @@ export function HistoryScreen() {
   return (
     <Screen bottomPadding={122}>
       <Header title={t("history.title")} profile={profile.data} />
+      <GymSelect preferenceError={preferenceError} gyms={gyms.data} includeAll value={gymFilter} onChange={setGymFilter} />
       <Segmented
         value={mode}
         onChange={setMode}
@@ -142,7 +152,7 @@ export function HistoryScreen() {
         <Pressable onPress={() => shift(-1)} accessibilityLabel={t("history.previous")} style={navButton}>
           <Ionicons name="chevron-back" size={18} color={colors.muted} />
         </Pressable>
-        <Pressable onPress={() => setSelected(localISO())} accessibilityRole="button" style={{ paddingHorizontal: 12, paddingVertical: 6, flexShrink: 1 }}>
+        <Pressable onPress={() => setSelected(null)} accessibilityRole="button" style={{ paddingHorizontal: 12, paddingVertical: 6, flexShrink: 1 }}>
           <Text weight="semibold" style={{ textAlign: "center" }}>{periodLabel(selectedDate, mode, lang)}</Text>
         </Pressable>
         <Pressable onPress={() => shift(1)} accessibilityLabel={t("history.next")} style={navButton}>
@@ -171,7 +181,7 @@ export function HistoryScreen() {
                   const outside = mode === "month" && day.getMonth() !== selectedDate.getMonth();
                   const count = outside ? 0 : (byDate.get(iso) ?? 0);
                   const futurePlanned = count === 0 && !outside &&
-                    scheduledWorkoutOn(profile.data?.training_schedule, iso) != null;
+                    scheduledWorkoutOn(schedule, iso) != null;
                   return (
                     <Pressable
                       key={iso}
@@ -241,6 +251,9 @@ export function HistoryScreen() {
           <WorkoutCard
             key={workout.id}
             workout={workout}
+            gymName={workout.gym_id
+              ? gyms.data?.find((gym) => gym.id === workout.gym_id)?.name
+              : gyms.data?.length ? t("gym.none") : undefined}
             unit={profile.data?.unit ?? "kg"}
             onPress={() => router.push({ pathname: "/workouts/[id]", params: { id: workout.id } })}
           />

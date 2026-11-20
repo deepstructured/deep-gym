@@ -25,7 +25,7 @@ import {
 import { isSupabaseConfigured } from "../src/lib/supabase";
 import { userErrorMessage } from "../src/lib/user-error";
 import { useI18n } from "../src/providers/locale-provider";
-import { colors } from "../src/theme";
+import { colors, fonts } from "../src/theme";
 import { BrandMark, GradientCard } from "../src/ui";
 
 type TelegramStep = "username" | "code";
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   codeInput: {
-    fontFamily: "Matricha",
+    fontFamily: fonts.dot,
     fontSize: 25,
     letterSpacing: 8,
     textAlign: "center",

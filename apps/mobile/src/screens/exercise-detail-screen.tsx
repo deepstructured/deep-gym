@@ -12,6 +12,8 @@ import {
 } from "@deepgym/core/weight";
 import { colors, fonts, radii } from "../theme";
 import { BottomSheet, Button, Card, Chip, DotValue, GradientCard, Screen, Text } from "../ui";
+import { useGymPreference, useGyms } from "../data/gyms";
+import { ExerciseAvailabilityField, type ExerciseAvailability } from "./exercise-availability";
 import { useExercises, useMuscleGroups, useProfile, useWorkouts } from "../data/queries";
 import {
   exerciseHistory,
@@ -95,11 +97,13 @@ function Tag({ children, tone = "muted" }: {
 }
 
 export function ExerciseDetailScreen() {
-  const params = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string; gymId?: string }>();
   const exerciseId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { t, lang } = useI18n();
   const profileQuery = useProfile();
   const exercisesQuery = useExercises();
+  const gyms = useGyms();
+  const { gymId: preferredGymId } = useGymPreference();
   const groupsQuery = useMuscleGroups();
   const workoutsQuery = useWorkouts();
   const update = useUpdateExerciseDetail();
@@ -128,6 +132,9 @@ export function ExerciseDetailScreen() {
   const [weightError, setWeightError] = useState<string | null>(null);
   const [machineSettings, setMachineSettings] = useState("");
   const [unitChoice, setUnitChoice] = useState<"default" | Unit>("default");
+  const [editedAvailability, setEditedAvailability] = useState<ExerciseAvailability>();
+  const availability = editedAvailability !== undefined ? editedAvailability
+    : exercise?.is_universal === false ? (gyms.data ?? []).filter(gym => gym.exercise_ids.includes(exercise.id)).map(gym => gym.id) : null;
   const [editError, setEditError] = useState<string | null>(null);
   const used = (workoutsQuery.data ?? []).some((workout) =>
     workout.workout_exercises.some((occurrence) => occurrence.exercise_id === exerciseId),
@@ -151,6 +158,7 @@ export function ExerciseDetailScreen() {
 
   function openEdit() {
     if (!exercise) return;
+    setEditedAvailability(undefined);
     setName(exercise.name);
     setGroupId(exercise.muscle_group_id);
     setEquipment(exercise.equipment);
@@ -198,7 +206,7 @@ export function ExerciseDetailScreen() {
     if (!exercise || exercise.working_weight_kg == null) return;
     router.push({
       pathname: "/plate-calculator",
-      params: { weightKg: String(exercise.working_weight_kg), equipment: exercise.equipment, unit },
+      params: { weightKg: String(exercise.working_weight_kg), equipment: exercise.equipment, unit, gymId: params.gymId },
     });
   }
 
@@ -229,6 +237,7 @@ export function ExerciseDetailScreen() {
 
   async function saveEdit() {
     if (!exercise) return;
+    if (editedAvailability?.length === 0) return setEditError(t("gym.chooseGyms"));
     if (!name.trim()) return setEditError(t("detail.nameEmpty"));
     if (used && (equipment === "bodyweight") !== (exercise.equipment === "bodyweight")) {
       return setEditError(t("detail.bodyweightModeLocked"));
@@ -238,6 +247,7 @@ export function ExerciseDetailScreen() {
       await update.mutateAsync({
         id: exercise.id,
         patch: {
+          ...(editedAvailability === undefined ? {} : { gym_ids: editedAvailability ?? [] }),
           name: name.trim(),
           muscle_group_id: groupId,
           equipment,
@@ -516,6 +526,8 @@ export function ExerciseDetailScreen() {
           ))}
         </View>
 
+        <ExerciseAvailabilityField gyms={gyms.data} suggestedGymId={params.gymId ?? preferredGymId}
+          value={availability} onChange={setEditedAvailability} retry={gyms.isError ? () => void gyms.refetch() : undefined} />
         <Text variant="micro" tone="muted" style={{ marginBottom: 9 }}>{t("picker.equipment")}</Text>
         <View style={chipWrap}>
           {EQUIPMENT_OPTIONS.map(({ value }) => (

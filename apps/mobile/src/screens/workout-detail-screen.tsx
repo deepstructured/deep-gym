@@ -6,6 +6,7 @@ import { translateCount } from "@deepgym/core/i18n";
 import { formatWeight, kgToUnit, roundWeight } from "@deepgym/core/weight";
 import { colors } from "../theme";
 import { Button, Card, DotValue, GradientCard, Screen, Text } from "../ui";
+import { useGyms } from "../data/gyms";
 import { useDeleteWorkout, useProfile, useWorkout } from "../data/queries";
 import { useI18n } from "../providers/locale-provider";
 import { userErrorMessage } from "../lib/user-error";
@@ -19,6 +20,8 @@ export function WorkoutDetailScreen() {
   const query = useWorkout(id ?? "");
   const remove = useDeleteWorkout();
   const workout = query.data;
+  const gyms = useGyms(Boolean(workout?.gym_id));
+  const gym = gyms.data?.find((item) => item.id === workout?.gym_id);
   const defaultUnit = profile.data?.unit ?? "kg";
 
   function confirmDelete() {
@@ -57,7 +60,7 @@ export function WorkoutDetailScreen() {
           <GradientCard variant="pink" style={{ minHeight: 152 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
               <Ionicons name="calendar-outline" size={15} color={colors.muted} />
-              <Text variant="micro" tone="muted">{formatDate(workout.date, lang)}</Text>
+              <Text variant="micro" tone="muted">{formatDate(workout.date, lang)}{gym ? ` · ${gym.name}` : ""}</Text>
             </View>
             <Text variant="display" style={{ marginTop: 16 }}>{workout.type}</Text>
             <Text tone="muted" style={{ marginTop: 6 }}>
@@ -103,7 +106,7 @@ export function WorkoutDetailScreen() {
             return (
               <Pressable
                 key={entry.id}
-                onPress={() => router.push({ pathname: "/exercises/[id]", params: { id: entry.exercise_id } })}
+                onPress={() => router.push({ pathname: "/exercises/[id]", params: { id: entry.exercise_id, gymId: workout.gym_id ?? "" } })}
               >
                 <Card radius={20} padding={17}>
                   <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>

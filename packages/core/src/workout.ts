@@ -6,6 +6,28 @@ export const BASE_WORKOUT_TYPES = [
   "Pull",
 ] as const;
 
+type DraftContents = { notes: string; exercises: readonly unknown[] };
+
+export function isWorkoutDraftEmpty(draft: DraftContents): boolean {
+  return draft.exercises.length === 0 && draft.notes.trim() === "";
+}
+
+/** A reset can stay in device or cloud storage for weeks. Its creation day
+ * only becomes the workout day when the athlete selects it or starts logging. */
+export function resolveWorkoutDraftDate(
+  draft: DraftContents & { date: string; dateExplicit?: boolean },
+  localToday: string,
+): string {
+  return draft.dateExplicit || !isWorkoutDraftEmpty(draft) ? draft.date : localToday;
+}
+
+/** A legacy draft with logged work already has a venue: no gym. Only a fresh
+ * draft inherits the profile, and an explicit null remains an active choice. */
+export function resolveWorkoutDraftGym(draft: DraftContents & { gymId?: string | null }, preferred: string | null) {
+  if (draft.gymId !== undefined) return draft.gymId;
+  return isWorkoutDraftEmpty(draft) ? preferred : null;
+}
+
 // Labels live in the i18n dictionary: t(`equipment.${value}`)
 export const EQUIPMENT_OPTIONS = [
   { value: "free_weight" },

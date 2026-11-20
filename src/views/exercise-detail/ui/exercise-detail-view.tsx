@@ -3,11 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
+  ExerciseAvailability,
   useDeleteExercise,
   useExercise,
   useExerciseUsageCount,
   useUpdateExercise,
 } from "@/entities/exercise";
+import { useGymPreference, useGyms } from "@/entities/gym";
 import { useMuscleGroups } from "@/entities/muscle-group";
 import { useProfile } from "@/entities/user";
 import {
@@ -53,7 +55,7 @@ import {
 import { cn } from "@/shared/lib/cn";
 import styles from "./exercise-detail-view.module.scss";
 
-export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
+export function ExerciseDetailView({ exerciseId, initialGymId }: { exerciseId: string; initialGymId?: string }) {
   const router = useRouter();
   const { t } = useI18n();
   const { data: exercise, isLoading, error: loadError } = useExercise(exerciseId);
@@ -64,6 +66,9 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
 
   const [weightSheetOpen, setWeightSheetOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const preference = useGymPreference();
+  const [changedCalculatorGym, setChangedCalculatorGym] = useState(false);
+  const calculatorGym = changedCalculatorGym ? preference.gymId : initialGymId ?? preference.gymId;
   const [platesOpen, setPlatesOpen] = useState(false);
 
   const unit = exercise?.unit ?? profile?.unit ?? "kg";
@@ -344,8 +349,7 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
         />
       )}
 
-      <EditExerciseSheet
-        open={editOpen}
+      {editOpen && <EditExerciseSheet
         onClose={() => setEditOpen(false)}
         exercise={exercise}
         bodyweightModeLocked={
@@ -355,19 +359,30 @@ export function ExerciseDetailView({ exerciseId }: { exerciseId: string }) {
           exerciseUsage.data > 0
         }
         onDeleted={() => router.push("/exercises")}
-      />
+      />}
 
       {!isBodyweight && (
         <PlateSheet
           context={
             platesOpen && exercise.working_weight_kg != null
               ? {
+                  gymId: calculatorGym || null,
                   weightKg: exercise.working_weight_kg,
                   equipment: exercise.equipment,
                   displayUnit: unit,
                 }
               : null
           }
+          onGymChange={id => {
+            preference.rememberGym(id || null);
+            setChangedCalculatorGym(true);
+            if (initialGymId) {
+              const url = new URL(window.location.href);
+              url.searchParams.delete("gym");
+              window.history.replaceState(null, "", url);
+            }
+          }}
+          preferenceError={preference.isError}
           onClose={() => setPlatesOpen(false)}
         />
       )}
@@ -516,16 +531,15 @@ function WorkingWeightSheet({
 }
 
 function EditExerciseSheet({
-  open,
   onClose,
   exercise,
   bodyweightModeLocked,
   onDeleted,
 }: {
-  open: boolean;
   onClose: () => void;
   exercise: {
     id: string;
+    is_universal?: boolean;
     name: string;
     muscle_group_id: string;
     equipment: Equipment;
@@ -538,6 +552,8 @@ function EditExerciseSheet({
   const { t } = useI18n();
   const { data: groups } = useMuscleGroups();
   const { data: profile } = useProfile();
+  const { data: gyms, isError: gymsError } = useGyms();
+  const { gymId } = useGymPreference();
   const update = useUpdateExercise();
   const remove = useDeleteExercise();
 
@@ -552,9 +568,14 @@ function EditExerciseSheet({
   );
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scopeChange, setScopeChange] = useState<string[] | null>();
+  const scope = scopeChange !== undefined ? scopeChange : exercise.is_universal === false
+    ? (gyms ?? []).filter(gym => gym.exercise_ids.includes(exercise.id)).map(gym => gym.id)
+    : null;
 
   function save() {
     if (!name.trim()) return setError(t("detail.nameEmpty"));
+    if (scopeChange?.length === 0) return setError(t("gym.chooseGyms"));
     if (
       bodyweightModeLocked &&
       (equipment === "bodyweight") !==
@@ -568,6 +589,7 @@ function EditExerciseSheet({
         id: exercise.id,
         patch: {
           name: name.trim(),
+          ...(scopeChange !== undefined ? { gym_ids: scopeChange ?? [] } : {}),
           muscle_group_id: groupId,
           equipment,
           ...(equipment === "bodyweight"
@@ -594,7 +616,7 @@ function EditExerciseSheet({
 
   return (
     <>
-      <Sheet open={open} onClose={onClose} title={t("detail.editExercise")}>
+      <Sheet open onClose={onClose} title={t("detail.editExercise")}>
         <div className={styles.sheetStack}>
           <Field label={t("picker.name")}>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
@@ -644,6 +666,7 @@ function EditExerciseSheet({
               />
             </Field>
           )}
+          <ExerciseAvailability gyms={gyms ?? (gymsError ? null : undefined)} value={scope} onChange={setScopeChange} defaultGymId={gymId} />
           <Field label={t("picker.unitForExercise")}>
             <div className={styles.chips}>
               {(

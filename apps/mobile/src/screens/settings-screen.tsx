@@ -13,7 +13,7 @@ import {
 } from "@deepgym/core/training-schedule";
 import type { Profile } from "@deepgym/core/types";
 import { BASE_WORKOUT_TYPES } from "@deepgym/core/workout";
-import { kgToUnit, parseWeight, roundWeight, unitToKg, type Unit } from "@deepgym/core/weight";
+import { buildPlateSpecs, kgToUnit, parseWeight, roundWeight, unitToKg, type Unit } from "@deepgym/core/weight";
 import { decode } from "base64-arraybuffer";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
@@ -50,9 +50,11 @@ import { colors, fonts, radii } from "../theme";
 import { BottomSheet, Button, Card, Chip, DotValue, Screen, Segmented, Text } from "../ui";
 import { ReleaseNotesSheet } from "../ui/release-notes-sheet";
 import { ErrorState, Header, LoadingState } from "./common";
+import { GymSettingsSheet } from "./gym-settings-sheet";
+import { PlateFields, SettingInput } from "./settings-equipment";
 
-type SheetKey = "profile" | "weight" | "schedule" | "plates" | "groups" | "language";
-const SHEETS: readonly SheetKey[] = ["profile", "weight", "schedule", "plates", "groups", "language"];
+type SheetKey = "profile" | "weight" | "schedule" | "plates" | "groups" | "language" | "gyms";
+const SHEETS: readonly SheetKey[] = ["profile", "weight", "schedule", "plates", "groups", "language", "gyms"];
 const AVATAR_SIZE = 384;
 const AVATAR_BUCKET = "avatars";
 
@@ -65,9 +67,9 @@ const WORKOUT_TYPE_KEYS = {
 } as const;
 
 const INPUT_COPY = {
-  en: { date: "Date (YYYY-MM-DD)", time: "Time (HH:mm)", invalidBar: "Enter a valid bar weight", invalidPlate: "Enter a valid plate weight" },
-  ru: { date: "Дата (ГГГГ-ММ-ДД)", time: "Время (ЧЧ:мм)", invalidBar: "Укажите корректный вес грифа", invalidPlate: "Укажите корректный вес блина" },
-  uk: { date: "Дата (РРРР-ММ-ДД)", time: "Час (ГГ:хх)", invalidBar: "Вкажіть коректну вагу грифа", invalidPlate: "Вкажіть коректну вагу млинця" },
+  en: { date: "Date (YYYY-MM-DD)", time: "Time (HH:mm)", invalidBar: "Enter a valid bar weight" },
+  ru: { date: "Дата (ГГГГ-ММ-ДД)", time: "Время (ЧЧ:мм)", invalidBar: "Укажите корректный вес грифа" },
+  uk: { date: "Дата (РРРР-ММ-ДД)", time: "Час (ГГ:хх)", invalidBar: "Вкажіть коректну вагу грифа" },
 } as const;
 
 function localDateTimeParts(date = new Date()) {
@@ -206,48 +208,6 @@ function SettingsRow({
   );
 }
 
-function SettingInput({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType,
-  onBlur,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder?: string;
-  keyboardType?: "default" | "decimal-pad" | "numbers-and-punctuation";
-  onBlur?: () => void;
-}) {
-  return (
-    <View style={{ gap: 8 }}>
-      <Text variant="caption" tone="muted">{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        onBlur={onBlur}
-        placeholder={placeholder}
-        placeholderTextColor={colors.faint}
-        keyboardType={keyboardType}
-        selectionColor={colors.lime}
-        style={{
-          minHeight: 49,
-          borderRadius: 13,
-          borderWidth: 1,
-          borderColor: colors.line,
-          backgroundColor: colors.raised,
-          color: colors.text,
-          fontFamily: fonts.regular,
-          fontSize: 16,
-          paddingHorizontal: 15,
-        }}
-      />
-    </View>
-  );
-}
-
 function BodyWeightChart({ rows, accessibilityLabel }: { rows: BodyWeightMeasurement[]; accessibilityLabel: string }) {
   const [width, setWidth] = useState(0);
   const ordered = useMemo(() => [...rows].reverse(), [rows]);
@@ -307,7 +267,8 @@ export function SettingsScreen() {
   const [whatsNewOpen, setWhatsNewOpen] = useState(false);
   const weightQuery = useBodyWeightMeasurements({ limit: 365, enabled: sheet === "weight" });
   const logWeight = useLogBodyWeight();
-  const params = useLocalSearchParams<{ open?: string }>();
+  const params = useLocalSearchParams<{ open?: string; gymId?: string }>();
+  const [initialGymId, setInitialGymId] = useState<string>();
   const deepLinkOpened = useRef(false);
 
   const [nameDraft, setNameDraft] = useState("");
@@ -316,8 +277,6 @@ export function SettingsScreen() {
   const [timeDraft, setTimeDraft] = useState("");
   const [scheduleDraft, setScheduleDraft] = useState<TrainingSchedule>(() => normalizeTrainingSchedule(null));
   const [barDraft, setBarDraft] = useState("");
-  const [plateDraft, setPlateDraft] = useState("");
-  const [plateUnit, setPlateUnit] = useState<Unit>("kg");
   const [newGroupDraft, setNewGroupDraft] = useState("");
   const [showAvatarPresets, setShowAvatarPresets] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -359,8 +318,6 @@ export function SettingsScreen() {
     if (next === "schedule") setScheduleDraft(normalizeTrainingSchedule(current.training_schedule));
     if (next === "plates") {
       setBarDraft(String(roundWeight(kgToUnit(current.bar_weight_kg, current.unit))));
-      setPlateDraft("");
-      setPlateUnit(current.unit);
     }
   }
 
@@ -368,9 +325,10 @@ export function SettingsScreen() {
     if (deepLinkOpened.current || !profile) return;
     if (typeof params.open === "string" && SHEETS.includes(params.open as SheetKey)) {
       deepLinkOpened.current = true;
+      if (params.open === "gyms") setInitialGymId(params.gymId);
       open(params.open as SheetKey, profile);
     }
-  }, [params.open, profile]);
+  }, [params.open, params.gymId, profile]);
 
   const close = () => { setSheet(null); setError(null); setSuccess(null); };
 
@@ -536,29 +494,6 @@ export function SettingsScreen() {
     } catch { setError(t("common.error")); }
   }
 
-  async function addPlate() {
-    if (!profile) return;
-    const parsed = parseWeight(plateDraft);
-    if (parsed == null) { setError(INPUT_COPY[lang].invalidPlate); return; }
-    const key = plateUnit === "kg" ? "plates_kg" : "plates_lb";
-    const current = profile[key] ?? [];
-    if (current.includes(parsed)) { setPlateDraft(""); return; }
-    try {
-      await updateProfile.mutateAsync({ [key]: [...current, parsed] });
-      setPlateDraft("");
-      setError(null);
-    } catch { setError(t("common.error")); }
-  }
-
-  async function removePlate(value: number, plateUnit: Unit) {
-    if (!profile) return;
-    const key = plateUnit === "kg" ? "plates_kg" : "plates_lb";
-    try {
-      await updateProfile.mutateAsync({ [key]: (profile[key] ?? []).filter((item) => item !== value) });
-      setError(null);
-    } catch { setError(t("common.error")); }
-  }
-
   async function handleSignOut() {
     setSigningOut(true);
     try { await signOut(); router.replace("/login"); }
@@ -584,10 +519,7 @@ export function SettingsScreen() {
 
   const avatarImage = avatarSource(profile.avatar_url);
   const avatarBusy = uploadingAvatar || updateProfile.isPending;
-  const plates = [
-    ...profile.plates_kg.map((value) => ({ value, unit: "kg" as Unit, kg: value })),
-    ...(profile.plates_lb ?? []).map((value) => ({ value, unit: "lb" as Unit, kg: unitToKg(value, "lb") })),
-  ].sort((a, b) => b.kg - a.kg);
+  const plates = buildPlateSpecs(profile.plates_kg, profile.plates_lb ?? []);
 
   return (
     <Screen bottomPadding={38}>
@@ -623,6 +555,10 @@ export function SettingsScreen() {
           value={scheduleSummary || t("settings.flexible")}
           icon={<SettingsGlyph name="calendar" color="#ff8a78" />}
           iconFill="rgba(211,79,61,0.15)" iconBorder="rgba(255,98,77,0.25)" onPress={() => open("schedule", profile)} />
+        <SettingsRow title={t("gym.title")}
+          icon={<Ionicons name="location-outline" size={18} color={colors.lime} />}
+          iconFill="rgba(215,246,81,0.1)" iconBorder="rgba(215,246,81,0.2)"
+          onPress={() => { setInitialGymId(undefined); open("gyms", profile); }} />
         <SettingsRow title={t("settings.plateCalc")}
           icon={<Ionicons name="calculator-outline" size={17} color="#aeb8ff" />}
           iconFill="rgba(24,39,136,0.3)" iconBorder="rgba(64,84,214,0.25)" onPress={() => router.push("/plate-calculator")} />
@@ -675,6 +611,7 @@ export function SettingsScreen() {
           onPress={confirmDeleteAccount} />
       </SettingsGroup>
 
+      {sheet === "gyms" && <GymSettingsSheet profile={profile} initialGymId={initialGymId} onClose={close} />}
       <BottomSheet open={sheet === "profile"} onClose={close} title={t("settings.profile")} closeLabel={t("common.close")}>
         <View style={{ gap: 16, paddingBottom: 8 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
@@ -790,7 +727,7 @@ export function SettingsScreen() {
             <Text weight="semibold" style={{ fontSize: 16 }}>{t("bodyWeight.historyTitle")}</Text>
             {weightQuery.data?.length ? <Text variant="micro" tone="muted" style={{ fontSize: 11 }}>{t("bodyWeight.entryCount", { count: weightQuery.data.length })}</Text> : null}
           </View>
-          {weightQuery.isLoading ? <ActivityIndicator color={colors.lime} /> : weightQuery.error ? (
+          {weightQuery.isLoading ? <LoadingState /> : weightQuery.error ? (
             <Text tone="pink">{t("common.error")}</Text>
           ) : !weightQuery.data?.length ? (
             <View style={{ gap: 5, paddingVertical: 14 }}>
@@ -905,29 +842,10 @@ export function SettingsScreen() {
           <View style={{ maxWidth: 128 }}>
             <SettingInput label={t("settings.barWeight", { unit })} value={barDraft} onChangeText={setBarDraft} onBlur={() => void saveBar()} keyboardType="decimal-pad" />
           </View>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {plates.map((plate) => (
-              <Pressable key={`${plate.unit}-${plate.value}`} onPress={() => removePlate(plate.value, plate.unit)} disabled={updateProfile.isPending}
-                accessibilityLabel={t("settings.removePlate", { plate: `${plate.value} ${plate.unit}` })}
-                style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingLeft: 14, paddingRight: 9, minHeight: 36, borderRadius: radii.pill, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised }}>
-                <Text style={{ fontFamily: fonts.dot, fontSize: 15, lineHeight: 20 }}>{plate.value}</Text><Text variant="caption" tone="muted">{plate.unit}</Text>
-                <Ionicons name="close" size={14} color={colors.faint} />
-              </Pressable>
-            ))}
-          </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <TextInput
-              value={plateDraft}
-              onChangeText={setPlateDraft}
-              placeholder={t("settings.plateWeight")}
-              placeholderTextColor={colors.faint}
-              keyboardType="decimal-pad"
-              selectionColor={colors.lime}
-              style={{ flex: 1, height: 40, borderRadius: radii.small, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.raised, color: colors.text, fontFamily: fonts.regular, fontSize: 14, paddingHorizontal: 13 }}
-            />
-            <Segmented options={[{ value: "kg", label: "kg" }, { value: "lb", label: "lb" }]} value={plateUnit} onChange={setPlateUnit} style={{ width: 98 }} />
-            <Button variant="surface" size="compact" leading={<Ionicons name="add" size={16} color={colors.text} />} disabled={!plateDraft.trim()} onPress={addPlate} loading={updateProfile.isPending}>{t("common.add")}</Button>
-          </View>
+          <PlateFields
+            unit={unit} platesKg={profile.plates_kg} platesLb={profile.plates_lb ?? []} pending={updateProfile.isPending}
+            onChange={(denomination, values) => updateProfile.mutateAsync({ [denomination === "kg" ? "plates_kg" : "plates_lb"]: values })}
+          />
           {error ? <Text tone="pink">{error}</Text> : null}
         </View>
       </BottomSheet>

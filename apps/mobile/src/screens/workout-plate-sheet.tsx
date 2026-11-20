@@ -15,6 +15,7 @@ import {
   type PlateCount,
   type Unit,
 } from "@deepgym/core/weight";
+import { useGyms } from "../data/gyms";
 import { useProfile } from "../data/queries";
 import { useI18n } from "../providers/locale-provider";
 import { colors, radii } from "../theme";
@@ -38,15 +39,22 @@ function PlateChip({ item }: { item: PlateCount }) {
 }
 
 /** The form's plate action mirrors the PWA's in-place PlateSheet. */
-export function WorkoutPlateSheet({ context, onClose }: { context: WorkoutPlateContext | null; onClose: () => void }) {
+export function WorkoutPlateSheet({ context, gymId, onClose }: {
+  context: WorkoutPlateContext | null;
+  gymId: string | null;
+  onClose: () => void;
+}) {
   const { t } = useI18n();
   const profile = useProfile().data;
+  const gyms = useGyms(Boolean(context && gymId));
+  const gym = gyms.data?.find(item => item.id === gymId);
+  const equipment = gymId ? gym : profile;
   const unit = context?.unit ?? profile?.unit ?? "kg";
   const weightKg = context?.weightKg ?? 0;
   const isDumbbell = context?.equipment === "dumbbell";
   const isBarbell = context?.equipment === "free_weight";
-  const barKg = profile?.bar_weight_kg ?? 20;
-  const specs = useMemo(() => buildPlateSpecs(profile?.plates_kg ?? [], profile?.plates_lb ?? []), [profile?.plates_kg, profile?.plates_lb]);
+  const barKg = equipment?.bar_weight_kg ?? 20;
+  const specs = useMemo(() => buildPlateSpecs(equipment?.plates_kg ?? [], equipment?.plates_lb ?? []), [equipment?.plates_kg, equipment?.plates_lb]);
   const barCoversAll = isBarbell && weightKg <= barKg;
   const variants = useMemo(() => context && !isDumbbell && !barCoversAll && weightKg > 0 ? calcPlateVariants(weightKg, specs, isBarbell ? barKg : undefined) : [], [context, isDumbbell, barCoversAll, weightKg, specs, isBarbell, barKg]);
   const closest = useMemo(() => context && !isDumbbell && !barCoversAll && weightKg > 0 && !variants.length ? calcPlatesGreedy(weightKg, specs, isBarbell ? barKg : undefined) : null, [context, isDumbbell, barCoversAll, variants.length, weightKg, specs, isBarbell, barKg]);
@@ -57,7 +65,8 @@ export function WorkoutPlateSheet({ context, onClose }: { context: WorkoutPlateC
 
   return (
     <BottomSheet open={context != null} onClose={onClose} title={title} closeLabel={t("common.close")}>
-      {context ? (
+      {context && !equipment ? <Text tone="muted">{t(gyms.isPending ? "common.loading" : "gym.unavailable")}</Text> : null}
+      {context && equipment ? (
         <View style={{ gap: 17 }}>
           <GradientCard variant="indigo" radius={radii.tile} padding={19} style={{ minHeight: 108 }}>
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -151,7 +160,7 @@ export function WorkoutPlateSheet({ context, onClose }: { context: WorkoutPlateC
           ) : (
             <Text variant="caption" tone="muted" style={{ textAlign: "center" }}>{t("plates.none")}</Text>
           )}
-          <Pressable onPress={() => { onClose(); router.push({ pathname: "/settings", params: { open: "plates" } }); }} accessibilityRole="button" style={{ alignSelf: "center", paddingHorizontal: 16, paddingVertical: 12 }}>
+          <Pressable onPress={() => { onClose(); router.push({ pathname: "/settings", params: gymId ? { open: "gyms", gymId } : { open: "plates" } }); }} accessibilityRole="button" style={{ alignSelf: "center", paddingHorizontal: 16, paddingVertical: 12 }}>
             <Text weight="semibold" tone="lime" style={{ fontSize: 14 }}>{t("plates.editPlates")}</Text>
           </Pressable>
         </View>

@@ -4,6 +4,7 @@ import type { Exercise } from "@/entities/exercise";
 import type { Workout, WorkoutInput } from "@/entities/workout";
 import {
   equipmentLoadMode,
+  isWorkoutDraftEmpty as isDraftEmpty,
   type Equipment,
 } from "@/shared/config/workout";
 import { NEW_WORKOUT_DRAFT_STORAGE_KEY } from "@/shared/config/storage";
@@ -48,10 +49,13 @@ export interface DraftExercise {
 }
 
 export interface WorkoutDraft {
+  gymId?: string | null;
   /** Persisted create idempotency key; retained through retries and reloads. */
   createKey?: string;
   type: string;
   date: string;
+  /** The user selected this calendar day, even if the draft is still empty. */
+  dateExplicit?: boolean;
   /** Athlete body-weight snapshot in the profile display unit. */
   bodyWeight: string;
   /** Unit used by the persisted bodyWeight string. This prevents an open
@@ -202,6 +206,7 @@ export function workoutToDraft(
   defaultUnit: Unit,
 ): WorkoutDraft {
   return {
+    gymId: workout.gym_id ?? undefined,
     type: workout.type,
     date: workout.date,
     bodyWeight:
@@ -312,6 +317,7 @@ export function draftToInput(
       : null;
 
   return {
+    ...(draft.gymId !== undefined ? { gym_id: draft.gymId } : {}),
     type: draft.type.trim() || "Workout",
     date: draft.date,
     notes: draft.notes.trim() || null,
@@ -423,9 +429,7 @@ export function rebaseBodyweightExercises(
 }
 
 /** A draft with nothing worth keeping — type/date alone don't count. */
-export function isDraftEmpty(draft: WorkoutDraft): boolean {
-  return draft.exercises.length === 0 && draft.notes.trim() === "";
-}
+export { isDraftEmpty };
 
 interface NewWorkoutDraftStore {
   draft: WorkoutDraft;
@@ -484,15 +488,23 @@ export const useNewWorkoutDraft = create<NewWorkoutDraftStore>()(
       setDraft: (draft) =>
         set((state) => {
           const now = nextDraftTimestamp(state.updatedAt);
+          const empty = isDraftEmpty(draft);
+          // An old empty local/cloud draft can receive its first set after a
+          // long pause. Capture the day of that interaction, including async
+          // copies and templates completing across midnight.
+          const date = !empty && !draft.dateExplicit && isDraftEmpty(state.draft)
+            ? todayISO()
+            : draft.date;
           // Stamp the moment the draft first gets content and keep it while
           // it has any; an emptied draft is no longer "in progress".
-          const startedAt = isDraftEmpty(draft)
+          const startedAt = empty
             ? undefined
             : (draft.startedAt ?? state.draft.startedAt ?? now);
           return {
             draft: {
               ...draft,
-              createKey: state.draft.createKey ?? draft.createKey ?? (isDraftEmpty(draft) ? undefined : key()),
+              date,
+              createKey: state.draft.createKey ?? draft.createKey ?? (empty ? undefined : key()),
               startedAt,
             },
             updatedAt: now,

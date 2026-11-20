@@ -48,7 +48,7 @@ export default function RootLayout() {
     Urbanist_500Medium,
     Urbanist_600SemiBold,
     Urbanist_700Bold,
-    Matricha: require("../src/theme/fonts/matricha.ttf"),
+    IBMPlexMonoMedium: require("../../../src/shared/fonts/IBMPlexMono-Medium.ttf"),
   });
 
   if (!fontsLoaded && !fontError) return null;

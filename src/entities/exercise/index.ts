@@ -1,4 +1,5 @@
 export type { Exercise, ExerciseInput } from "./model/types";
+export { ExerciseAvailability } from "./ui/exercise-availability";
 export {
   useExercises,
   useExercise,

@@ -8,6 +8,7 @@ import Svg, { Circle, Defs, LinearGradient, Path, Stop } from "react-native-svg"
 import { activityByDate, weeklyBuckets, workingSets, workoutSetCount } from "@deepgym/core/analytics";
 import { translateCount } from "@deepgym/core/i18n";
 import { nextScheduledWorkout } from "@deepgym/core/next-workout";
+import { useLocalToday } from "@deepgym/core/use-local-today";
 import { normalizeTrainingSchedule } from "@deepgym/core/training-schedule";
 import type { Workout } from "@deepgym/core/types";
 import { kgToUnit, roundWeight } from "@deepgym/core/weight";
@@ -20,7 +21,7 @@ import { BottomSheet, BrandMark, Button, Card, Chip, DotValue, GradientCard, Scr
 import { useProfile, useWorkouts } from "../data/queries";
 import { useAuth } from "../providers/auth-provider";
 import { useI18n } from "../providers/locale-provider";
-import { formatDate, localISO, weekStreak } from "./format";
+import { formatDate, fromISO, localISO, weekStreak } from "./format";
 import { ErrorState, LoadingState, WorkoutCard } from "./common";
 import { ScheduledWorkoutCard } from "./scheduled-workout-card";
 import { HomeExtraWidget } from "./home-extra-widgets";
@@ -402,6 +403,7 @@ function DraggableWidget({
 }
 
 export function HomeScreen() {
+  const todayISO = useLocalToday();
   const { t, lang } = useI18n();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -630,8 +632,7 @@ export function HomeScreen() {
       : widget));
   }
 
-  const today = new Date();
-  const todayISO = localISO(today);
+  const today = fromISO(todayISO);
   const history = workouts.data ?? EMPTY_WORKOUTS;
   const hasDraft = draftReady && draftOwnerId === user?.id && !draftIsEmpty(draft);
   const filledSets = draft.exercises.reduce(

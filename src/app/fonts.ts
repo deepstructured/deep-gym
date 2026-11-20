@@ -7,8 +7,9 @@ export const urbanist = Urbanist({
   display: "swap",
 });
 
-export const matricha = localFont({
-  src: "../shared/fonts/matricha.ttf",
-  variable: "--font-matricha",
+export const metrics = localFont({
+  src: "../shared/fonts/IBMPlexMono-Medium.ttf",
+  variable: "--font-metrics",
+  weight: "500",
   display: "swap",
 });

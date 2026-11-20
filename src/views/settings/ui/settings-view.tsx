@@ -3,6 +3,7 @@
 import { addDays, format } from 'date-fns'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useGyms } from '@/entities/gym'
 import { useMuscleGroups } from '@/entities/muscle-group'
 import {
   normalizeTrainingSchedule,
@@ -24,6 +25,7 @@ import {
   Avatar,
   ErrorNote,
   IconCalendar,
+  IconDumbbell,
   IconCheck,
   IconChevronRight,
   IconGlobe,
@@ -43,6 +45,7 @@ import {
   PlatesSettings,
   ProfileNameField,
 } from './settings-sections'
+import { GymSettingsSheet } from './gym-settings-sheet'
 import styles from './settings-view.module.scss'
 
 const SHEETS = [
@@ -50,6 +53,7 @@ const SHEETS = [
   'weight',
   'schedule',
   'plates',
+  'gyms',
   'groups',
   'language',
   'interface',
@@ -70,6 +74,7 @@ const MONDAY = new Date(2024, 0, 1)
 export function SettingsView() {
   const { t, lang, setLang } = useI18n()
   const { data: profile, isLoading, error: loadError } = useProfile()
+  const { data: gyms } = useGyms()
   const { data: groups } = useMuscleGroups()
   const updateProfile = useUpdateProfile()
   const [sheet, setSheet] = useState<SheetKey | null>(null)
@@ -158,6 +163,13 @@ export function SettingsView() {
         </Group>
 
         <Group title={t('settings.groupTraining')}>
+          <Row
+            icon={<IconDumbbell size={18} />}
+            tone="lime"
+            title={t('gym.title')}
+            value={gyms?.length ? String(gyms.length) : undefined}
+            onClick={() => setSheet('gyms')}
+          />
           <Row
             icon={<IconCalendar size={18} />}
             tone="cherry"
@@ -344,6 +356,8 @@ export function SettingsView() {
       >
         <UiModeOptions onPicked={close} />
       </Sheet>
+
+      {sheet === 'gyms' && <GymSettingsSheet profile={profile} onClose={close} />}
 
       <WhatsNewSheet
         open={whatsNewOpen}

@@ -16,6 +16,8 @@ import {
 } from 'date-fns'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocalToday } from '@deepgym/core/use-local-today'
+import { GymSelect, useGymPreference, useGyms } from '@/entities/gym'
 import { useProfile, type TrainingSchedule } from '@/entities/user'
 import { WorkoutCard, useWorkouts, type Workout } from '@/entities/workout'
 import { FirstWorkoutSuccessSheet } from '@/features/first-workout'
@@ -40,6 +42,7 @@ import { formatWeight } from '@/shared/lib/weight'
 import { AppShell } from '@/widgets/app-shell'
 import {
   EmptyState,
+  ErrorNote,
   IconChevronLeft,
   IconChevronRight,
   PageLoader,
@@ -54,9 +57,13 @@ export function HistoryView() {
   const router = useRouter()
   const { t } = useI18n()
   const { data: profile, isLoading: isProfileLoading } = useProfile()
+  const { data: gyms } = useGyms()
+  const { filter: gymFilter, rememberFilter, isError: preferenceError } = useGymPreference()
   const layoutMode = useLayoutMode()
   const [mode, setMode] = useState<Mode>('day')
-  const [cursor, setCursor] = useState<Date>(() => new Date())
+  const today = useLocalToday()
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null)
+  const cursor = useMemo(() => selectedDay ?? fromISODate(today), [selectedDay, today])
   // Only promotes the initial view once, so a deliberate switch to Day sticks.
   const promotedToMonth = useRef(false)
   useEffect(() => {
@@ -95,17 +102,21 @@ export function HistoryView() {
     toISODate(range.from),
     toISODate(range.to),
   )
-  const { data: workouts, isLoading, error, isFetching, refetch } = workoutQuery
+  const { data: sessions, isLoading, error, isFetching, refetch } = workoutQuery
+  const workouts = useMemo(() => gymFilter
+    ? sessions?.filter(workout => gymFilter === 'none' ? !workout.gym_id : workout.gym_id === gymFilter)
+    : sessions, [sessions, gymFilter])
+  const gymNames = useMemo(() => new Map(gyms?.map(gym => [gym.id, gym.name])), [gyms])
+  const schedule = gymFilter ? null : profile?.training_schedule
 
   const scheduledWorkout = useMemo(
-    () => scheduledWorkoutOn(profile?.training_schedule, toISODate(cursor)),
-    [profile?.training_schedule, cursor],
+    () => scheduledWorkoutOn(schedule, toISODate(cursor), fromISODate(today)),
+    [schedule, cursor, today],
   )
 
   function shift(direction: -1 | 1) {
-    if (mode === 'day') setCursor((d) => addDays(d, direction))
-    else if (mode === 'week') setCursor((d) => addWeeks(d, direction))
-    else setCursor((d) => addMonths(d, direction))
+    const advance = mode === 'day' ? addDays : mode === 'week' ? addWeeks : addMonths
+    setSelectedDay(day => advance(day ?? fromISODate(today), direction))
   }
 
   const heading =
@@ -117,6 +128,7 @@ export function HistoryView() {
 
   function workoutActions(workout: Workout) {
     return {
+      gymName: workout.gym_id ? gymNames.get(workout.gym_id) : gyms?.length ? t('gym.none') : undefined,
       onEdit: () => router.push(`/workouts/${workout.id}/edit`),
     }
   }
@@ -138,6 +150,11 @@ export function HistoryView() {
             ]}
           />
 
+          {(Boolean(gyms?.length) || Boolean(gymFilter)) && (
+            <GymSelect className={styles.gymFilter} gyms={gyms ?? []} value={gymFilter} filter onChange={rememberFilter} />
+          )}
+          {preferenceError && <ErrorNote message={t('gym.preferenceError')} />}
+
           {/* Period navigator */}
           <div className={styles.navigator}>
             <button
@@ -151,7 +168,7 @@ export function HistoryView() {
             <button
               type="button"
               className={styles.heading}
-              onClick={() => setCursor(new Date())}
+              onClick={() => setSelectedDay(null)}
             >
               {heading}
             </button>
@@ -169,9 +186,9 @@ export function HistoryView() {
             <WeekStrip
               from={range.from}
               workouts={workouts ?? []}
-              schedule={profile?.training_schedule}
+              schedule={schedule}
               selected={cursor}
-              onSelect={setCursor}
+              onSelect={setSelectedDay}
             />
           )}
 
@@ -179,8 +196,8 @@ export function HistoryView() {
             <MonthGrid
               cursor={cursor}
               workouts={workouts ?? []}
-              schedule={profile?.training_schedule}
-              onSelect={setCursor}
+              schedule={schedule}
+              onSelect={setSelectedDay}
             />
           )}
 
@@ -435,7 +452,7 @@ function SelectedDayWorkouts({
   workouts: Workout[]
   scheduledWorkout: ScheduledWorkout | null
   unit: 'kg' | 'lb'
-  actions: (workout: Workout) => { onEdit: () => void }
+  actions: (workout: Workout) => { onEdit: () => void; gymName?: string }
 }) {
   const { t } = useI18n()
   const visible = workouts.filter((w) =>

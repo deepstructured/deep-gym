@@ -1,4 +1,4 @@
-export { WorkoutForm } from "./ui/workout-form";
+export { WorkoutForm, useWorkoutGyms } from "./ui/workout-form";
 export {
   useNewWorkoutDraft,
   syncDraftOwner,

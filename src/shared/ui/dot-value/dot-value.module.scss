@@ -2,7 +2,8 @@
 
 .dotValue {
   font-family: $font-dot;
-  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
   letter-spacing: -0.025em;
 }
 

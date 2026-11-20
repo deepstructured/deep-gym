@@ -17,3 +17,35 @@
   gap: 0.75rem;
   padding-top: 0.25rem;
 }
+
+.availability {
+  min-width: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+
+  legend, .hint {
+    font-size: 0.8125rem;
+    color: $muted;
+  }
+
+  legend { margin-bottom: 0.375rem; }
+}
+
+.gymOptions {
+  margin-top: 0.5rem;
+  border-block: 1px solid $line;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 2.75rem;
+    overflow-wrap: anywhere;
+    font-size: 0.9375rem;
+  }
+
+  input { accent-color: $lime; }
+}
+
+.hint { margin-top: 0.5rem; }

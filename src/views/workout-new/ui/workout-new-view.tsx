@@ -1,8 +1,12 @@
 "use client";
 
+import { isValidISODate, todayISO } from "@deepgym/core/dates";
+import { useLocalToday } from "@deepgym/core/use-local-today";
+import { resolveWorkoutDraftDate, resolveWorkoutDraftGym } from "@deepgym/core/workout";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useBodyWeightMeasurements } from "@/entities/body-weight";
+import { useGymPreference } from "@/entities/gym";
 import { useMuscleGroups } from "@/entities/muscle-group";
 import {
   getWorkoutTemplate,
@@ -21,6 +25,7 @@ import {
   DraftSummary,
   WorkoutMetaControls,
   WorkoutForm,
+  useWorkoutGyms,
   bodyweightDraftIssue,
   draftBodyWeightKg,
   draftToInput,
@@ -42,6 +47,7 @@ import {
   ErrorNote,
   IconTrash,
   PageLoader,
+  QueryError,
 } from "@/shared/ui";
 import styles from "./workout-new-view.module.scss";
 
@@ -50,9 +56,16 @@ const EMPTY_TEMPLATE = "EMPTY_TEMPLATE";
 export function WorkoutNewView() {
   const router = useRouter();
   const { t } = useI18n();
-  const { data: profile } = useProfile();
+  const profileQuery = useProfile();
+  const profile = profileQuery.data;
   const { data: groups } = useMuscleGroups();
-  const { draft, setDraft, reset, pendingRemote, resolveConflict } = useNewWorkoutDraft();
+  const { draft: storedDraft, setDraft, reset, pendingRemote, resolveConflict } = useNewWorkoutDraft();
+  const today = useLocalToday();
+  const date = resolveWorkoutDraftDate(storedDraft, today);
+  const draft = date === storedDraft.date ? storedDraft : { ...storedDraft, date };
+  const preference = useGymPreference();
+  const gymId = resolveWorkoutDraftGym(draft, preference.gymId);
+  const gymChoices = useWorkoutGyms(gymId);
   const createWorkout = useCreateWorkout();
   const [error, setError] = useState<string | null>(null);
   const [isFirstWorkout, setIsFirstWorkout] = useState(false);
@@ -71,9 +84,11 @@ export function WorkoutNewView() {
   // Renders a loader until the cloud draft pull settles — this both avoids
   // a hydration mismatch with the locally stored draft and stops a fresher
   // remote draft from replacing a form the user is already editing.
-  const { ready, syncError, storageError } = useNewWorkoutDraftSync();
+  const draftSync = useNewWorkoutDraftSync();
+  const { syncError, storageError } = draftSync;
+  const ready = draftSync.ready && preference.ready;
   const unit = profile?.unit ?? "kg";
-  const bodyWeightCutoff = /^\d{4}-\d{2}-\d{2}$/.test(draft.date)
+  const bodyWeightCutoff = isValidISODate(draft.date)
     ? new Date(`${draft.date}T23:59:59.999`).toISOString()
     : undefined;
   const { data: bodyWeightMeasurements, isLoading: bodyWeightLoading } =
@@ -85,24 +100,28 @@ export function WorkoutNewView() {
 
   // Scheduled-workout cards preselect both the workout type and its date.
   // Read via window.location instead of useSearchParams to skip the
-  // Suspense boundary Next requires for the latter. Runs after the cloud
-  // pull so an explicit "start this scheduled workout" tap wins over it.
+  // Suspense boundary Next requires for the latter. Wait for the cloud
+  // draft so schedule defaults only apply to a workout without logged work.
   useEffect(() => {
     if (!ready) return;
     const params = new URLSearchParams(window.location.search);
     setIsFirstWorkout(params.get("first") === "1");
+    // A combined template/repeat link applies all its fields together, after
+    // the user confirms replacement of an existing workout.
+    if (params.get("template") || params.get("repeat")) return;
     const type = params.get("type");
     const date = params.get("date");
-    const scheduledDate = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+    const scheduledDate = date && isValidISODate(date) ? date : null;
     const { draft: current, setDraft: apply } = useNewWorkoutDraft.getState();
-    const next = {
-      ...current,
-      type: type || current.type,
-      date: scheduledDate ?? current.date,
-    };
-    if (next.type !== current.type || next.date !== current.date) {
-      apply(next);
+    if (isDraftEmpty(current) && ((type && type !== current.type) || scheduledDate)) {
+      apply({
+        ...current,
+        gymId: resolveWorkoutDraftGym(current, preference.gymId),
+        type: type || current.type,
+        ...(scheduledDate && { date: scheduledDate, dateExplicit: true }),
+      });
     }
+    if (date || type) consumeLaunchParams();
   }, [ready]);
 
   // While the snapshot is automatic, use the newest measurement available on
@@ -111,6 +130,7 @@ export function WorkoutNewView() {
     if (!ready || !profile || bodyWeightLoading) return;
     const store = useNewWorkoutDraft.getState();
     const current = store.draft;
+    if (resolveWorkoutDraftDate(current, todayISO()) !== date) return;
     const automatic =
       current.bodyWeightAuto === true || !(current.bodyWeight ?? "").trim();
     if (!automatic) return;
@@ -151,6 +171,7 @@ export function WorkoutNewView() {
     bodyWeightCutoff,
     bodyWeightLoading,
     bodyWeightMeasurements,
+    date,
     profile,
     ready,
     unit,
@@ -215,7 +236,8 @@ export function WorkoutNewView() {
   }, [groups, profile, ready, t]);
 
   const canSave =
-    draft.exercises.length > 0 &&
+    ready && Boolean(profile) && draft.exercises.length > 0 &&
+    !gymChoices.missingGym &&
     !createWorkout.isPending &&
     !draftSyncPending &&
     !pendingRemote &&
@@ -235,8 +257,7 @@ export function WorkoutNewView() {
 
   function consumeLaunchParams() {
     const url = new URL(window.location.href);
-    url.searchParams.delete("template");
-    url.searchParams.delete("repeat");
+    for (const name of ["template", "repeat", "type", "date"]) url.searchParams.delete(name);
     window.history.replaceState(
       null,
       "",
@@ -265,12 +286,13 @@ export function WorkoutNewView() {
   function applyLaunch(next: { type: string; exercises: DraftExercise[] }) {
     const store = useNewWorkoutDraft.getState();
     const current = store.draft;
-    const explicitType = new URLSearchParams(window.location.search).get(
-      "type",
-    );
+    const params = new URLSearchParams(window.location.search);
+    const requestedDate = params.get("date");
     store.setDraft({
       ...current,
-      type: explicitType || next.type,
+      ...(requestedDate && isValidISODate(requestedDate) && { date: requestedDate, dateExplicit: true }),
+      gymId: resolveWorkoutDraftGym(current, preference.gymId),
+      type: params.get("type") || next.type,
       notes: "",
       showNotes: false,
       exercises: rebaseBodyweightExercises(
@@ -291,6 +313,10 @@ export function WorkoutNewView() {
   async function save() {
     if (!canSave || !profile) return;
     setError(null);
+    if (!isValidISODate(draft.date)) {
+      setError(t("workout.invalidDate"));
+      return;
+    }
     const bodyweightIssue = bodyweightDraftIssue(draft, unit);
     if (bodyweightIssue) {
       setError(
@@ -344,8 +370,8 @@ export function WorkoutNewView() {
             <WorkoutMetaControls
               type={draft.type}
               date={draft.date}
-              onTypeChange={(type) => setDraft({ ...draft, type })}
-              onDateChange={(date) => setDraft({ ...draft, date })}
+              onTypeChange={(type) => setDraft({ ...draft, gymId, type })}
+              onDateChange={(date) => setDraft({ ...draft, gymId, date, dateExplicit: true })}
             />
           )}
           {ready && !isDraftEmpty(draft) && (
@@ -376,6 +402,7 @@ export function WorkoutNewView() {
       ) : (
         <fieldset disabled={draftSyncPending || createWorkout.isPending} className={styles.stack} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           {isFirstWorkout && <FirstWorkoutFormTip />}
+          {!profile && profileQuery.isError && <QueryError retrying={profileQuery.isFetching} onRetry={() => void profileQuery.refetch()} />}
           {storageError && <ErrorNote message={t("draft.storageUnavailable")} />}
           {syncError && !storageError && <ErrorNote message={t("draft.syncPending")} />}
           {pendingRemote && (
@@ -387,7 +414,8 @@ export function WorkoutNewView() {
           )}
 
           <WorkoutForm
-            value={draft}
+            gymChoices={gymChoices}
+            value={{ ...draft, gymId }}
             onChange={setDraft}
             unit={unit}
             enableCopyLast
@@ -403,6 +431,7 @@ export function WorkoutNewView() {
               const current = store.draft;
               store.setDraft({
                 ...current,
+                gymId: resolveWorkoutDraftGym(current, preference.gymId),
                 bodyWeight: String(
                   roundWeight(kgToUnit(measurement.weight_kg, unit)),
                 ),

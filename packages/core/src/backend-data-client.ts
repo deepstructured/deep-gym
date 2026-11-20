@@ -38,7 +38,7 @@ class DataQuery implements PromiseLike<BackendReply> {
     // Each endpoint defines a stable order before applying pagination. Reject a
     // new ordering requirement until implemented at both ends.
     const allowed: Record<string, string[]> = {
-      workouts: ["date", "created_at", "id"], exercises: ["name", "id"], muscle_groups: ["sort_order", "name", "id"],
+      scoped_gym_catalog: ["name", "id"], gym_catalog: ["name", "id"], workouts: ["date", "created_at", "id"], exercises: ["name", "id"], muscle_groups: ["sort_order", "name", "id"],
       workout_exercises: ["id"], sets: ["id"], workout_templates: ["updated_at", "name", "id"],
       workout_template_exercises: ["position", "id"], body_weight_measurements: ["measured_at", "created_at", "id"],
     };
@@ -61,7 +61,7 @@ class DataQuery implements PromiseLike<BackendReply> {
   }
   private async execute(): Promise<BackendReply> {
     try {
-      this.signal?.throwIfAborted();
+      if (this.signal?.aborted) throw this.signal.reason ?? new Error("Request aborted");
       const { operation, input } = this.plan();
       const reply = await this.request(operation, input, this.signal);
       if (reply.error) return reply;
@@ -97,11 +97,19 @@ class DataQuery implements PromiseLike<BackendReply> {
       delete value.user_id;
     }
     const id = take("id");
-    if (id !== undefined && !["profiles", "workouts", "exercises", "muscle_groups", "workout_templates"].includes(this.table)) unsupported();
+    if (id !== undefined && !["gyms", "profiles", "workouts", "exercises", "muscle_groups", "workout_templates"].includes(this.table)) unsupported();
     let operation = "";
     let input: RecordValue = {};
     const assign = (key: string, value: unknown) => { if (value !== undefined) input[key] = value; };
     switch (this.table) {
+      case "scoped_gym_catalog":
+      case "gym_catalog":
+        if (this.mode !== "select") unsupported();
+        operation = this.table === "scoped_gym_catalog" ? "gyms.listScoped" : "gyms.list";
+        input = { ...this.page }; break;
+      case "gyms":
+        if (this.mode !== "delete") unsupported();
+        operation = "gyms.delete"; input = { id }; break;
       case "profiles":
         if (id != null && this.getUserId && id !== this.getUserId()) throw new Error("Session identity changed; retry after signing in");
         operation = this.mode === "select" ? "profile.get" : this.mode === "update" ? "profile.update" : unsupported();
@@ -115,7 +123,7 @@ class DataQuery implements PromiseLike<BackendReply> {
           this.selection.includes("sets") ? "workouts.list" : "workouts.headers";
         input = { ...this.page };
         assign("from", take("date", "gte")); assign("to", take("date", "lte")); assign("beforeDate", take("date", "lt"));
-        assign("type", take("type")); assign("ids", take("id", "in")); assign("exerciseId", take("workout_exercises.exercise_id"));
+        assign("type", take("type")); assign("gymId", take("gym_id")); assign("ids", take("id", "in")); assign("exerciseId", take("workout_exercises.exercise_id"));
         break;
       case "workout_exercises":
         if (this.mode !== "select") unsupported();
@@ -167,7 +175,11 @@ class DataQuery implements PromiseLike<BackendReply> {
   }
   private rpcPlan(name: string, args: RecordValue) {
     switch (name) {
-      case "save_workout_atomic": return { operation: "workouts.save", input: { input: args.p_input, id: args.p_workout_id, createKey: args.p_create_key } };
+      case "save_gym": return { operation: "gyms.save", input: { id: args.p_id, name: args.p_name,
+        bar_weight_kg: args.p_bar_weight_kg, plates_kg: args.p_plates_kg, plates_lb: args.p_plates_lb, exercise_ids: args.p_exercise_ids } };
+      case "save_catalog_exercise": return { operation: "exercises.saveCatalog", input: { id: args.p_id, input: args.p_input, gymIds: args.p_gym_ids } };
+      case "create_exercise_at_gym": return { operation: "exercises.createAtGym", input: { gymId: args.p_gym_id, input: args.p_input } };
+      case "save_workout_at_gym": case "save_workout_atomic": return { operation: "workouts.save", input: { input: args.p_input, id: args.p_workout_id, createKey: args.p_create_key } };
       case "home_dashboard_summary": return { operation: "workouts.homeSummary", input: { today: args.p_today, recordsSince: args.p_records_since, muscleSince: args.p_muscle_since } };
       case "save_workout_draft": return { operation: "drafts.save", input: { draft: args.p_draft, updatedAt: args.p_updated_at, ownerId: args.p_owner_id } };
       case "log_body_weight": return { operation: "bodyWeight.log", input: { weightKg: args.p_weight_kg, measuredAt: args.p_measured_at, source: args.p_source } };

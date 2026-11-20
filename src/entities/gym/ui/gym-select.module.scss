@@ -1,0 +1,31 @@
+@use "../../../shared/styles/palette" as *;
+
+.control {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  min-width: 0;
+  border: 1px solid $line;
+  border-radius: .875rem;
+  background: $surface;
+  padding-inline: .875rem;
+  color: $muted;
+  font-size: .875rem;
+
+  select {
+    flex: 1;
+    min-width: 0;
+    min-height: 2.75rem;
+    appearance: none;
+    color: $text;
+    background: $surface;
+    font: inherit;
+    text-align: end;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    outline: none;
+  }
+
+  svg { flex-shrink: 0; }
+  &:focus-within { outline: 2px solid $lime; outline-offset: 2px; }
+}

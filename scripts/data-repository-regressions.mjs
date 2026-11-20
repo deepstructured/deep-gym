@@ -94,6 +94,50 @@ export async function runDataRepositoryRegressions(connection) {
       try { return {...await execute(client,a,body.operation,body.input),error:null}; }
       catch (error) { return {data:null,error:errors.dataError(error).error}; }
     }, () => a);
+    // Exercise the shared client through the same fixed operations as both apps.
+    const pagination = await compiled("../packages/core/src/pagination.ts");
+    const gymData = await compiled("../packages/core/src/gym-data.ts", { "./pagination": pagination });
+    const input = { name: "Practice gym", bar_weight_kg: 15, plates_kg: [20,5], plates_lb: [], exercise_ids: [exercise.id] };
+    const gymId = await gymData.saveGym(backend, { input });
+    const memberships = () => gymData.fetchGyms(backend, a, new AbortController().signal);
+    assert.deepEqual((await memberships())[0], { ...input, exercise_ids: [], user_id: a, id: gymId });
+    const filter = async (items, id) => gymData.filterExercisesByGym(items, await memberships(), id);
+    assert.equal(exercise.is_universal, true);
+    assert.deepEqual((await op("gyms.list")).data[0].exercise_ids, [exercise.id]);
+    assert.deepEqual(await filter([exercise], gymId), [exercise]);
+    const extra = await gymData.createCatalogExercise(backend, a, {
+      gym_id: gymId, name: "Cable", muscle_group_id: groups[0].id, equipment: "crossover",
+    });
+    assert.equal(extra.is_universal, false);
+    assert.ok((await memberships())[0].exercise_ids.includes(extra.id));
+    assert.deepEqual(await filter([extra, exercise], "none"), [exercise]);
+    await gymData.saveGym(backend, { id: gymId, input: { ...input, bar_weight_kg: 12.5 } });
+    assert.deepEqual((await memberships())[0].exercise_ids, []);
+    assert.deepEqual(await filter([extra, exercise], gymId), [exercise]);
+    const scoped = await gymData.updateCatalogExercise(backend, a, exercise.id, { gym_ids: [gymId] });
+    const renamed = await gymData.updateCatalogExercise(backend, a, scoped.id, { name: "Updated press" });
+    assert.equal(renamed.is_universal, false);
+    assert.deepEqual((await memberships())[0].exercise_ids, [scoped.id]);
+    const universal = await gymData.updateCatalogExercise(backend, a, scoped.id, { gym_ids: [] });
+    assert.equal(universal.is_universal, true);
+    assert.equal(universal.name, "Updated press");
+    assert.deepEqual((await memberships())[0].exercise_ids, []);
+    assert.deepEqual(await filter([extra, universal], "none"), [universal]);
+    assert.deepEqual(await filter([extra, universal], ""), [extra, universal]);
+    let preference = (await op("profile.update", { patch: { last_gym_id: gymId, gym_filter_all: false } })).data;
+    assert.equal(preference.last_gym_id, gymId);
+    assert.equal(preference.gym_filter_all, false);
+    preference = (await op("profile.update", { patch: { gym_filter_all: true } })).data;
+    assert.equal(preference.last_gym_id, gymId);
+    assert.equal(preference.gym_filter_all, true);
+    assert.equal((await memberships())[0].bar_weight_kg, 12.5);
+    assert.equal((await gymData.writeWorkout(backend, { ...payload, gym_id: gymId }, workout, null)).error, null);
+    assert.equal((await op("workouts.detail", { id: workout })).data.gym_id, gymId);
+    await gymData.deleteGym(backend, gymId, a);
+    assert.equal((await memberships()).length, 0);
+    assert.equal((await op("profile.get")).data.last_gym_id, null);
+    assert.equal((await op("workouts.detail", { id: workout })).data.gym_id, null);
+    console.log("PASS gyms: shared web/native CRUD, atomic exercise assignment, workout location and detachment");
     const nativeWorkout = await backend.from("workouts")
       .select("*, workout_exercises (*, exercise:exercises (*), sets (*))")
       .order("date",{ascending:false}).order("created_at",{ascending:false});

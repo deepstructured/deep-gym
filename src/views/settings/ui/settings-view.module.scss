@@ -378,3 +378,57 @@
 .presetsGrid {
   margin-top: 0.75rem;
 }
+
+.gymEditor {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.gymName {
+  @include truncate;
+  flex: 1;
+}
+
+.gymActions { display: flex; gap: .625rem; }
+.gymActions > * { flex: 1; }
+
+.gymSection {
+  min-width: 0;
+  border-top: 1px solid $line;
+
+  summary {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-height: 3rem;
+    cursor: pointer;
+    list-style: none;
+    font-weight: 600;
+  }
+  input::placeholder { color: $muted; }
+  summary::-webkit-details-marker { display: none; }
+  summary > span { color: $muted; font-variant-numeric: tabular-nums; }
+  summary > svg { margin-left: auto; color: $muted; }
+  &[open] summary > svg { transform: rotate(90deg); }
+}
+
+.gymExercises {
+  overflow-y: auto;
+  max-height: 36dvh;
+  overscroll-behavior: contain;
+
+  label {
+    display: flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: .75rem;
+    padding: .375rem;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+  }
+  input { width: 1.125rem; height: 1.125rem; flex-shrink: 0; accent-color: $lime; color-scheme: dark; }
+}

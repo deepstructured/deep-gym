@@ -1,19 +1,17 @@
-import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
-import { readAllPages, readIdBatches } from "@/shared/lib/supabase/pagination";
-import type { Workout, WorkoutExercise, WorkoutSet } from "../model/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { readAllPages, readIdBatches } from "./pagination";
+import type { Workout, WorkoutExercise, WorkoutSet } from "./types";
 
-export const WORKOUT_FIELDS = "id,user_id,type,date,notes,body_weight_kg,created_at";
 export type WorkoutHeader = Omit<Workout, "workout_exercises">;
 
 /** Paginate children independently: embedded to-many results can themselves
  * be capped by PostgREST, even when the parent page contains one workout. */
-export async function hydrateWorkouts(headers: WorkoutHeader[], signal: AbortSignal): Promise<Workout[]> {
-  const supabase = getSupabaseBrowser();
+export async function hydrateWorkouts(supabase: SupabaseClient, headers: WorkoutHeader[], signal: AbortSignal): Promise<Workout[]> {
   const occurrences = await readIdBatches<Omit<WorkoutExercise, "sets">>(
     headers.map((workout) => workout.id),
     (ids) => readAllPages(async ({ from, to, count }) => {
       const result = await supabase.from("workout_exercises")
-        .select("id,workout_id,exercise_id,position,notes,load_mode,exercise:exercises(*)", { count })
+        .select("*,exercise:exercises(*)", { count })
         .in("workout_id", ids).order("id").range(from, to).abortSignal(signal);
       return { ...result, data: result.data as unknown as Omit<WorkoutExercise, "sets">[] | null };
     }, signal),
@@ -22,7 +20,7 @@ export async function hydrateWorkouts(headers: WorkoutHeader[], signal: AbortSig
     occurrences.map((occurrence) => occurrence.id),
     (ids) => readAllPages(async ({ from, to, count }) => {
       const result = await supabase.from("sets")
-        .select("id,workout_exercise_id,position,weight_kg,reps,to_failure,set_type", { count })
+        .select("*", { count })
         .in("workout_exercise_id", ids).order("id").range(from, to).abortSignal(signal);
       return { ...result, data: result.data as WorkoutSet[] | null };
     }, signal),
@@ -43,4 +41,24 @@ export async function hydrateWorkouts(headers: WorkoutHeader[], signal: AbortSig
     ...workout,
     workout_exercises: (byWorkout.get(workout.id) ?? []).sort((a, b) => a.position - b.position || a.id.localeCompare(b.id)),
   }));
+}
+
+export async function fetchWorkouts(supabase: SupabaseClient, ownerId: string, signal: AbortSignal, dates?: { from: string; to: string }) {
+  const headers = await readAllPages<WorkoutHeader>(async ({ from, to, count }) => {
+    let query = supabase.from("workouts").select("*", { count }).eq("user_id", ownerId);
+    if (dates) query = query.gte("date", dates.from).lte("date", dates.to);
+    const result = await query.order("date", { ascending: false }).order("created_at", { ascending: false })
+      .order("id", { ascending: false }).range(from, to).abortSignal(signal);
+    return { ...result, data: result.data as WorkoutHeader[] | null };
+  }, signal);
+  return hydrateWorkouts(supabase, headers, signal);
+}
+
+export async function fetchWorkout(supabase: SupabaseClient, ownerId: string, id: string, signal: AbortSignal): Promise<Workout> {
+  const { data, error } = await supabase.from("workouts").select("*")
+    .eq("id", id).eq("user_id", ownerId).abortSignal(signal).single();
+  if (error) throw error;
+  // The self-hosted detail operation returns all children in one transaction.
+  if (Array.isArray(data.workout_exercises)) return data as Workout;
+  return (await hydrateWorkouts(supabase, [data as WorkoutHeader], signal))[0];
 }

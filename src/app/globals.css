@@ -7,7 +7,7 @@
 :root {
   --font-sans: var(--font-urbanist), ui-sans-serif, system-ui, -apple-system,
     sans-serif;
-  --font-dot: var(--font-matricha), ui-monospace, monospace;
+  --font-dot: var(--font-metrics), ui-monospace, monospace;
 
   --color-bg: #0a0a0c;
   --color-surface: #151518;

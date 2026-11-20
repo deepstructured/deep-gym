@@ -3,6 +3,7 @@
 import { addDays, format, isSameDay, startOfWeek } from "date-fns";
 import Link from "next/link";
 import { useMemo } from "react";
+import { useLocalToday } from "@deepgym/core/use-local-today";
 import type { TrainingSchedule } from "@/entities/user";
 import { useI18n } from "@/shared/i18n";
 import { fromISODate, getDateLocale } from "@/shared/lib/dates";
@@ -130,9 +131,10 @@ export function NextWorkoutCard({
   schedule,
   workouts,
 }: NextWorkoutCardProps) {
+  const today = useLocalToday();
   const prediction = useMemo(
-    () => (workouts ? nextScheduledWorkout(schedule, workouts) : null),
-    [schedule, workouts],
+    () => (workouts ? nextScheduledWorkout(schedule, workouts, fromISODate(today)) : null),
+    [schedule, workouts, today],
   );
   if (!prediction) return null;
   return <ScheduledWorkoutCard prediction={prediction} />;

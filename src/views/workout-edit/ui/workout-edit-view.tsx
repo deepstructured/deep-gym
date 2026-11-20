@@ -14,6 +14,7 @@ import {
 } from "@/entities/workout";
 import {
   WorkoutForm,
+  useWorkoutGyms,
   WorkoutMetaControls,
   bodyweightDraftIssue,
   draftToInput,
@@ -41,6 +42,7 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
   const deleteWorkout = useDeleteWorkout();
 
   const [draft, setDraft] = useState<WorkoutDraft | null>(null);
+  const gymChoices = useWorkoutGyms(draft?.gymId);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -54,7 +56,7 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
   }, [workout, groups, draft, unit]);
 
   function save() {
-    if (!draft) return;
+    if (!draft || gymChoices.missingGym) return;
     setError(null);
     const bodyweightIssue = bodyweightDraftIssue(draft, unit);
     if (bodyweightIssue) {
@@ -89,6 +91,7 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
 
   const canSave =
     draft != null &&
+    !gymChoices.missingGym &&
     draft.exercises.length > 0 &&
     !updateWorkout.isPending &&
     !deleteWorkout.isPending;
@@ -144,7 +147,7 @@ export function WorkoutEditView({ workoutId }: { workoutId: string }) {
         )
       ) : (
         <div className={styles.stack}>
-          <WorkoutForm value={draft} onChange={setDraft} unit={unit} />
+          <WorkoutForm gymChoices={gymChoices} value={draft} onChange={setDraft} unit={unit} />
           {error && <ErrorNote message={error} />}
           <Button
             variant="gradient"

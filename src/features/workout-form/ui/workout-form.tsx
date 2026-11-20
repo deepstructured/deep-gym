@@ -18,7 +18,8 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useState, type CSSProperties } from "react";
-import type { Exercise } from "@/entities/exercise";
+import { GymSelect, useGymPreference, useGyms } from "@/entities/gym";
+import { useExercises, type Exercise } from "@/entities/exercise";
 import { useMuscleGroups } from "@/entities/muscle-group";
 import { CompareButton } from "@/features/exercise-compare";
 import { MachineInfoButton } from "@/features/machine-info";
@@ -38,6 +39,7 @@ import {
   Card,
   Chip,
   ConfirmSheet,
+  ErrorNote,
   Field,
   IconFlame,
   IconClose,
@@ -72,7 +74,16 @@ import { ExercisePicker } from "./exercise-picker";
 import { TemplatePicker } from "./template-picker";
 import styles from "./workout-form.module.scss";
 
+export function useWorkoutGyms(selectedId?: string | null) {
+  const { data } = useGyms();
+  return {
+    gyms: data ?? [],
+    missingGym: Boolean(selectedId && data && !data.some(gym => gym.id === selectedId)),
+  };
+}
+
 interface WorkoutFormProps {
+  gymChoices: ReturnType<typeof useWorkoutGyms>;
   value: WorkoutDraft;
   onChange: (draft: WorkoutDraft) => void;
   unit: Unit;
@@ -81,13 +92,22 @@ interface WorkoutFormProps {
 }
 
 export function WorkoutForm({
+  gymChoices: { gyms, missingGym },
   value,
   onChange,
   unit,
   enableCopyLast,
 }: WorkoutFormProps) {
   const { t } = useI18n();
+  const { rememberGym, isError: preferenceError } = useGymPreference();
   const { data: groups } = useMuscleGroups();
+  const selectedGym = gyms.find(gym => gym.id === value.gymId);
+  const { data: catalog } = useExercises(Boolean(enableCopyLast && selectedGym && value.exercises.length));
+  const outOfScope = enableCopyLast && selectedGym && catalog
+    ? catalog.filter(exercise => exercise.is_universal === false &&
+        !selectedGym.exercise_ids.includes(exercise.id) &&
+        value.exercises.some(item => item.exerciseId === exercise.id))
+    : [];
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pendingTemplate, setPendingTemplate] = useState<{
     exercises: DraftExercise[];
@@ -140,6 +160,7 @@ export function WorkoutForm({
     const exerciseUnit = exercise.unit ?? unit;
     if (weight != null) {
       setPlateContext({
+        gymId: value.gymId,
         weightKg: unitToKg(weight, exerciseUnit),
         equipment: exercise.equipment,
         displayUnit: exerciseUnit,
@@ -188,10 +209,28 @@ export function WorkoutForm({
           <Input
             type="date"
             value={value.date}
-            onChange={(e) => e.target.value && patch({ date: e.target.value })}
+            onChange={(e) => e.target.value && patch({ date: e.target.value, dateExplicit: true })}
           />
         </Field>
       </div>
+
+      {(gyms.length > 0 || value.gymId) && (
+        <GymSelect gyms={gyms} value={value.gymId ?? ""}
+          onChange={id => {
+            patch({ gymId: id || null });
+            rememberGym(id || null);
+          }} />
+      )}
+
+      {missingGym && (
+        <ErrorNote message={t("gym.deletedHint")} />
+      )}
+      {preferenceError && <ErrorNote message={t("gym.preferenceError")} />}
+      {outOfScope.length > 0 && (
+        <p role="status" className={styles.gymScopeHint}>
+          {t("gym.draftScopeHint")} <strong>{outOfScope.map(exercise => exercise.name).join(", ")}</strong>
+        </p>
+      )}
 
       {/* Workout notes */}
       {value.showNotes ? (
@@ -264,10 +303,11 @@ export function WorkoutForm({
       {enableCopyLast && isDraftEmpty(value) && (
         <>
           <CopyLastWorkout
+            gymId={value.gymId}
             type={value.type}
             date={value.date}
             unit={unit}
-            onCopy={(exercises) =>
+            onCopy={exercises =>
               patch({
                 exercises: [
                   ...value.exercises,
@@ -279,6 +319,7 @@ export function WorkoutForm({
             }
           />
           <CopyWorkoutPicker
+            gymId={value.gymId}
             unit={unit}
             onCopy={(exercises, type) =>
               patch({
@@ -321,6 +362,7 @@ export function WorkoutForm({
       </button>
 
       <ExercisePicker
+        gymId={value.gymId}
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         unit={unit}

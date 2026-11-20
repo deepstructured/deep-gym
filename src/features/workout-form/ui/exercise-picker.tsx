@@ -6,6 +6,8 @@ import {
   useExercises,
   type Exercise,
 } from "@/entities/exercise";
+import { useGyms } from "@/entities/gym";
+import { filterExercisesByGym } from "@deepgym/core/gym-data";
 import { useMuscleGroups } from "@/entities/muscle-group";
 import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
@@ -23,6 +25,7 @@ import styles from "./exercise-picker.module.scss";
 
 interface ExercisePickerProps {
   open: boolean;
+  gymId?: string | null;
   onClose: () => void;
   onPick: (exercise: Exercise, muscleGroupName: string) => void;
   unit: Unit;
@@ -30,6 +33,7 @@ interface ExercisePickerProps {
 
 export function ExercisePicker({
   open,
+  gymId,
   onClose,
   onPick,
   unit,
@@ -38,6 +42,8 @@ export function ExercisePicker({
   const { data: groups, isLoading: groupsLoading, error: groupsError } = useMuscleGroups();
   const { data: exercises, isLoading, error: exercisesError } = useExercises();
 
+  const gyms = useGyms(open);
+  const gym = gymId ? gyms.data?.find(item => item.id === gymId) : undefined;
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -46,12 +52,12 @@ export function ExercisePicker({
     groups?.find((g) => g.id === id)?.name ?? "";
 
   const filtered = useMemo(() => {
-    let list = exercises ?? [];
+    let list = filterExercisesByGym(exercises ?? [], gyms.data ?? [], gymId ?? "");
     if (groupFilter) list = list.filter((e) => e.muscle_group_id === groupFilter);
     const q = search.trim().toLowerCase();
     if (q) list = list.filter((e) => e.name.toLowerCase().includes(q));
     return list;
-  }, [exercises, groupFilter, search]);
+  }, [exercises, gyms.data, gymId, groupFilter, search]);
 
   function resetCreateForm() {
     setCreating(false);
@@ -71,8 +77,10 @@ export function ExercisePicker({
         <ExerciseCreateForm
           key={groupFilter ?? "all"}
           groups={groups ?? []}
+          gyms={gyms.data ?? (gyms.isError ? null : undefined)}
           unit={unit}
           defaultGroupId={groupFilter}
+          requiredGymId={gymId}
           submitLabel={t("picker.createAdd")}
           onCancel={resetCreateForm}
           onCreated={(exercise, muscleGroupName) => {
@@ -103,8 +111,10 @@ export function ExercisePicker({
             ))}
           </div>
 
-          {isLoading || groupsLoading ? (
+          {isLoading || groupsLoading || (gymId && gyms.isLoading) ? (
             <PageLoader variant="list" />
+          ) : gymId && !gym ? (
+            <ErrorNote message={t(gyms.isError ? "gym.loadError" : "gym.deletedHint")} />
           ) : groupsError || exercisesError ? (
             <ErrorNote message={t("common.error")} />
           ) : (
@@ -132,7 +142,7 @@ export function ExercisePicker({
                 <p className={styles.emptyNote}>
                   {search.trim()
                     ? t("picker.emptyFor", { query: search.trim() })
-                    : t("picker.empty")}
+                    : t(gym && gym.exercise_ids.length === 0 ? "gym.notAssigned" : "picker.empty")}
                 </p>
               )}
             </div>
@@ -142,7 +152,7 @@ export function ExercisePicker({
             variant="surface"
             block
             dashed
-            disabled={groupsLoading || !groups?.length}
+            disabled={groupsLoading || !groups?.length || Boolean(gymId && !gym)}
             onClick={() => {
               setCreating(true);
             }}

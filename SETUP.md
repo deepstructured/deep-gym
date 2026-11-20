@@ -21,8 +21,9 @@ npm run dev
 2. Open **SQL Editor** and run every file in `supabase/migrations/` in
    numeric order — they create the schema, RLS policies and subsequent
    profile features. The current sequence is `0001_init.sql` through
-   `0009_atomic_workout_write.sql`. Migration 0008 adds dashboard layout and
-   warm-up sets; 0009 provides the native app's atomic workout-write RPC.
+   `0014_exercise_scope_and_gym_preference.sql`. Migration 0013 adds personal
+   gyms and equipment. Apply 0014 once after 0013 to make every existing
+   exercise available in all gyms and remember gym selections across clients.
 3. **Project Settings → API**: copy into `.env.local`:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`

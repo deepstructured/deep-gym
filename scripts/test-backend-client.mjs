@@ -25,6 +25,17 @@ test("history filtering and exact pagination survive the compatibility boundary"
   assert.deepEqual(requests, [["workouts.headers", { count: true, offset: 500, limit: 500, from: "2026-01-01", to: "2026-11-10" }, controller.signal]]);
 });
 
+test("copy sources scope both the latest workout and calendar pages to the selected gym", async () => {
+  const { client, requests } = fixture();
+  const gym = "22222222-2222-2222-2222-222222222222";
+  await client.from("workouts").select("*").eq("type", "Upper").eq("gym_id", gym).limit(1);
+  await client.from("workouts").select("id,date,type,workout_exercises(count)").eq("gym_id", gym).range(0, 99);
+  assert.deepEqual(requests.map(([operation, input]) => [operation, input]), [
+    ["workouts.headers", { type: "Upper", gymId: gym, limit: 1, count: false }],
+    ["workouts.summaries", { gymId: gym, offset: 0, limit: 100, count: false }],
+  ]);
+});
+
 test("old native nested workout reads request complete domain records", async () => {
   const { client, requests } = fixture();
   await client.from("workouts").select("*, workout_exercises (*, exercise:exercises (*), sets (*))").order("date", { ascending: false });

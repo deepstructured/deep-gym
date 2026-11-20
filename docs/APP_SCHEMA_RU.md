@@ -67,7 +67,7 @@ src/features/
 
 src/entities/
   предметные сущности и их запросы:
-  user, muscle-group, exercise, workout, workout-template, body-weight
+  user, muscle-group, exercise, gym, workout, workout-template, body-weight
 
 src/shared/
   переиспользуемые UI-компоненты, lib-функции,
@@ -125,7 +125,7 @@ flowchart TD
 
 Корневой layout:
 
-- подключает шрифты `Urbanist` и локальный `matricha.ttf`;
+- подключает шрифты `Urbanist` и локальный IBM Plex Mono Medium для чисел;
 - подключает `src/app/globals.css`;
 - оборачивает приложение в `Providers`;
 - задает metadata, PWA manifest, Apple Web App настройки и viewport;
@@ -245,7 +245,7 @@ Add «дышит» и получает красную точку.
 
 ## 7. База данных
 
-Схема находится в `supabase/migrations/0001_init.sql`–`0009_atomic_workout_write.sql`.
+Нумерованные миграции схемы находятся в `supabase/migrations/`.
 Миграция 0008 добавляет `profiles.home_widgets` (раскладка главной) и
 `sets.set_type` (`working` / `warmup`).
 Миграция 0009 добавляет `public.save_workout_atomic` для атомарного сохранения
@@ -254,6 +254,18 @@ Add «дышит» и получает красную точку.
 `.env.local` подключен к production-проекту, поэтому для QA можно изменять
 только `demo@deepgym.app`.
 
+### Залы и принадлежность тренировок
+
+В PWA и Expo личные залы настраиваются в разделе **Настройки → Мои залы**. Миграция `0013_gyms.sql` добавляет их в базу. В `gyms` хранятся название, масса грифа в кг и два списка номиналов блинов в кг и фунтах. При создании зала форма копирует оборудование из профиля. Затем инвентарь каждого зала редактируется отдельно. Для тренировок без зала калькулятор использует инвентарь профиля.
+
+Миграция `0014_exercise_scope_and_gym_preference.sql` делает все существующие упражнения универсальными, в том числе упражнения, привязанные к залам в версии 0013. Режим «В любом зале» (`exercises.is_universal`) распространяется и на будущие залы. При создании или редактировании упражнения можно выбрать режим «В выбранных залах» и указать один или несколько залов. Эти связи хранятся в `gym_exercises`. Обе настройки сохраняют идентификатор упражнения и всю его историю. Например, один и тот же жим можно отслеживать в двух залах, а для тренажёров с разной механикой завести отдельные упражнения.
+
+`workouts.gym_id` допускает `NULL`. Старые тренировки получают значение «Без зала», а существующие упражнения сохраняют идентификаторы. При удалении зала база обнуляет ссылку в тренировках и удаляет записи о принадлежности упражнений к залу. Подходы, веса и связь с упражнением сохраняются. RLS и составные внешние ключи проверяют владельца зала, упражнения и тренировки.
+
+Веб и Expo берут зал для новой тренировки из `profiles.last_gym_id`. При переходе с 0013 для тех, кто уже тренировался с залом, начальным выбором становится зал последней созданной тренировки, включая «Без зала». Дальше приложение запоминает явный выбор. «Все залы» в фильтре истории или библиотеки запоминается отдельно (`profiles.gym_filter_all`), поэтому просмотр общей истории сохраняет выбранный зал для следующей тренировки. Восстановленный черновик и сохранённая тренировка открываются со своим залом. При записи без зала доступен весь каталог упражнений.
+
+Запись тренировки с выбранным залом проходит через `save_workout_at_gym`, который сохраняет состав тренировки и её зал в одной транзакции. Повтор запроса с исходным ключом создания возвращает прежний идентификатор. Клиенты, которые ещё не передают зал, могут редактировать тренировки с сохранением имеющейся привязки.
+
 ### ER-схема
 
 ```mermaid
@@ -261,6 +273,11 @@ erDiagram
   AUTH_USERS ||--|| PROFILES : creates
   AUTH_USERS ||--o{ EXERCISES : owns
   AUTH_USERS ||--o{ WORKOUTS : owns
+  AUTH_USERS ||--o{ GYMS : owns
+  GYMS |o--o{ WORKOUTS : location
+  GYMS |o--o| PROFILES : preferred_by_owner
+  GYMS ||--o{ GYM_EXERCISES : offers
+  EXERCISES ||--o{ GYM_EXERCISES : available_at
   AUTH_USERS ||--o{ MUSCLE_GROUPS : custom_groups
   AUTH_USERS ||--o{ BODY_WEIGHT_MEASUREMENTS : records
   AUTH_USERS ||--o{ WORKOUT_TEMPLATES : owns
@@ -286,6 +303,8 @@ erDiagram
     numeric bar_weight_kg
     numeric_array plates_kg
     numeric_array plates_lb
+    uuid last_gym_id FK
+    boolean gym_filter_all
     text_array training_schedule
     jsonb home_widgets
     int onboarding_version
@@ -312,15 +331,32 @@ erDiagram
     uuid muscle_group_id FK
     text name
     text equipment
+    boolean is_universal
     text machine_settings
     numeric working_weight_kg
     text unit
     timestamptz created_at
   }
 
+  GYMS {
+    uuid id PK
+    uuid user_id FK
+    text name
+    numeric bar_weight_kg
+    numeric_array plates_kg
+    numeric_array plates_lb
+  }
+
+  GYM_EXERCISES {
+    uuid user_id FK
+    uuid gym_id PK,FK
+    uuid exercise_id PK,FK
+  }
+
   WORKOUTS {
     uuid id PK
     uuid user_id FK
+    uuid gym_id FK
     text type
     date date
     text notes
@@ -895,8 +931,9 @@ Week streak считается по неделям с понедельника:
 Новая тренировка строится вокруг `WorkoutForm` и persisted draft
 (локальный + облачная копия, см. ниже).
 
-Переход из плановой карточки передает `?type=...&date=...`; форма применяет
-оба значения к черновику.
+Пока в черновике нет упражнений и заметок, дата по умолчанию следует за местным днём на устройстве. При возобновлении приложения PWA и Expo перепроверяют день. Первое упражнение или заметка фиксирует дату тренировки. Если пользователь сам выбрал дату в календаре или открыл тренировку на конкретный день из расписания, черновик сохраняет этот выбор даже до ввода первого упражнения.
+
+Переход из карточки расписания передаёт `?type=...&date=...`. Пустой черновик получает запланированные тип и дату. Если тренировка уже начата, сохраняются её собственные тип и дата.
 Переход с first-workout guide добавляет `?first=1`: форма показывает подсказку,
 а после save открывает `/history?first=1` с success sheet.
 Переход с карточки шаблона передает `?template=<id>`, виджет «Повторить» —
@@ -1534,7 +1571,7 @@ Approved brand/PWA/favicon sources лежат в `assets/brand/night-reverse/`.
 - мобильная колонка и отдельная десктопная раскладка с dock;
 - яркий lime accent;
 - pink/indigo/flame gradient cards;
-- custom dot font для чисел;
+- IBM Plex Mono Medium для чисел и измерений;
 - rounded cards/sheets/chips;
 - bottom sheets на телефоне и центрированные диалоги на десктопе.
 

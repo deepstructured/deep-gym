@@ -1,12 +1,13 @@
 "use client";
 
+import { writeWorkout } from "@deepgym/core/gym-data";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { requireAuthUserId, useAuthSession } from "@/shared/lib/auth-session";
 import { fromISODate, toISODate } from "@/shared/lib/dates";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
 import { readAllPages } from "@/shared/lib/supabase/pagination";
 import type { Workout, WorkoutInput } from "../model/types";
-import { hydrateWorkouts, WORKOUT_FIELDS, type WorkoutHeader } from "./read-workouts";
+import { fetchWorkout, fetchWorkouts, hydrateWorkouts, type WorkoutHeader } from "@deepgym/core/workout-read";
 import { workoutRpcInput } from "./workout-input";
 
 export function isWorkoutLoadModeMismatchError(error: unknown): boolean {
@@ -55,18 +56,7 @@ export function useWorkouts(from: string, to: string) {
   const { userId, status } = useAuthSession();
   return useQuery({
     queryKey: ["workouts", userId, from, to],
-    queryFn: async ({ signal }): Promise<Workout[]> => {
-      const supabase = getSupabaseBrowser();
-      const headers = await readAllPages<WorkoutHeader>(async (page) => {
-        const result = await supabase.from("workouts")
-          .select(WORKOUT_FIELDS, { count: page.count }).eq("user_id", userId!)
-          .gte("date", from).lte("date", to)
-          .order("date", { ascending: false }).order("created_at", { ascending: false })
-          .order("id", { ascending: false }).range(page.from, page.to).abortSignal(signal);
-        return { ...result, data: result.data as WorkoutHeader[] | null };
-      }, signal);
-      return hydrateWorkouts(headers, signal);
-    },
+    queryFn: ({ signal }) => fetchWorkouts(getSupabaseBrowser(), userId!, signal, { from, to }),
     enabled: status === "authenticated",
   });
 }
@@ -76,32 +66,35 @@ export function useRecentWorkouts(limit = 3) {
   return useQuery({
     queryKey: ["workouts", "recent", userId, limit],
     queryFn: async ({ signal }) => {
-      const { data, error } = await getSupabaseBrowser().from("workouts")
-        .select(WORKOUT_FIELDS).eq("user_id", userId!).lte("date", toISODate(new Date()))
+      const client = getSupabaseBrowser();
+      const { data, error } = await client.from("workouts")
+        .select("*").eq("user_id", userId!).lte("date", toISODate(new Date()))
         .order("date", { ascending: false }).order("created_at", { ascending: false })
         .order("id", { ascending: false }).limit(limit).abortSignal(signal);
       if (error) throw error;
-      return hydrateWorkouts(data as WorkoutHeader[], signal);
+      return hydrateWorkouts(client, data as WorkoutHeader[], signal);
     },
     enabled: status === "authenticated",
   });
 }
 
 /** Prefer the newest matching weekday among the last 60 sessions. */
-export function useLastWorkoutOfType(type: string, beforeDate: string, preferWeekdayOf?: string | null) {
+export function useLastWorkoutOfType(type: string, beforeDate: string, preferWeekdayOf?: string | null, gymId?: string | null) {
   const { userId, status } = useAuthSession();
   return useQuery({
-    queryKey: ["workouts", "last-of-type", userId, type, beforeDate, preferWeekdayOf ?? null],
+    queryKey: ["workouts", "last-of-type", userId, type, beforeDate, preferWeekdayOf ?? null, gymId ?? null],
     queryFn: async ({ signal }): Promise<Workout | null> => {
-      const { data, error } = await getSupabaseBrowser().from("workouts")
-        .select(WORKOUT_FIELDS).eq("user_id", userId!).eq("type", type).lt("date", beforeDate)
-        .order("date", { ascending: false }).order("created_at", { ascending: false })
+      const client = getSupabaseBrowser();
+      let query = client.from("workouts")
+        .select("*").eq("user_id", userId!).eq("type", type).lt("date", beforeDate);
+      if (gymId) query = query.eq("gym_id", gymId);
+      const { data, error } = await query.order("date", { ascending: false }).order("created_at", { ascending: false })
         .order("id", { ascending: false }).limit(preferWeekdayOf ? 60 : 1).abortSignal(signal);
       if (error) throw error;
       const rows = data as WorkoutHeader[];
       const weekday = preferWeekdayOf ? fromISODate(preferWeekdayOf).getDay() : null;
       const header = rows.find((row) => weekday != null && fromISODate(row.date).getDay() === weekday) ?? rows[0];
-      return header ? (await hydrateWorkouts([header], signal))[0] : null;
+      return header ? (await hydrateWorkouts(client, [header], signal))[0] : null;
     },
     enabled: status === "authenticated" && Boolean(type && beforeDate),
   });
@@ -109,16 +102,17 @@ export function useLastWorkoutOfType(type: string, beforeDate: string, preferWee
 
 export interface WorkoutSummary { id: string; date: string; type: string; exerciseCount: number }
 
-export function useWorkoutSummaries() {
+export function useWorkoutSummaries(gymId?: string | null) {
   const { userId, status } = useAuthSession();
   return useQuery({
-    queryKey: ["workouts", "summaries", userId],
+    queryKey: ["workouts", "summaries", userId, gymId ?? null],
     queryFn: async ({ signal }): Promise<WorkoutSummary[]> => {
       type Row = { id: string; date: string; type: string; workout_exercises: { count: number }[] };
       const rows = await readAllPages<Row>(async (page) => {
-        const result = await getSupabaseBrowser().from("workouts")
-          .select("id,date,type,workout_exercises(count)", { count: page.count }).eq("user_id", userId!)
-          .order("date", { ascending: false }).order("created_at", { ascending: false })
+        let query = getSupabaseBrowser().from("workouts")
+          .select("id,date,type,workout_exercises(count)", { count: page.count }).eq("user_id", userId!);
+        if (gymId) query = query.eq("gym_id", gymId);
+        const result = await query.order("date", { ascending: false }).order("created_at", { ascending: false })
           .order("id", { ascending: false }).range(page.from, page.to).abortSignal(signal);
         return { ...result, data: result.data as Row[] | null };
       }, signal);
@@ -129,13 +123,7 @@ export function useWorkoutSummaries() {
 }
 
 export async function getWorkout(id: string, signal = new AbortController().signal): Promise<Workout> {
-  const userId = requireAuthUserId();
-  const { data, error } = await getSupabaseBrowser().from("workouts")
-    .select(WORKOUT_FIELDS).eq("id", id).eq("user_id", userId).abortSignal(signal).single();
-  if (error) throw error;
-  // The own API returns the complete aggregate in one transaction.
-  if (process.env.NEXT_PUBLIC_BACKEND === "postgres") return data as Workout;
-  return (await hydrateWorkouts([data as WorkoutHeader], signal))[0];
+  return fetchWorkout(getSupabaseBrowser(), requireAuthUserId(), id, signal);
 }
 
 export function useWorkout(id: string) {
@@ -157,9 +145,7 @@ export function useCreateWorkout() {
   return useMutation({
     mutationFn: async ({ input, createKey }: { input: WorkoutInput; createKey: string }): Promise<string> => {
       assertSessionOwner(userId);
-      const { data, error } = await getSupabaseBrowser().rpc("save_workout_atomic", {
-        p_input: workoutRpcInput(input), p_workout_id: null, p_create_key: createKey,
-      });
+      const { data, error } = await writeWorkout(getSupabaseBrowser(), workoutRpcInput(input), null, createKey);
       if (error) throw error;
       if (typeof data !== "string") throw new Error("Workout was not created");
       return data;
@@ -178,9 +164,7 @@ export function useUpdateWorkout() {
   return useMutation({
     mutationFn: async ({ id, input }: { id: string; input: WorkoutInput }) => {
       assertSessionOwner(userId);
-      const { error } = await getSupabaseBrowser().rpc("save_workout_atomic", {
-        p_input: workoutRpcInput(input), p_workout_id: id, p_create_key: null,
-      });
+      const { error } = await writeWorkout(getSupabaseBrowser(), workoutRpcInput(input), id, null);
       if (error) throw error;
     },
     onSuccess: (_data, { id }) => {

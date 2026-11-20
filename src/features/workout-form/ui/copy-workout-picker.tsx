@@ -21,6 +21,7 @@ import styles from "./copy-workout-picker.module.scss";
 
 interface CopyWorkoutPickerProps {
   unit: Unit;
+  gymId?: string | null;
   /** Copied exercises plus the source workout's type (to align the draft). */
   onCopy: (exercises: DraftExercise[], type: string) => void;
 }
@@ -30,10 +31,10 @@ interface CopyWorkoutPickerProps {
  * marked day lists that day's workouts; tapping one loads it and asks which
  * copy mode to use. The copied draft adopts the source workout's type.
  */
-export function CopyWorkoutPicker({ unit, onCopy }: CopyWorkoutPickerProps) {
+export function CopyWorkoutPicker({ unit, gymId, onCopy }: CopyWorkoutPickerProps) {
   const { t, tn } = useI18n();
   const { data: groups } = useMuscleGroups();
-  const { data: summaries } = useWorkoutSummaries();
+  const { data: summaries } = useWorkoutSummaries(gymId);
   const [open, setOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [copyingId, setCopyingId] = useState<string | null>(null);

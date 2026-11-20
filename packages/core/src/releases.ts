@@ -3,6 +3,6 @@ export const CURRENT_ONBOARDING_VERSION = 1;
 
 /** Monotonic database acknowledgement plus the human-facing release label. */
 export const CURRENT_RELEASE = {
-  sequence: 5,
-  label: "1.6.1",
+  sequence: 6,
+  label: "1.7.0",
 } as const;

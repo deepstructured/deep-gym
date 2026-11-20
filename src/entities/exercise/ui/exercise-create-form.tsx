@@ -14,6 +14,7 @@ import {
 } from "@/shared/ui";
 import { useCreateExercise } from "../api/queries";
 import type { Exercise } from "../model/types";
+import { ExerciseAvailability } from "./exercise-availability";
 import styles from "./exercise-create-form.module.scss";
 
 export interface ExerciseFormGroup {
@@ -23,7 +24,10 @@ export interface ExerciseFormGroup {
 
 interface ExerciseCreateFormProps {
   groups: ExerciseFormGroup[];
+  gyms?: { id: string; name: string }[] | null;
+  requiredGymId?: string | null;
   unit: Unit;
+  defaultGymId?: string | null;
   defaultGroupId?: string | null;
   submitLabel: string;
   cancelLabel?: string;
@@ -34,8 +38,11 @@ interface ExerciseCreateFormProps {
 /** Shared exercise creation form used by the workout picker and catalog. */
 export function ExerciseCreateForm({
   groups,
+  gyms,
+  requiredGymId,
   unit,
   defaultGroupId,
+  defaultGymId,
   submitLabel,
   cancelLabel,
   onCreated,
@@ -52,6 +59,7 @@ export function ExerciseCreateForm({
   const [workingWeight, setWorkingWeight] = useState("");
   const [unitChoice, setUnitChoice] = useState<"default" | Unit>("default");
   const [formError, setFormError] = useState<string | null>(null);
+  const [gymIds, setGymIds] = useState<string[] | null>(null);
 
   const effectiveUnit: Unit = unitChoice === "default" ? unit : unitChoice;
 
@@ -61,12 +69,14 @@ export function ExerciseCreateForm({
       groups.find((group) => group.id === groupId) ?? groups[0];
     if (!trimmed) return setFormError(t("picker.errName"));
     if (!selectedGroup) return setFormError(t("picker.errGroup"));
+    if (gymIds?.length === 0) return setFormError(t("gym.chooseGyms"));
 
     const weight = parseWeight(workingWeight);
     setFormError(null);
     createExercise.mutate(
       {
         name: trimmed,
+        gym_ids: gymIds ?? [],
         muscle_group_id: selectedGroup.id,
         equipment,
         machine_settings:
@@ -134,6 +144,9 @@ export function ExerciseCreateForm({
           />
         </Field>
       )}
+
+      <ExerciseAvailability gyms={gyms} value={gymIds} onChange={setGymIds}
+        defaultGymId={defaultGymId} requiredGymId={requiredGymId} />
 
       <Field label={t("picker.unitForExercise")}>
         <div className={styles.chips}>

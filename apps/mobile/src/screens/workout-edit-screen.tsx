@@ -1,3 +1,4 @@
+import { filterExercisesByGym } from "@deepgym/core/gym-data";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router, useLocalSearchParams } from "expo-router";
@@ -17,6 +18,8 @@ import { workoutRpcErrorKey } from "../data/workout-rpc";
 import { useI18n } from "../providers/locale-provider";
 import { userErrorMessage } from "../lib/user-error";
 import { ErrorState, Header, LoadingState } from "./common";
+import { useGymPreference, useGyms } from "../data/gyms";
+import { GymSelect } from "./gym-select";
 import { InlineExerciseCreate } from "./inline-exercise-create";
 import { localISO } from "./format";
 import { SortableWorkoutExercises } from "./sortable-workout-exercises";
@@ -58,6 +61,8 @@ export function WorkoutEditScreen() {
   const profile = useProfile();
   const groups = useMuscleGroups();
   const exercises = useExercises();
+  const gyms = useGyms();
+  const preference = useGymPreference();
   const history = useWorkouts();
   const update = useUpdateWorkout();
   const updateMachine = useUpdateExerciseDetail();
@@ -207,6 +212,7 @@ export function WorkoutEditScreen() {
   async function save() {
     if (!draft || !id || update.isPending || remove.isPending) return;
     setError(null);
+    if (draft.gymId && gyms.isSuccess && !gyms.data.some((item) => item.id === draft.gymId)) return setError(t("gym.deletedHint"));
     if (!isValidDate(draft.date)) return setError(t("workout.invalidDate"));
     if (draft.exercises.length === 0) return setError(t("workout.addExercise"));
     const bodyweightIssue = bodyweightDraftError(draft, unit);
@@ -232,7 +238,11 @@ export function WorkoutEditScreen() {
     setConfirmDeleteOpen(true);
   }
 
-  const pickerResults = (exercises.data ?? []).filter((exercise) =>
+  const gymId = draft?.gymId ?? null;
+  const gym = gyms.data?.find((item) => item.id === gymId);
+  const missingGym = Boolean(gymId && !gym);
+  const availableExercises = filterExercisesByGym(exercises.data ?? [], gyms.data ?? [], gymId ?? "");
+  const pickerResults = availableExercises.filter((exercise) =>
     (!pickerGroupId || exercise.muscle_group_id === pickerGroupId) &&
     exercise.name.toLocaleLowerCase().includes(pickerSearch.trim().toLocaleLowerCase()),
   );
@@ -264,6 +274,10 @@ export function WorkoutEditScreen() {
 
       {draft ? (
         <>
+          <GymSelect preferenceError={preference.isError} gyms={gyms.data} retry={gyms.isError ? () => void gyms.refetch() : undefined} value={gymId ?? ""} onChange={(id) => {
+            patch(current => ({ ...current, gymId: id || null }));
+            preference.rememberGym(id || null);
+          }} />
           <Text variant="caption" tone="muted" weight="medium" style={{ fontSize: 13, marginTop: 20, marginBottom: 7 }}>{t("workout.type")}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 20, paddingBottom: 15 }}>
             {[...BASE_WORKOUT_TYPES, ...(groups.data ?? []).map((group) => `Split ${group.name}`)].map((value) => (
@@ -475,6 +489,7 @@ export function WorkoutEditScreen() {
       <BottomSheet open={exercisePicker} onClose={closeExercisePicker} title={t(creatingExercise ? "picker.newTitle" : "picker.title")} closeLabel={t("common.close")}>
         {creatingExercise ? (
           <InlineExerciseCreate
+            gymId={gymId}
             groups={groups.data ?? []}
             profileUnit={unit}
             defaultGroupId={pickerGroupId}
@@ -512,12 +527,12 @@ export function WorkoutEditScreen() {
                 ))}
                 {pickerResults.length === 0 ? (
                   <Text tone="muted" style={{ paddingVertical: 16 }}>
-                    {pickerSearch.trim() ? t("picker.emptyFor", { query: pickerSearch.trim() }) : t("picker.empty")}
+                    {pickerSearch.trim() ? t("picker.emptyFor", { query: pickerSearch.trim() }) : t(missingGym ? "gym.unavailable" : gym && !availableExercises.length ? "gym.notAssigned" : "picker.empty")}
                   </Text>
                 ) : null}
               </>
             ) : null}
-            <Button variant="surface" block dashed leading={<Ionicons name="add" size={18} color={colors.lime} />} disabled={groups.isLoading || !groups.data?.length} onPress={() => setCreatingExercise(true)} style={{ marginTop: 18 }}>
+            <Button variant="surface" block dashed leading={<Ionicons name="add" size={18} color={colors.lime} />} disabled={groups.isLoading || !groups.data?.length || missingGym} onPress={() => setCreatingExercise(true)} style={{ marginTop: 18 }}>
               {t("picker.createNew")}
             </Button>
           </View>
@@ -669,7 +684,7 @@ export function WorkoutEditScreen() {
           )
         ) : null}
       </BottomSheet>
-      <WorkoutPlateSheet context={plateContext} onClose={() => setPlateContext(null)} />
+      <WorkoutPlateSheet gymId={gymId} context={plateContext} onClose={() => setPlateContext(null)} />
       <WorkoutConfirmSheet
         open={confirmDeleteOpen}
         title={t("workout.deleteTitle")}

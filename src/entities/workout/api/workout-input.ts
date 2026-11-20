@@ -7,6 +7,7 @@ export function workoutRpcInput(input: WorkoutInput): WorkoutInput {
   return {
     type: input.type.trim(),
     date: input.date,
+    ...(input.gym_id !== undefined ? { gym_id: input.gym_id } : {}),
     notes: input.notes,
     ...("body_weight_kg" in input ? { body_weight_kg: input.body_weight_kg ?? null } : {}),
     exercises: input.exercises.map((exercise) => ({

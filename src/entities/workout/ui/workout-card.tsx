@@ -17,6 +17,7 @@ import s from './workout-card.module.scss'
 interface WorkoutCardProps {
   workout: Workout
   unit: Unit
+  gymName?: string | null
   showDate?: boolean
   className?: string
   onEdit?: () => void
@@ -37,6 +38,7 @@ export function WorkoutCard({
   workout,
   unit,
   showDate,
+  gymName,
   className,
   onEdit,
 }: WorkoutCardProps) {
@@ -57,6 +59,7 @@ export function WorkoutCard({
         <div className={s.headerText}>
           <p className={s.type}>{workout.type}</p>
           <p className={s.meta}>
+            {gymName && <>{gymName} · </>}
             {showDate && <>{formatDay(workout.date)} · </>}
             {tn('count.exercises', workout.workout_exercises.length)} ·{' '}
             {tn('count.sets', totalSets)}
