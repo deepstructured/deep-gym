@@ -17,7 +17,7 @@ If Expo Go stays on a dark loading screen, wait five seconds and tap **Reset loc
 
 ## Database migration
 
-Creating and editing workouts in the native app calls `public.save_workout_atomic`. Review and apply `supabase/migrations/0009_atomic_workout_write.sql` manually in the Supabase SQL Editor **after** migration 0008. This keeps the workout and all its sets in one transaction and deduplicates a retry from the same device. The app does not fall back to multi-request writes when the function is missing. Refresh the PostgREST schema cache if a just-applied function is not visible yet. The configured Supabase project contains real users; use only the demo account for QA.
+The native app uses `public.save_workout_atomic` to save a workout and its sets together. Migration 0009 deduplicates retries from the same device. Assigning or clearing a gym uses `public.save_workout_at_gym` from migration 0013. Apply `0014_exercise_scope_and_gym_preference.sql` after 0013 to share the last selected gym with the PWA and choose exercise availability in the library or during a workout. Existing exercises become available in every gym. Apply migrations manually in order in the Supabase SQL Editor. The configured project contains real users. Use the demo account for QA.
 
 ## First run
 

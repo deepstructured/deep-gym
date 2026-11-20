@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { resolveWorkoutDraftDate } from "@deepgym/core/workout";
 import { useAuthSession } from "@/shared/lib/auth-session";
 import { withTimeout } from "@/shared/lib/request-timeout";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
@@ -10,7 +11,7 @@ import {
   canApplyRemote,
   createLatestWriteQueue,
   draftSignature,
-  draftContentSignature,
+  serializeDraft,
   type DraftSnapshot,
 } from "./draft-sync-engine";
 
@@ -39,6 +40,13 @@ function markSyncFailure(ownerId: string, failed: boolean) {
   if (failed) syncFailures.add(ownerId);
   else syncFailures.delete(ownerId);
   listeners.forEach((listener) => listener());
+}
+
+function draftContentSignature(draft: WorkoutDraft) {
+  const { createKey: _key, ...content } = draft;
+  // A reset on a different day is still the same blank workout. Keep the
+  // full date in the exact signatures used to order and verify writes.
+  return serializeDraft({ ...content, date: resolveWorkoutDraftDate(draft, "") });
 }
 
 function applyRemote(ownerId: string, startedSignature: string, remote: RemoteDraftRow) {

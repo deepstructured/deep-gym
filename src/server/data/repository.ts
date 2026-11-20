@@ -4,7 +4,7 @@ import * as v from "./validation";
 
 type Input = Record<string, unknown>;
 const PAGE = ["offset", "limit", "count"];
-const WORKOUT_FILTER = ["from", "to", "type", "beforeDate", "ids", "exerciseId", ...PAGE];
+const WORKOUT_FILTER = ["from", "to", "type", "beforeDate", "ids", "exerciseId", "gymId", ...PAGE];
 const WORKOUT_WHERE = `w.user_id=$1::uuid
   and ($2::date is null or w.date >= $2) and ($3::date is null or w.date <= $3)
   and ($4::text is null or w.type=$4) and ($5::date is null or w.date < $5)
@@ -41,9 +41,12 @@ async function count(db: DatabaseClient, sql: string, values: unknown[]): Promis
   return Number(result.rows[0]?.count ?? 0);
 }
 function workoutFilters(userId: string, input: Input) {
-  return [userId, input.from == null ? null : v.date(input.from), input.to == null ? null : v.date(input.to),
+  const values = [userId, input.from == null ? null : v.date(input.from), input.to == null ? null : v.date(input.to),
     input.type == null ? null : v.text(input.type, "type"), input.beforeDate == null ? null : v.date(input.beforeDate),
     input.ids == null ? null : v.uuids(input.ids), input.exerciseId == null ? null : v.uuid(input.exerciseId)];
+  // Leave legacy workout reads available during the optional gyms rollout.
+  if (input.gymId == null) return { where: WORKOUT_WHERE, values };
+  return { where: WORKOUT_WHERE + " and w.gym_id=$8::uuid", values: [...values, v.uuid(input.gymId)] };
 }
 async function paged(
   db: DatabaseClient, input: Input, select: string, from: string, where: string, order: string, values: unknown[],
@@ -54,13 +57,17 @@ async function paged(
   return { data, ...(page.count ? { count: await count(db, `select count(*) as count ${from} where ${where}`, values) } : {}) };
 }
 
-const PROFILE_COLUMNS = ["display_name", "unit", "bar_weight_kg", "plates_kg", "plates_lb", "language", "avatar_url", "training_schedule", "home_widgets", "onboarding_version", "onboarding_completed_at", "last_seen_release_version"] as const;
+const PROFILE_COLUMNS = ["last_gym_id", "gym_filter_all", "display_name", "unit", "bar_weight_kg", "plates_kg", "plates_lb", "language", "avatar_url", "training_schedule", "home_widgets", "onboarding_version", "onboarding_completed_at", "last_seen_release_version"] as const;
 function profilePatch(value: unknown): Input {
   const patch = v.object(value, "profile patch");
   v.fields(patch, PROFILE_COLUMNS);
   const result: Input = {};
   for (const [key, value] of Object.entries(patch)) {
     switch (key) {
+      case "last_gym_id": result[key] = value === null ? null : v.uuid(value); break;
+      case "gym_filter_all":
+        if (typeof value !== "boolean") throw new v.DataRequestError("Invalid gym filter");
+        result[key] = value; break;
       case "display_name": result[key] = v.nullableText(value, key, 100); break;
       case "unit": result[key] = v.choice(value, ["kg", "lb"], key); break;
       case "language": result[key] = value == null ? null : v.choice(value, ["en", "ru", "uk"], key); break;
@@ -120,7 +127,7 @@ async function update(db: DatabaseClient, table: "profiles" | "exercises", id: s
 }
 function workoutInput(value: unknown): Input {
   const input = v.object(value, "workout input");
-  v.fields(input, ["type", "date", "notes", "body_weight_kg", "exercises"]);
+  v.fields(input, ["type", "date", "notes", "gym_id", "body_weight_kg", "exercises"]);
   if (!Array.isArray(input.exercises) || !input.exercises.length || input.exercises.length > 100) throw new v.DataRequestError("Invalid workout exercises");
   const exercises = input.exercises.map((value) => {
     const exercise = v.object(value, "workout exercise");
@@ -141,6 +148,7 @@ function workoutInput(value: unknown): Input {
     };
   });
   return { type: v.text(input.type, "workout type"), date: v.date(input.date), notes: v.nullableText(input.notes, "notes"),
+    ...("gym_id" in input ? { gym_id: input.gym_id == null ? null : v.uuid(input.gym_id) } : {}),
     ...("body_weight_kg" in input ? { body_weight_kg: input.body_weight_kg == null ? null : v.number(input.body_weight_kg, "body weight", 0.01, 1000) } : {}), exercises };
 }
 function templateInput(value: unknown) {
@@ -155,6 +163,30 @@ function templateInput(value: unknown) {
  * independent RLS check. The caller supplies only a verified session identity. */
 export async function executeDataOperation(db: DatabaseClient, userId: string, operation: DataOperation, input: Input = {}): Promise<DataResult> {
   switch (operation) {
+    case "gyms.listScoped":
+    case "gyms.list":
+      v.fields(input, PAGE);
+      return paged(db, input, "to_jsonb(g)", operation === "gyms.listScoped" ? "from public.scoped_gym_catalog g" : "from public.gym_catalog g", "g.user_id=$1::uuid", "g.name,g.id", [userId]);
+    case "gyms.save": {
+      v.fields(input, ["id", "name", "bar_weight_kg", "plates_kg", "plates_lb", "exercise_ids"]);
+      const equipment = profilePatch({ bar_weight_kg: input.bar_weight_kg, plates_kg: input.plates_kg, plates_lb: input.plates_lb });
+      return { data: await one(db, "select public.save_gym($1::uuid,$2::text,$3::numeric,$4::numeric[],$5::numeric[],$6::uuid[]) as data",
+        [input.id == null ? null : v.uuid(input.id), v.text(input.name, "gym name", 100), equipment.bar_weight_kg,
+          equipment.plates_kg, equipment.plates_lb, v.uuids(input.exercise_ids, "exercise IDs", 10000)]) };
+    }
+    case "gyms.delete":
+      v.fields(input, ["id"]);
+      await db.query("delete from public.gyms where id=$1::uuid and user_id=$2::uuid", [v.uuid(input.id), userId]);
+      return { data: null };
+    case "exercises.saveCatalog":
+      v.fields(input, ["id", "input", "gymIds"]);
+      return { data: await one(db, "select to_jsonb(public.save_catalog_exercise($1::uuid,$2::jsonb,$3::uuid[])) as data",
+        [input.id == null ? null : v.uuid(input.id), exercisePatch(input.input, input.id == null),
+          input.gymIds == null ? null : v.uuids(input.gymIds, "gym IDs", 10000)]) };
+    case "exercises.createAtGym":
+      v.fields(input, ["gymId", "input"]);
+      return { data: await one(db, "select to_jsonb(public.create_exercise_at_gym($1::uuid,$2::jsonb)) as data",
+        [v.uuid(input.gymId), JSON.stringify(exercisePatch(input.input, true))]) };
     case "profile.get":
       v.fields(input, []);
       return { data: await one(db, "select to_jsonb(p) as data from public.profiles p where id=$1::uuid", [userId], true) };
@@ -166,11 +198,13 @@ export async function executeDataOperation(db: DatabaseClient, userId: string, o
       const select = operation === "workouts.list" ? FULL_WORKOUT : operation === "workouts.headers" ? "to_jsonb(w)" :
         `jsonb_build_object('id',w.id,'date',w.date,'type',w.type,'exerciseCount',(select count(*) from public.workout_exercises where workout_id=w.id),
           'workout_exercises',jsonb_build_array(jsonb_build_object('count',(select count(*) from public.workout_exercises where workout_id=w.id))))`;
-      return paged(db, input, select, "from public.workouts w", WORKOUT_WHERE, WORKOUT_ORDER, workoutFilters(userId, input));
+      const { where, values } = workoutFilters(userId, input);
+      return paged(db, input, select, "from public.workouts w", where, WORKOUT_ORDER, values);
     }
     case "workouts.count": {
       v.fields(input, WORKOUT_FILTER);
-      const total = await count(db, `select count(*) as count from public.workouts w where ${WORKOUT_WHERE}`, workoutFilters(userId, input));
+      const { where, values } = workoutFilters(userId, input);
+      const total = await count(db, `select count(*) as count from public.workouts w where ${where}`, values);
       return { data: total, count: total };
     }
     case "workouts.detail":
@@ -199,7 +233,11 @@ export async function executeDataOperation(db: DatabaseClient, userId: string, o
       const id = input.id == null ? null : v.uuid(input.id);
       const createKey = input.createKey == null ? null : v.uuid(input.createKey, "create key");
       if ((!id && !createKey) || (id && createKey)) throw new v.DataRequestError("Invalid create key");
-      return { data: await one(db, "select public.save_workout_atomic($1::jsonb,$2::uuid,$3::uuid) as data", [JSON.stringify(workoutInput(input.input)), id, createKey]) };
+      const payload = workoutInput(input.input);
+      const sql = "gym_id" in payload
+        ? "select public.save_workout_at_gym($1::jsonb,$2::uuid,$3::uuid) as data"
+        : "select public.save_workout_atomic($1::jsonb,$2::uuid,$3::uuid) as data";
+      return { data: await one(db, sql, [JSON.stringify(payload), id, createKey]) };
     }
     case "workouts.delete":
       v.fields(input, ["id"]);

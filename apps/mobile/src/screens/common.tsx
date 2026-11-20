@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ActivityIndicator, Image, Pressable, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Image, Pressable, View } from "react-native";
 import type { Profile, Workout } from "@deepgym/core/types";
 import { kgToUnit, roundWeight } from "@deepgym/core/weight";
 import { translateCount } from "@deepgym/core/i18n";
@@ -73,10 +74,23 @@ export function Header({
 
 export function LoadingState() {
   const { t } = useI18n();
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), 250);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <View style={{ paddingVertical: 64, alignItems: "center", gap: 16 }}>
-      <ActivityIndicator color={colors.lime} />
-      <Text tone="muted">{t("common.loading")}</Text>
+    <View
+      accessible={visible}
+      accessibilityLabel={t("common.loading")}
+      accessibilityState={{ busy: true }}
+      style={{ minHeight: 68, padding: 16, gap: 10, borderRadius: radii.tile,
+        backgroundColor: colors.surface, opacity: visible ? 1 : 0 }}
+    >
+      <View style={{ height: 13, width: "58%", borderRadius: 5, backgroundColor: colors.raised }} />
+      <View style={{ height: 9, width: "34%", borderRadius: 4, backgroundColor: colors.raised }} />
     </View>
   );
 }
@@ -93,10 +107,12 @@ export function ErrorState({ message, retry, translated = false }: { message: st
 
 export function WorkoutCard({
   workout,
+  gymName,
   unit = "kg",
   onPress,
 }: {
   workout: Workout;
+  gymName?: string;
   unit?: "kg" | "lb";
   onPress?: () => void;
 }) {
@@ -108,7 +124,7 @@ export function WorkoutCard({
           <View style={{ flex: 1 }}>
             <Text weight="bold" tone="lime" style={{ fontSize: 16 }}>{workout.type}</Text>
             <Text variant="caption" tone="muted" style={{ marginTop: 3 }}>
-              {formatDate(workout.date, lang)} · {translateCount(lang, "count.exercises", workout.workout_exercises.length)} · {translateCount(lang, "count.sets", workingSetCount(workout))}
+              {gymName ? `${gymName} · ` : ""}{formatDate(workout.date, lang)} · {translateCount(lang, "count.exercises", workout.workout_exercises.length)} · {translateCount(lang, "count.sets", workingSetCount(workout))}
             </Text>
           </View>
           {onPress ? <Ionicons name="chevron-forward" size={16} color={colors.faint} /> : null}

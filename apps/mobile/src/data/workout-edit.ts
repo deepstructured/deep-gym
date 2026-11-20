@@ -1,3 +1,4 @@
+import { writeWorkout } from "@deepgym/core/gym-data";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Workout, WorkoutInput } from "@deepgym/core/types";
 import { kgToUnit, roundWeight, type Unit } from "@deepgym/core/weight";
@@ -17,6 +18,7 @@ export function workoutToEditDraft(
 ): WorkoutDraft {
   return {
     type: workout.type,
+    gymId: workout.gym_id,
     date: workout.date,
     bodyWeight: workout.body_weight_kg == null
       ? ""
@@ -69,11 +71,7 @@ export function useUpdateWorkout() {
   return useMutation({
     mutationFn: async ({ id, input }: { id: string; input: WorkoutInput }) => {
       if (!user) throw new Error("Not signed in");
-      const { error } = await supabase.rpc("save_workout_atomic", {
-        p_input: input,
-        p_workout_id: id,
-        p_create_key: null,
-      });
+      const { error } = await writeWorkout(supabase, input, id, null);
       if (error) throw error;
     },
     onSettled: (_result, _error, { id }) => {

@@ -39,6 +39,13 @@
   }
 }
 
+.gymScopeHint {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: $muted;
+  strong { color: $text; font-weight: 500; }
+}
+
 .noteWrap {
   position: relative;
 }

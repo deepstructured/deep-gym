@@ -3,6 +3,8 @@ import { TextInput, View } from "react-native";
 import type { Exercise, MuscleGroup } from "@deepgym/core/types";
 import { EQUIPMENT_OPTIONS, type Equipment } from "@deepgym/core/workout";
 import { parseWeight, unitToKg, type Unit } from "@deepgym/core/weight";
+import { useGyms } from "../data/gyms";
+import { ExerciseAvailabilityField, type ExerciseAvailability } from "./exercise-availability";
 import { useCreateExercise } from "../data/queries";
 import { useI18n } from "../providers/locale-provider";
 import { userErrorMessage } from "../lib/user-error";
@@ -10,6 +12,7 @@ import { colors, fonts, radii } from "../theme";
 import { Button, Chip, Text } from "../ui";
 
 interface InlineExerciseCreateProps {
+  gymId?: string | null;
   groups: MuscleGroup[];
   profileUnit: Unit;
   defaultGroupId: string | null;
@@ -19,6 +22,7 @@ interface InlineExerciseCreateProps {
 
 /** The picker stays over the workout draft, so creating an exercise never loses entered sets. */
 export function InlineExerciseCreate({
+  gymId,
   groups,
   profileUnit,
   defaultGroupId,
@@ -27,6 +31,8 @@ export function InlineExerciseCreate({
 }: InlineExerciseCreateProps) {
   const { t } = useI18n();
   const createExercise = useCreateExercise();
+  const gyms = useGyms();
+  const [availability, setAvailability] = useState<ExerciseAvailability>(null);
   const [name, setName] = useState("");
   const [groupId, setGroupId] = useState(defaultGroupId ?? groups[0]?.id ?? null);
   const [equipment, setEquipment] = useState<Equipment>("free_weight");
@@ -42,10 +48,12 @@ export function InlineExerciseCreate({
     if (!trimmed) return setError(t("picker.errName"));
     if (!selectedGroup) return setError(t("picker.errGroup"));
 
+    if (availability !== null && (!availability.length || (gymId && !availability.includes(gymId)))) return setError(t("gym.chooseGyms"));
     const parsedWeight = parseWeight(weight);
     setError(null);
     try {
       const exercise = await createExercise.mutateAsync({
+        gym_ids: availability ?? [],
         name: trimmed,
         muscle_group_id: selectedGroup.id,
         equipment,
@@ -81,6 +89,9 @@ export function InlineExerciseCreate({
           </Chip>
         ))}
       </View>
+
+      <ExerciseAvailabilityField gyms={gyms.data} requiredGymId={gymId} value={availability} onChange={setAvailability}
+        retry={gyms.isError ? () => void gyms.refetch() : undefined} />
 
       <Text variant="micro" tone="muted" style={labelStyle}>{t("picker.equipment")}</Text>
       <View style={chipsStyle}>

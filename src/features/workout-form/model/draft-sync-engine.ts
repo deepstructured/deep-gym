@@ -91,11 +91,6 @@ export function serializeDraft(value: unknown): string {
   );
 }
 
-export function draftContentSignature<D extends { createKey?: string }>(draft: D): string {
-  const { createKey: _key, ...content } = draft;
-  return serializeDraft(content);
-}
-
 /** A late response cannot replace edits made while it was in flight. */
 export function canApplyRemote<D>(
   current: DraftSnapshot<D> & { ownerId: string | null },

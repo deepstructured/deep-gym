@@ -1,10 +1,10 @@
+import { fetchExercises, fetchMuscleGroups } from "@deepgym/core/catalog-read";
+import { fetchWorkout, fetchWorkouts } from "@deepgym/core/workout-read";
+import { createCatalogExercise, writeWorkout } from "@deepgym/core/gym-data";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
-  Exercise,
   ExerciseInput,
-  MuscleGroup,
   Profile,
-  Workout,
   WorkoutInput,
   WorkoutTemplateSummary,
   WorkoutTemplate,
@@ -13,26 +13,10 @@ import type {
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../providers/auth-provider";
 
-const WORKOUT_SELECT = `
-  *,
-  workout_exercises (
-    *,
-    exercise:exercises (*),
-    sets (*)
-  )
-`;
-
-function orderedWorkout(workout: Workout): Workout {
-  workout.workout_exercises.sort((a, b) => a.position - b.position);
-  workout.workout_exercises.forEach((entry) =>
-    entry.sets.sort((a, b) => a.position - b.position),
-  );
-  return workout;
-}
-
 export function useProfile() {
   const { user } = useAuth();
   return useQuery({
+    refetchOnWindowFocus: "always",
     queryKey: ["profile", user?.id],
     enabled: Boolean(user),
     queryFn: async (): Promise<Profile> => {
@@ -70,15 +54,7 @@ export function useWorkouts() {
   return useQuery({
     queryKey: ["workouts", user?.id],
     enabled: Boolean(user),
-    queryFn: async (): Promise<Workout[]> => {
-      const { data, error } = await supabase
-        .from("workouts")
-        .select(WORKOUT_SELECT)
-        .order("date", { ascending: false })
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data as Workout[]).map(orderedWorkout);
-    },
+    queryFn: ({ signal }) => fetchWorkouts(supabase, user!.id, signal),
   });
 }
 
@@ -87,15 +63,7 @@ export function useWorkout(id: string) {
   return useQuery({
     queryKey: ["workout", user?.id, id],
     enabled: Boolean(user && id),
-    queryFn: async (): Promise<Workout> => {
-      const { data, error } = await supabase
-        .from("workouts")
-        .select(WORKOUT_SELECT)
-        .eq("id", id)
-        .single();
-      if (error) throw error;
-      return orderedWorkout(data as Workout);
-    },
+    queryFn: ({ signal }) => fetchWorkout(supabase, user!.id, id, signal),
   });
 }
 
@@ -121,14 +89,7 @@ export function useExercises() {
   return useQuery({
     queryKey: ["exercises", user?.id],
     enabled: Boolean(user),
-    queryFn: async (): Promise<Exercise[]> => {
-      const { data, error } = await supabase
-        .from("exercises")
-        .select("*")
-        .order("name");
-      if (error) throw error;
-      return data as Exercise[];
-    },
+    queryFn: ({ signal }) => fetchExercises(supabase, user!.id, signal),
   });
 }
 
@@ -137,14 +98,7 @@ export function useMuscleGroups() {
   return useQuery({
     queryKey: ["muscle-groups", user?.id],
     enabled: Boolean(user),
-    queryFn: async (): Promise<MuscleGroup[]> => {
-      const { data, error } = await supabase
-        .from("muscle_groups")
-        .select("*")
-        .order("sort_order");
-      if (error) throw error;
-      return data as MuscleGroup[];
-    },
+    queryFn: ({ signal }) => fetchMuscleGroups(supabase, user!.id, signal),
   });
 }
 
@@ -241,21 +195,14 @@ export function useCreateExercise() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: ExerciseInput): Promise<Exercise> => {
+    mutationFn: (input: ExerciseInput & { gym_id?: string | null }) => {
       if (!user) throw new Error("Not signed in");
-      const normalized = input.equipment === "bodyweight"
-        ? { ...input, working_weight_kg: null }
-        : input;
-      const { data, error } = await supabase
-        .from("exercises")
-        .insert({ ...normalized, user_id: user.id })
-        .select("*")
-        .single();
-      if (error) throw error;
-      return data as Exercise;
+      return createCatalogExercise(supabase, user.id, input);
     },
-    onSuccess: () =>
+    onSuccess: (_exercise, input) => Promise.all([
       queryClient.invalidateQueries({ queryKey: ["exercises", user?.id] }),
+      ...(input.gym_ids?.length || input.gym_id ? [queryClient.invalidateQueries({ queryKey: ["gyms"] })] : []),
+    ]),
   });
 }
 
@@ -292,11 +239,7 @@ export function useCreateWorkout() {
     mutationFn: async ({ input, createKey }: { input: WorkoutInput; createKey: string }): Promise<string> => {
       if (!user) throw new Error("Not signed in");
       if (input.exercises.length === 0) throw new Error("Add an exercise first");
-      const { data, error } = await supabase.rpc("save_workout_atomic", {
-        p_input: input,
-        p_workout_id: null,
-        p_create_key: createKey,
-      });
+      const { data, error } = await writeWorkout(supabase, input, null, createKey);
       if (error) throw error;
       if (typeof data !== "string") throw new Error("Workout was not created");
       return data;

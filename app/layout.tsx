@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { matricha, urbanist } from "@/app/fonts";
+import { metrics, urbanist } from "@/app/fonts";
 import { Providers } from "@/app/providers";
 import { UI_MODE_SCRIPT } from "@/shared/lib/ui-mode";
 import { marketingMetadata, PRIVATE_ROBOTS, SEO_ORIGIN } from "@/shared/config/seo";
@@ -74,7 +74,7 @@ export default async function RootLayout({
     // so those attributes legitimately differ from the server render.
     <html
       lang={lang}
-      className={`${urbanist.variable} ${matricha.variable}`}
+      className={`${urbanist.variable} ${metrics.variable}`}
       suppressHydrationWarning
     >
       <head>

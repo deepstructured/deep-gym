@@ -5,7 +5,7 @@ import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { Exercise } from "@deepgym/core/types";
 import { kgToUnit, roundWeight, type Unit } from "@deepgym/core/weight";
-import type { Equipment } from "@deepgym/core/workout";
+import { isWorkoutDraftEmpty as draftIsEmpty, resolveWorkoutDraftDate, type Equipment } from "@deepgym/core/workout";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../providers/auth-provider";
 import { localISO } from "../screens/format";
@@ -34,8 +34,10 @@ export interface DraftExercise {
 
 /** Matches the PWA's `workout_drafts.draft` JSON contract. */
 export interface WorkoutDraft {
+  gymId?: string | null;
   type: string;
   date: string;
+  dateExplicit?: boolean;
   bodyWeight: string;
   bodyWeightUnit?: Unit;
   bodyWeightAuto?: boolean;
@@ -76,9 +78,7 @@ export function emptyDraft(): WorkoutDraft {
   };
 }
 
-export function draftIsEmpty(draft: WorkoutDraft): boolean {
-  return !draft.exercises.length && !draft.notes.trim();
-}
+export { draftIsEmpty };
 
 function serializeDraft(draft: WorkoutDraft): string {
   // Postgres jsonb may return object keys in a different order.
@@ -91,7 +91,8 @@ function serializeDraft(draft: WorkoutDraft): string {
 
 function serializeDraftContent(draft: WorkoutDraft): string {
   const { createKey: _createKey, ...content } = draft;
-  return serializeDraft(content);
+  // Blank automatic drafts represent the next local day on either device.
+  return serializeDraft({ ...content, date: resolveWorkoutDraftDate(draft, "") });
 }
 
 function validCreateKey(value: unknown): value is string {
@@ -438,7 +439,7 @@ export function useWorkoutDraftSync(): { ready: boolean } {
               draft: remote.draft,
               updatedAt: remote.updated_at,
             } });
-          } else if (!current.updatedAt || (
+          } else if (!current.updatedAt || (!differs && current.draft.date !== remote.draft.date) || (
             validCreateKey(remote.draft.createKey) && remote.draft.createKey !== current.draft.createKey
           )) {
             // A matching cloud draft may be from a save whose response was

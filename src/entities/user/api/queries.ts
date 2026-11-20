@@ -10,6 +10,7 @@ export const profileQueryKey = (userId: string | null) => ["profile", userId] as
 export function useProfile() {
   const session = useAuthSession();
   return useQuery({
+    refetchOnWindowFocus: "always",
     queryKey: profileQueryKey(session.userId),
     enabled: session.status === "authenticated",
     queryFn: async ({ signal }): Promise<Profile> => {
@@ -51,11 +52,19 @@ export function useUpdateProfile() {
       if (error) throw error;
       return { userId, profile: data as Profile };
     },
-    onSuccess: ({ userId, profile }) => {
+    onSuccess: ({ userId, profile }, patch) => {
       if (getAuthSessionSnapshot().userId !== userId) return;
       // Use the returned row directly. A second request must not keep a
       // completed save pending or briefly reopen version-gated UI.
-      queryClient.setQueryData<Profile>(profileQueryKey(userId), profile);
+      queryClient.setQueryData<Profile>(profileQueryKey(userId), current => {
+        if (!current) return profile;
+        // A settings response may arrive after a more recent venue selection.
+        return {
+          ...profile,
+          last_gym_id: "last_gym_id" in patch ? profile.last_gym_id : current.last_gym_id,
+          gym_filter_all: "gym_filter_all" in patch ? profile.gym_filter_all : current.gym_filter_all,
+        };
+      });
     },
   });
 }

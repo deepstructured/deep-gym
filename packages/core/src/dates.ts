@@ -1,4 +1,4 @@
-import { format, parseISO } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 
 /** ISO date (yyyy-MM-dd) for a local Date. */
 export function toISODate(date: Date): string {
@@ -11,4 +11,8 @@ export function todayISO(): string {
 
 export function fromISODate(iso: string): Date {
   return parseISO(iso);
+}
+
+export function isValidISODate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && isValid(parseISO(value));
 }

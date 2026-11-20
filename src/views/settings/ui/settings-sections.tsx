@@ -41,14 +41,10 @@ import styles from './settings-view.module.scss'
 
 /** Bar weight and the plate denominations available in the gym. */
 export function PlatesSettings() {
-  const { t } = useI18n()
   const { data: profile } = useProfile()
   const updateProfile = useUpdateProfile()
   const unit: Unit = profile?.unit ?? 'kg'
   const [barWeight, setBarWeight] = useState('')
-  const [newPlate, setNewPlate] = useState('')
-  const [newPlateUnit, setNewPlateUnit] = useState<Unit>(unit)
-
   useEffect(() => {
     if (profile) {
       setBarWeight(
@@ -59,20 +55,6 @@ export function PlatesSettings() {
 
   if (!profile) return null
 
-  // combined plate list, heaviest first, each in its native denomination
-  const plates: { value: number; unit: Unit; kg: number }[] = [
-    ...profile.plates_kg.map((value) => ({
-      value,
-      unit: 'kg' as Unit,
-      kg: value,
-    })),
-    ...(profile.plates_lb ?? []).map((value) => ({
-      value,
-      unit: 'lb' as Unit,
-      kg: unitToKg(value, 'lb'),
-    })),
-  ].sort((a, b) => b.kg - a.kg)
-
   function saveBarWeight() {
     const parsed = parseWeight(barWeight)
     if (parsed != null) {
@@ -82,46 +64,75 @@ export function PlatesSettings() {
     }
   }
 
+  return (
+    <PlateFields
+      unit={unit}
+      defaultEquipment
+      barWeight={barWeight}
+      onBarChange={setBarWeight}
+      onBarBlur={saveBarWeight}
+      platesKg={profile.plates_kg}
+      platesLb={profile.plates_lb ?? []}
+      onPlatesChange={(patch) => updateProfile.mutate(patch)}
+    />
+  )
+}
+
+export function PlateFields({ unit, defaultEquipment = false, barWeight, onBarChange, onBarBlur, platesKg, platesLb, onPlatesChange }: {
+  unit: Unit
+  defaultEquipment?: boolean
+  barWeight: string
+  onBarChange: (value: string) => void
+  onBarBlur?: () => void
+  platesKg: number[]
+  platesLb: number[]
+  onPlatesChange: (patch: { plates_kg?: number[]; plates_lb?: number[] }) => void
+}) {
+  const { t } = useI18n()
+  const [newPlate, setNewPlate] = useState('')
+  const [newPlateUnit, setNewPlateUnit] = useState<Unit>(unit)
+
+  // combined plate list, heaviest first, each in its native denomination
+  const plates: { value: number; unit: Unit; kg: number }[] = [
+    ...platesKg.map((value) => ({
+      value,
+      unit: 'kg' as Unit,
+      kg: value,
+    })),
+    ...platesLb.map((value) => ({
+      value,
+      unit: 'lb' as Unit,
+      kg: unitToKg(value, 'lb'),
+    })),
+  ].sort((a, b) => b.kg - a.kg)
+
   function addPlate() {
+    if (!/^\d+(?:[.,]\d+)?$/.test(newPlate.trim())) return
     const parsed = parseWeight(newPlate)
-    if (parsed == null || !profile) return
-    if (newPlateUnit === 'kg') {
-      if (!profile.plates_kg.includes(parsed)) {
-        updateProfile.mutate({ plates_kg: [...profile.plates_kg, parsed] })
-      }
-    } else {
-      const platesLb = profile.plates_lb ?? []
-      if (!platesLb.includes(parsed)) {
-        updateProfile.mutate({ plates_lb: [...platesLb, parsed] })
-      }
+    if (parsed == null) return
+    const values = newPlateUnit === 'kg' ? platesKg : platesLb
+    if (!values.includes(parsed)) {
+      onPlatesChange({ [newPlateUnit === 'kg' ? 'plates_kg' : 'plates_lb']: [...values, parsed] })
     }
     setNewPlate('')
   }
 
   function removePlate(plate: { value: number; unit: Unit }) {
-    if (!profile) return
-    if (plate.unit === 'kg') {
-      updateProfile.mutate({
-        plates_kg: profile.plates_kg.filter((p) => p !== plate.value),
-      })
-    } else {
-      updateProfile.mutate({
-        plates_lb: (profile.plates_lb ?? []).filter((p) => p !== plate.value),
-      })
-    }
+    const values = plate.unit === 'kg' ? platesKg : platesLb
+    onPlatesChange({ [plate.unit === 'kg' ? 'plates_kg' : 'plates_lb']: values.filter(value => value !== plate.value) })
   }
 
   return (
     <div className={styles.sheetStack}>
-      <p className={styles.cardHint}>{t('settings.plateCalcHint')}</p>
+      <p className={styles.cardHint}>{t(defaultEquipment ? 'gym.defaultEquipment' : 'settings.plateCalcHint')}</p>
 
       <Field label={t('settings.barWeight', { unit })}>
         <Input
           value={barWeight}
           onChange={(e) =>
-            setBarWeight(e.target.value.replace(/[^\d.,]/g, ''))
+            onBarChange(e.target.value.replace(/[^\d.,]/g, ''))
           }
-          onBlur={saveBarWeight}
+          onBlur={onBarBlur}
           inputMode="decimal"
           className={styles.barInput}
         />
@@ -157,6 +168,7 @@ export function PlatesSettings() {
           }
           onKeyDown={(e) => e.key === 'Enter' && addPlate()}
           inputMode="decimal"
+          aria-label={t('settings.plateWeight')}
           placeholder={t('settings.plateWeight')}
           className={styles.addInput}
         />
@@ -165,6 +177,7 @@ export function PlatesSettings() {
             <button
               key={option}
               type="button"
+              aria-pressed={newPlateUnit === option}
               onClick={() => setNewPlateUnit(option)}
               className={cn(
                 styles.unitOption,

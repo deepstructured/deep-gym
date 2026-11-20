@@ -1,6 +1,7 @@
 /** Fixed application operations; this API never accepts SQL, table names,
  * PostgREST expressions, arbitrary field selections or client auth claims. */
 export const DATA_OPERATIONS = [
+  "gyms.list", "gyms.listScoped", "gyms.save", "gyms.delete", "exercises.createAtGym", "exercises.saveCatalog",
   "profile.get", "profile.update",
   "workouts.list", "workouts.headers", "workouts.count", "workouts.detail", "workouts.summaries",
   "workouts.exercises", "workouts.sets", "workouts.homeSummary", "workouts.save", "workouts.delete",
@@ -15,6 +16,7 @@ export interface DataRequest { operation: DataOperation; input?: Record<string, 
 export interface DataResult { data: unknown; count?: number }
 export interface DataFailure { error: { code: string; message: string }; data: null }
 const WRITES = new Set<DataOperation>([
+  "gyms.save", "gyms.delete", "exercises.createAtGym", "exercises.saveCatalog",
   "profile.update", "workouts.save", "workouts.delete", "exercises.create", "exercises.update", "exercises.delete",
   "groups.create", "groups.delete", "templates.create", "templates.update", "templates.delete", "bodyWeight.log", "drafts.save",
 ]);

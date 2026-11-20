@@ -1,3 +1,4 @@
+import { filterExercisesByGym } from "@deepgym/core/gym-data";
 import { Ionicons } from "@expo/vector-icons";
 import { translateCount } from "@deepgym/core/i18n";
 import { router, useLocalSearchParams } from "expo-router";
@@ -16,8 +17,11 @@ import {
   useProfile,
   useTemplates,
 } from "../data/queries";
+import { useGymPreference, useGyms } from "../data/gyms";
 import { useI18n } from "../providers/locale-provider";
 import { userErrorMessage } from "../lib/user-error";
+import { ExerciseAvailabilityField, type ExerciseAvailability } from "./exercise-availability";
+import { GymSelect } from "./gym-select";
 import { ErrorState, Header, LoadingState } from "./common";
 
 type LibraryTab = "exercises" | "templates";
@@ -27,6 +31,8 @@ export function LibraryScreen() {
   const params = useLocalSearchParams<{ tab?: string; create?: string }>();
   const profile = useProfile();
   const exercises = useExercises();
+  const gyms = useGyms();
+  const { filter: gymFilter, isError: preferenceError, rememberFilter: setGymFilter, gymId: preferredGymId } = useGymPreference();
   const groups = useMuscleGroups();
   const templates = useTemplates();
   const createExercise = useCreateExercise();
@@ -38,6 +44,7 @@ export function LibraryScreen() {
   const [name, setName] = useState("");
   const [type, setType] = useState("Full Body");
   const [groupId, setGroupId] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<ExerciseAvailability>(null);
   const [equipment, setEquipment] = useState<Equipment>("free_weight");
   const [weight, setWeight] = useState("");
   const [machineSettings, setMachineSettings] = useState("");
@@ -64,11 +71,12 @@ export function LibraryScreen() {
     router.setParams({ tab: "templates", create: "0" });
   }, [params.create]);
 
+  const selectedGymId = gymFilter && gymFilter !== "none" ? gymFilter : undefined;
   const visibleExercises = useMemo(() =>
-    (exercises.data ?? []).filter((exercise) =>
+    filterExercisesByGym(exercises.data ?? [], gyms.data ?? [], gymFilter).filter((exercise) =>
       (!focusGroup || exercise.muscle_group_id === focusGroup) &&
       exercise.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
-    ), [exercises.data, focusGroup, search]);
+    ), [exercises.data, gyms.data, gymFilter, focusGroup, search]);
   const visibleTemplates = (templates.data ?? []).filter((template) =>
     template.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
   );
@@ -76,6 +84,7 @@ export function LibraryScreen() {
   const effectiveUnit = unitChoice === "default" ? displayUnit : unitChoice;
 
   function openCreate() {
+    setAvailability(null);
     setName("");
     setWeight("");
     setGroupId(focusGroup ?? groups.data?.[0]?.id ?? null);
@@ -95,10 +104,12 @@ export function LibraryScreen() {
           setFormError(t(!name.trim() ? "picker.errName" : "picker.errGroup"));
           return;
         }
+        if (availability?.length === 0) return setFormError(t("gym.chooseGyms"));
         const parsed = parseWeight(weight);
         const created = await createExercise.mutateAsync({
           name: name.trim(),
           muscle_group_id: groupId,
+          gym_ids: availability ?? [],
           equipment,
           working_weight_kg: equipment === "bodyweight" || parsed == null
             ? null : Math.round(unitToKg(parsed, effectiveUnit) * 100) / 100,
@@ -134,6 +145,7 @@ export function LibraryScreen() {
         ]}
         style={{ marginTop: 20, marginBottom: 18 }}
       />
+      {tab === "exercises" && <GymSelect preferenceError={preferenceError} gyms={gyms.data} includeAll value={gymFilter} onChange={setGymFilter} />}
       {tab === "exercises" ? (
         <TextInput
           value={search}
@@ -175,7 +187,7 @@ export function LibraryScreen() {
               {visibleExercises.filter((exercise) => exercise.muscle_group_id === group.id).map((exercise) => (
                 <Pressable
                   key={exercise.id}
-                  onPress={() => router.push({ pathname: "/exercises/[id]", params: { id: exercise.id } })}
+                  onPress={() => router.push({ pathname: "/exercises/[id]", params: { id: exercise.id, gymId: selectedGymId } })}
                 >
                   <Card radius={radii.tile} padding={14}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -251,7 +263,7 @@ export function LibraryScreen() {
           pendingCreatedDetail.current = null;
           if (!destination) return;
           if (destination.kind === "exercise") {
-            router.push({ pathname: "/exercises/[id]", params: { id: destination.id } });
+            router.push({ pathname: "/exercises/[id]", params: { id: destination.id, gymId: selectedGymId } });
           } else {
             router.push({ pathname: "/templates/[id]", params: { id: destination.id } });
           }
@@ -280,6 +292,8 @@ export function LibraryScreen() {
                 <Chip key={group.id} selected={groupId === group.id} onPress={() => setGroupId(group.id)}>{group.name}</Chip>
               ))}
             </View>
+            <ExerciseAvailabilityField gyms={gyms.data} suggestedGymId={selectedGymId ?? preferredGymId} value={availability} onChange={setAvailability}
+              retry={gyms.isError ? () => void gyms.refetch() : undefined} />
             <Text variant="micro" tone="muted" style={{ marginBottom: 9 }}>{t("picker.equipment")}</Text>
             <View style={chipWrap}>
               {EQUIPMENT_OPTIONS.map(({ value }) => (

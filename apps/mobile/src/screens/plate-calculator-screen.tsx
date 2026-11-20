@@ -16,6 +16,8 @@ import {
   type PlateCount,
   type Unit,
 } from "@deepgym/core/weight";
+import { useGymPreference, useGyms } from "../data/gyms";
+import { GymSelect } from "./gym-select";
 import { useProfile } from "../data/queries";
 import { useI18n } from "../providers/locale-provider";
 import { colors, fonts, radii } from "../theme";
@@ -51,10 +53,10 @@ function PlateChip({ item }: { item: PlateCount }) {
   );
 }
 
-function EditPlatesButton() {
+function EditPlatesButton({ gymId }: { gymId: string }) {
   const { t } = useI18n();
   return (
-    <Pressable onPress={() => router.push({ pathname: "/settings", params: { open: "plates" } })}
+    <Pressable onPress={() => router.push({ pathname: "/settings", params: gymId ? { open: "gyms", gymId } : { open: "plates" } })}
       accessibilityRole="button" style={{ alignSelf: "center", paddingVertical: 12, paddingHorizontal: 16 }}>
       <Text weight="semibold" tone="lime" style={{ fontSize: 14 }}>{t("plates.editPlates")}</Text>
     </Pressable>
@@ -64,8 +66,17 @@ function EditPlatesButton() {
 export function PlateCalculatorScreen() {
   const { t } = useI18n();
   const profileQuery = useProfile();
-  const params = useLocalSearchParams<{ weightKg?: string; equipment?: string; unit?: string }>();
+  const params = useLocalSearchParams<{ weightKg?: string; equipment?: string; unit?: string; gymId?: string }>();
   const profile = profileQuery.data;
+  const gyms = useGyms();
+  const { gymId: preferredGymId, isError: preferenceError, rememberGym } = useGymPreference();
+  const [routeGymOverride, setRouteGymOverride] = useState(params.gymId);
+  const gymId = routeGymOverride ?? preferredGymId ?? "";
+  function setGymId(id: string) {
+    setRouteGymOverride(undefined);
+    rememberGym(id || null);
+  }
+  const equipment = gymId ? gyms.data?.find(item => item.id === gymId) : profile;
   const [mode, setMode] = useState<LoadMode>(() => asMode(params.equipment));
   const [unitOverride, setUnitOverride] = useState<Unit | null>(() =>
     params.unit === "kg" || params.unit === "lb"
@@ -82,13 +93,13 @@ export function PlateCalculatorScreen() {
   });
   const inputWeight = parseWeight(weightText);
   const weightKg = inputWeight == null ? null : unitToKg(inputWeight, unit);
-  const barKg = profile?.bar_weight_kg ?? 20;
+  const barKg = equipment?.bar_weight_kg ?? 20;
   const isBarbell = mode === "free_weight";
   const isDumbbell = mode === "dumbbell";
   const barCoversAll = weightKg != null && isBarbell && weightKg <= barKg;
   const specs = useMemo(
-    () => buildPlateSpecs(profile?.plates_kg ?? [], profile?.plates_lb ?? []),
-    [profile?.plates_kg, profile?.plates_lb],
+    () => buildPlateSpecs(equipment?.plates_kg ?? [], equipment?.plates_lb ?? []),
+    [equipment?.plates_kg, equipment?.plates_lb],
   );
   const variants = useMemo(
     () => weightKg != null && !isDumbbell && !barCoversAll
@@ -133,6 +144,7 @@ export function PlateCalculatorScreen() {
   return (
     <Screen bottomPadding={35}>
       <Header title={t("settings.plateCalc")} back />
+      <GymSelect preferenceError={preferenceError} gyms={gyms.data} retry={gyms.isError ? () => void gyms.refetch() : undefined} value={gymId} onChange={setGymId} />
       <Card style={{ marginTop: 14, marginBottom: 14 }}>
         <Text variant="micro" tone="muted">{t("settings.plateCalc")}</Text>
         <Segmented
@@ -170,7 +182,7 @@ export function PlateCalculatorScreen() {
         <Text variant="caption" tone="faint" style={{ marginTop: 12 }}>{t("settings.plateCalcHint")}</Text>
       </Card>
 
-      {weightKg != null ? <>
+      {weightKg != null && equipment ? <>
         <Text variant="micro" tone="muted" style={{ marginBottom: 9 }}>{title}</Text>
         <GradientCard variant="indigo" radius={radii.tile} padding={20} style={{ minHeight: 124, marginBottom: 20 }}>
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -281,7 +293,7 @@ export function PlateCalculatorScreen() {
         )}
       </> : null}
 
-      <EditPlatesButton />
+      <EditPlatesButton gymId={gymId} />
     </Screen>
   );
 }

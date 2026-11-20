@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Exercise, Workout } from "@deepgym/core/types";
+import { updateCatalogExercise } from "@deepgym/core/gym-data";
+import type { Exercise, ExerciseInput, Workout } from "@deepgym/core/types";
 import type { SetType } from "@deepgym/core/workout";
 import { roundWeight } from "@deepgym/core/weight";
 import { supabase } from "../lib/supabase";
@@ -175,10 +176,7 @@ export function exerciseProgress(records: ExerciseSetRecord[], metric: ProgressM
   return points.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-export type ExerciseEditPatch = Partial<Pick<
-  Exercise,
-  "name" | "muscle_group_id" | "equipment" | "machine_settings" | "unit" | "working_weight_kg"
->>;
+export type ExerciseEditPatch = Partial<ExerciseInput>;
 
 export function useUpdateExerciseDetail() {
   const { user } = useAuth();
@@ -186,17 +184,10 @@ export function useUpdateExerciseDetail() {
   return useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: ExerciseEditPatch }): Promise<Exercise> => {
       if (!user) throw new Error("Not signed in");
-      const { data, error } = await supabase
-        .from("exercises")
-        .update(patch)
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .select("*")
-        .single();
-      if (error) throw error;
-      return data as Exercise;
+      return updateCatalogExercise(supabase, user.id, id, patch);
     },
-    onSuccess: (updated) => {
+    onSuccess: (updated, { patch }) => {
+      if (patch.gym_ids !== undefined) queryClient.invalidateQueries({ queryKey: ["gyms", user?.id] });
       queryClient.setQueryData<Exercise[]>(["exercises", user?.id], (current) =>
         current?.map((exercise) => exercise.id === updated.id ? updated : exercise),
       );
@@ -217,6 +208,7 @@ export function useDeleteExerciseDetail() {
       if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gyms"] });
       queryClient.invalidateQueries({ queryKey: ["exercises", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["workouts", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["templates", user?.id] });

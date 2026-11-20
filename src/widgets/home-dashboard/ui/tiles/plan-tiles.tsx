@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
+import { useLocalToday } from "@deepgym/core/use-local-today";
 import { WorkoutCard } from "@/entities/workout";
 import { useWorkoutTemplates } from "@/entities/workout-template";
 import {
@@ -12,7 +13,7 @@ import {
 import { workoutSetCount } from "@/features/training-analytics";
 import { useI18n } from "@/shared/i18n";
 import { cn } from "@/shared/lib/cn";
-import { formatDay } from "@/shared/lib/dates";
+import { formatDay, fromISODate } from "@/shared/lib/dates";
 import {
   IconCalendar,
   IconChart,
@@ -30,12 +31,13 @@ import styles from "./tiles.module.scss";
 export function NextTile() {
   const { t } = useI18n();
   const { workouts, profile, workoutsLoaded } = useHomeData();
+  const today = useLocalToday();
   const prediction = useMemo(
     () =>
       workoutsLoaded
-        ? nextScheduledWorkout(profile?.training_schedule, workouts)
+        ? nextScheduledWorkout(profile?.training_schedule, workouts, fromISODate(today))
         : null,
-    [profile?.training_schedule, workouts, workoutsLoaded],
+    [profile?.training_schedule, workouts, workoutsLoaded, today],
   );
 
   if (prediction) {

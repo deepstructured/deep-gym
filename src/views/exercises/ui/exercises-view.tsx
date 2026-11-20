@@ -8,6 +8,8 @@ import {
   useExercises,
   type Exercise,
 } from "@/entities/exercise";
+import { filterExercisesByGym } from "@deepgym/core/gym-data";
+import { GymSelect, useGymPreference, useGyms } from "@/entities/gym";
 import { useMuscleGroups } from "@/entities/muscle-group";
 import { useProfile } from "@/entities/user";
 import { useI18n } from "@/shared/i18n";
@@ -18,6 +20,7 @@ import {
   Button,
   Chip,
   DotValue,
+  ErrorNote,
   EmptyState,
   IconChevronRight,
   IconPlus,
@@ -34,30 +37,38 @@ export function ExercisesView() {
   const { data: groups, isLoading: groupsLoading } = useMuscleGroups();
   const { data: exercises, isLoading } = useExercises();
   const { data: profile } = useProfile();
+  const { data: gyms, isError: gymsError } = useGyms();
+  const { filter: gymFilter, rememberFilter, gymId: lastGym, isError: preferenceError } = useGymPreference();
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
   const unit = profile?.unit ?? "kg";
+  const gymId = gymFilter && gymFilter !== "none" ? gymFilter : null;
+
+  const catalog = useMemo(
+    () => filterExercisesByGym(exercises ?? [], gyms ?? [], gymFilter),
+    [exercises, gyms, gymFilter],
+  );
 
   const filtered = useMemo(() => {
-    let list = exercises ?? [];
+    let list = catalog;
     if (groupFilter) list = list.filter((e) => e.muscle_group_id === groupFilter);
     const q = search.trim().toLowerCase();
     if (q) list = list.filter((e) => e.name.toLowerCase().includes(q));
     return list;
-  }, [exercises, groupFilter, search]);
+  }, [catalog, groupFilter, search]);
 
   const countByGroup = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const exercise of exercises ?? []) {
+    for (const exercise of catalog) {
       counts.set(
         exercise.muscle_group_id,
         (counts.get(exercise.muscle_group_id) ?? 0) + 1,
       );
     }
     return counts;
-  }, [exercises]);
+  }, [catalog]);
 
   const visibleGroups = useMemo(() => {
     if (!groups) return [];
@@ -92,6 +103,8 @@ export function ExercisesView() {
           a sticky left rail and the list into a multi-column grid. */}
       <div className={styles.layout}>
         <div className={styles.filters}>
+          {(Boolean(gyms?.length) || Boolean(gymFilter)) && <GymSelect gyms={gyms ?? []} value={gymFilter} filter onChange={rememberFilter} />}
+          {preferenceError && <ErrorNote message={t("gym.preferenceError")} />}
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -105,7 +118,7 @@ export function ExercisesView() {
             >
               {t("common.all")}
               <span className={styles.groupCount}>
-                {exercises?.length ?? ""}
+                {exercises ? catalog.length : ""}
               </span>
             </Chip>
             {groups?.map((group) => (
@@ -132,7 +145,7 @@ export function ExercisesView() {
           ) : visibleGroups.length === 0 ? (
             <EmptyState
               title={t("exercises.emptyTitle")}
-              hint={t("exercises.emptyHint")}
+              hint={t(gymFilter && gymFilter !== "none" && !catalog.length ? "gym.notAssigned" : "exercises.emptyHint")}
             />
           ) : (
             <div className={styles.sections}>
@@ -147,6 +160,7 @@ export function ExercisesView() {
                       <ExerciseRow
                         key={exercise.id}
                         exercise={exercise}
+                        href={exerciseHref(exercise.id, gymId)}
                         unit={unit}
                         bodyWeightKg={profile?.body_weight_kg ?? null}
                       />
@@ -166,12 +180,14 @@ export function ExercisesView() {
         <ExerciseCreateForm
           key={createOpen ? "open" : "closed"}
           groups={groups ?? []}
+          gyms={gyms ?? (gymsError ? null : undefined)}
           unit={unit}
           defaultGroupId={groupFilter}
+          defaultGymId={gymId ?? lastGym}
           submitLabel={t("picker.createNew")}
           onCreated={(exercise) => {
             setCreateOpen(false);
-            router.push(`/exercises/${exercise.id}`);
+            router.push(exerciseHref(exercise.id, gymId));
           }}
         />
       </Sheet>
@@ -179,12 +195,18 @@ export function ExercisesView() {
   );
 }
 
+function exerciseHref(id: string, gymId: string | null) {
+  return gymId ? `/exercises/${id}?gym=${encodeURIComponent(gymId)}` : `/exercises/${id}`;
+}
+
 function ExerciseRow({
   exercise,
+  href,
   unit,
   bodyWeightKg,
 }: {
   exercise: Exercise;
+  href: string;
   unit: "kg" | "lb";
   bodyWeightKg: number | null;
 }) {
@@ -196,7 +218,7 @@ function ExerciseRow({
       : exercise.working_weight_kg;
   return (
     <Link
-      href={`/exercises/${exercise.id}`}
+      href={href}
       className={cn(styles.row, "surface-well")}
     >
       <div className={styles.rowText}>

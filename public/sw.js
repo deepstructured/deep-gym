@@ -1,5 +1,5 @@
 /* DeepGym service worker — app-shell caching with offline fallback. */
-const VERSION = "deepgym-v10";
+const VERSION = "deepgym-v11";
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGE_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = "/offline";

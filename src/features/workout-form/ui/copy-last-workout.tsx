@@ -18,6 +18,7 @@ import styles from "./copy-last-workout.module.scss";
 
 interface CopyLastWorkoutProps {
   /** Workout type selected in the form — the last workout of this type is offered. */
+  gymId?: string | null;
   type: string;
   /** The draft's date — source cutoff and same-weekday preference anchor. */
   date: string;
@@ -35,6 +36,7 @@ interface CopyLastWorkoutProps {
  */
 export function CopyLastWorkout({
   type,
+  gymId,
   date,
   unit,
   onCopy,
@@ -51,6 +53,7 @@ export function CopyLastWorkout({
     type,
     date,
     typeRunsOnSeveralDays ? date : null,
+    gymId,
   );
 
   if (!last || last.workout_exercises.length === 0) return null;

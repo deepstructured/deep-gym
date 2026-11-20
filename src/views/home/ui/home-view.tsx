@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useLocalToday } from "@deepgym/core/use-local-today";
 import { useProfile } from "@/entities/user";
 import { useWorkoutCount } from "@/entities/workout";
 import { FirstWorkoutGuideCard } from "@/features/first-workout";
 import { useI18n } from "@/shared/i18n";
-import { formatDayFull, todayISO } from "@/shared/lib/dates";
+import { formatDayFull } from "@/shared/lib/dates";
 import { AppShell } from "@/widgets/app-shell";
 import { HomeDashboard } from "@/widgets/home-dashboard";
 import { cn } from "@/shared/lib/cn";
@@ -15,6 +16,7 @@ import styles from "./home-view.module.scss";
 
 export function HomeView() {
   const { t } = useI18n();
+  const today = useLocalToday();
   const { data: profile } = useProfile();
   const { data: workoutCount } = useWorkoutCount();
   const firstName = profile?.display_name?.split(" ")[0] ?? t("home.athlete");
@@ -26,7 +28,7 @@ export function HomeView() {
         <div className={styles.headerText}>
           <div className={styles.dateRow}>
             <BrandMark width={22} />
-            <p className={styles.date}>{formatDayFull(todayISO())}</p>
+            <p className={styles.date}>{formatDayFull(today)}</p>
           </div>
           <h1 className={styles.greeting}>
             {t("home.greeting", { name: firstName })}

@@ -1,8 +1,9 @@
 "use client";
 
+import { createCatalogExercise, updateCatalogExercise } from "@deepgym/core/gym-data";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { requireAuthUserId, useAuthSession } from "@/shared/lib/auth-session";
-import { readAllPages } from "@/shared/lib/supabase/pagination";
+import { fetchExercises } from "@deepgym/core/catalog-read";
 import { getSupabaseBrowser } from "@/shared/lib/supabase/client";
 import type { Exercise, ExerciseInput } from "../model/types";
 
@@ -13,12 +14,7 @@ export function useExercises(enabled = true) {
   return useQuery({
     enabled: enabled && status === "authenticated",
     queryKey: ["exercises", userId],
-    queryFn: async ({ signal }): Promise<Exercise[]> => readAllPages(async (page) => {
-      const result = await getSupabaseBrowser().from("exercises")
-        .select("*", { count: page.count }).eq("user_id", userId!)
-        .order("name").order("id").range(page.from, page.to).abortSignal(signal);
-      return { ...result, data: result.data as Exercise[] | null };
-    }, signal),
+    queryFn: ({ signal }) => fetchExercises(getSupabaseBrowser(), userId!, signal),
   });
 }
 
@@ -62,22 +58,13 @@ export function useExerciseUsageCount(id: string) {
 export function useCreateExercise() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: ExerciseInput): Promise<Exercise> => {
-      const supabase = getSupabaseBrowser();
-      const userId = requireAuthUserId();
-      const normalizedInput =
-        input.equipment === "bodyweight"
-          ? { ...input, working_weight_kg: null }
-          : input;
-      const { data, error } = await supabase
-        .from("exercises")
-        .insert({ ...normalizedInput, user_id: userId })
-        .select("*")
-        .single();
-      if (error) throw error;
-      return data as Exercise;
+    mutationFn: (input: ExerciseInput & { gym_id?: string | null }) => {
+      return createCatalogExercise(getSupabaseBrowser(), requireAuthUserId(), input);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["exercises"] }),
+    onSuccess: (_exercise, input) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["exercises"] }),
+      ...(input.gym_ids?.length || input.gym_id ? [queryClient.invalidateQueries({ queryKey: ["gyms"] })] : []),
+    ]),
   });
 }
 
@@ -91,18 +78,10 @@ export function useUpdateExercise() {
       id: string;
       patch: Partial<ExerciseInput>;
     }) => {
-      const supabase = getSupabaseBrowser();
-      const normalizedPatch =
-        patch.equipment === "bodyweight"
-          ? { ...patch, working_weight_kg: null }
-          : patch;
-      const { error } = await supabase
-        .from("exercises")
-        .update(normalizedPatch)
-        .eq("id", id).eq("user_id", requireAuthUserId());
-      if (error) throw error;
+      return updateCatalogExercise(getSupabaseBrowser(), requireAuthUserId(), id, patch);
     },
-    onSuccess: (_data, { id }) => {
+    onSuccess: (_data, { id, patch }) => {
+      if (patch.gym_ids !== undefined) queryClient.invalidateQueries({ queryKey: ["gyms"] });
       queryClient.invalidateQueries({ queryKey: ["exercises"] });
       queryClient.invalidateQueries({ queryKey: ["exercise", id] });
       queryClient.invalidateQueries({ queryKey: ["workouts"] });
@@ -122,6 +101,7 @@ export function useDeleteExercise() {
       if (error) throw error;
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["gyms"] });
       queryClient.invalidateQueries({ queryKey: ["exercises"] });
       queryClient.invalidateQueries({ queryKey: ["workouts"] });
       queryClient.invalidateQueries({ queryKey: ["exercise-history"] });

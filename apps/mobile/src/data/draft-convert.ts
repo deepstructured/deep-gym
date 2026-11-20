@@ -22,6 +22,7 @@ export function draftToInput(draft: WorkoutDraft, defaultUnit: Unit): WorkoutInp
   return {
     type: draft.type.trim() || "Workout",
     date: draft.date,
+    ...(draft.gymId !== undefined ? { gym_id: draft.gymId } : {}),
     notes: draft.notes.trim() || null,
     body_weight_kg: bodyWeightKg,
     exercises: draft.exercises.map((exercise) => ({

@@ -14,6 +14,9 @@ export interface MuscleGroup {
 export interface Profile {
   id: string;
   display_name: string | null;
+  /** Last explicit workout venue. Missing on snapshots from before migration 0014. */
+  last_gym_id?: string | null;
+  gym_filter_all?: boolean;
   unit: Unit;
   bar_weight_kg: number;
   /** Plate denominations in kg (20, 10, 5…). */
@@ -44,10 +47,25 @@ export interface Profile {
   created_at: string;
 }
 
+export interface GymInput {
+  name: string;
+  bar_weight_kg: number;
+  plates_kg: number[];
+  plates_lb: number[];
+  exercise_ids: string[];
+}
+
+export interface Gym extends GymInput {
+  id: string;
+  user_id: string;
+}
+
 export interface Exercise {
   id: string;
   user_id: string;
   muscle_group_id: string;
+  /** A missing flag denotes a universal, pre-0014 exercise. */
+  is_universal?: boolean;
   name: string;
   equipment: Equipment;
   machine_settings: string | null;
@@ -58,6 +76,8 @@ export interface Exercise {
 }
 
 export interface ExerciseInput {
+  /** Empty = universal; IDs = restricted; omitted on edit retains the current scope. */
+  gym_ids?: string[];
   name: string;
   muscle_group_id: string;
   equipment: Equipment;
@@ -90,6 +110,8 @@ export interface WorkoutExercise {
 }
 
 export interface Workout {
+  /** Optional location. An omitted field preserves the location on legacy edits. */
+  gym_id?: string | null;
   id: string;
   user_id: string;
   type: string;
@@ -103,6 +125,8 @@ export interface Workout {
 
 /** Input shape used by create/update mutations. */
 export interface WorkoutInput {
+  /** Optional location. An omitted field preserves the location on legacy edits. */
+  gym_id?: string | null;
   type: string;
   date: string;
   notes: string | null;

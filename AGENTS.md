@@ -6,6 +6,10 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 DeepGym — a mobile-first PWA workout tracker. Next.js 15 (App Router) + React 19 + TypeScript + Tailwind CSS 4 + Supabase (Auth + Postgres with RLS), TanStack React Query, Zustand. Detailed docs: [SETUP.md](SETUP.md) (setup, auth providers, dev utilities) and [docs/APP_SCHEMA_RU.md](docs/APP_SCHEMA_RU.md) (full app schema, in Russian).
 
+## Design skills
+
+Use the project-local Impeccable and Taste Skill for interface changes in the PWA and Expo app. Treat the DeepGym palette, existing components and interaction patterns as the design reference. Use Taste Skill as a secondary check on alignment, small-screen readability and touch targets. Numeric data uses IBM Plex Mono Medium. Project installations live in `.agents/skills/impeccable` and `.agents/skills/design-taste-frontend`. On a fresh checkout, run `npx skills install --frozen-lockfile` from the project root to restore the versions in `skills-lock.json`.
+
 ## Commands
 
 ```bash
@@ -71,6 +75,7 @@ Key locations:
 
 ## Domain conventions
 
+- Gym availability is shared by the PWA and Expo. Universal exercises appear in every gym, including newly created gyms. Restricted exercises use explicit `gym_exercises` rows. New workouts default to the profile’s last selected gym. Preserve the gym on an existing workout or a draft that already has content.
 - Warm-up sets (`sets.set_type = 'warmup'`, `DraftSet.warmup`) are saved and displayed but never count toward statistics — filter with `isWorkingRecord` / `workingSets`. `set_type` is only sent on insert when a workout has warm-ups, so plain workouts still save before migration 0008.
 - Weights are **always stored in kg** (`weight_kg`). Display unit is resolved per exercise: `exercise.unit ?? profile.unit`.
 - Auth: Google OAuth + Telegram OTP (bot sends 6-digit code → `/api/auth/telegram/*`). `middleware.ts` redirects unauthenticated users to `/login`; public paths: `/login`, `/auth`, `/api`, `/offline`.

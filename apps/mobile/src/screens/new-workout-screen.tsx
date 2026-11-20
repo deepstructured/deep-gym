@@ -1,3 +1,4 @@
+import { filterExercisesByGym } from "@deepgym/core/gym-data";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { router, useLocalSearchParams } from "expo-router";
@@ -5,8 +6,10 @@ import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import type { Exercise, Workout, WorkoutTemplateExercise } from "@deepgym/core/types";
 import { translateCount } from "@deepgym/core/i18n";
+import { isValidISODate } from "@deepgym/core/dates";
+import { useLocalToday } from "@deepgym/core/use-local-today";
 import { normalizeTrainingSchedule } from "@deepgym/core/training-schedule";
-import { BASE_WORKOUT_TYPES } from "@deepgym/core/workout";
+import { BASE_WORKOUT_TYPES, resolveWorkoutDraftDate, resolveWorkoutDraftGym } from "@deepgym/core/workout";
 import { formatWeight, kgToUnit, parseSignedWeight, parseWeight, roundWeight, unitToKg } from "@deepgym/core/weight";
 import { colors, fonts, radii } from "../theme";
 import { BottomSheet, Button, Card, Chip, Screen, Text } from "../ui";
@@ -29,8 +32,10 @@ import { userErrorMessage } from "../lib/user-error";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../providers/auth-provider";
 import { useI18n } from "../providers/locale-provider";
-import { Header, LoadingState } from "./common";
+import { ErrorState, Header, LoadingState } from "./common";
 import { fromISO, localISO } from "./format";
+import { useGymPreference, useGyms } from "../data/gyms";
+import { GymSelect } from "./gym-select";
 import { InlineExerciseCreate } from "./inline-exercise-create";
 import { SortableWorkoutExercises } from "./sortable-workout-exercises";
 import { WorkoutBodyweightLoad } from "./workout-bodyweight-load";
@@ -41,20 +46,12 @@ import { WorkoutGlyph } from "./workout-glyphs";
 import { WorkoutPlateSheet, type WorkoutPlateContext } from "./workout-plate-sheet";
 import { withWarmupSet } from "./workout-warmup";
 
-function isValidDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const [year, month, day] = value.split("-").map(Number);
-  return localISO(new Date(year, month - 1, day)) === value;
-}
-
 function pickerDate(value: string): Date {
-  if (!isValidDate(value)) return new Date();
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day, 12);
+  return isValidISODate(value) ? new Date(`${value}T12:00:00`) : new Date();
 }
 
 function inputDateLabel(value: string): string {
-  if (!isValidDate(value)) return value;
+  if (!isValidISODate(value)) return value;
   return pickerDate(value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -136,12 +133,15 @@ function copiedExercises(workout: Workout, mode: CopyMode, unit: "kg" | "lb", bo
   });
 }
 
+
 export function NewWorkoutScreen() {
   const { t, lang } = useI18n();
   const { user } = useAuth();
   const params = useLocalSearchParams<{ type?: string; date?: string; template?: string; repeat?: string; first?: string }>();
   const profile = useProfile();
   const exercises = useExercises();
+  const gyms = useGyms();
+  const preference = useGymPreference();
   const groups = useMuscleGroups();
   const templates = useTemplates();
   const history = useWorkouts();
@@ -149,16 +149,17 @@ export function NewWorkoutScreen() {
   const createWorkout = useCreateWorkout();
   const updateMachine = useUpdateExerciseDetail();
   const draft = useWorkoutDraft((state) => state.draft);
+  const today = useLocalToday();
+  const workoutDate = resolveWorkoutDraftDate(draft, today);
   const hydrated = useWorkoutDraft((state) => state.hydrated);
   const syncReady = useWorkoutDraft((state) => state.syncReady);
-  const bodyWeightCutoff = isValidDate(draft.date) ? new Date(`${draft.date}T23:59:59.999`).toISOString() : undefined;
+  const bodyWeightCutoff = isValidISODate(workoutDate) ? new Date(`${workoutDate}T23:59:59.999`).toISOString() : undefined;
   const bodyWeights = useBodyWeightMeasurements({ limit: 1, to: bodyWeightCutoff, enabled: syncReady && Boolean(profile.data) && Boolean(bodyWeightCutoff) });
   const logWeight = useLogBodyWeight();
   const cloudVerified = useWorkoutDraft((state) => state.cloudVerified);
   const draftOwnerId = useWorkoutDraft((state) => state.ownerId);
   const pendingRemote = useWorkoutDraft((state) => state.pendingRemote);
   const edit = useWorkoutDraft((state) => state.edit);
-  const replace = useWorkoutDraft((state) => state.replace);
   const reset = useWorkoutDraft((state) => state.reset);
   const resolveConflict = useWorkoutDraft((state) => state.resolveConflict);
   const [exercisePicker, setExercisePicker] = useState(false);
@@ -195,7 +196,15 @@ export function NewWorkoutScreen() {
   const unit = profile.data?.unit ?? "kg";
   const groupName = new Map((groups.data ?? []).map((group) => [group.id, group.name]));
   const exerciseById = new Map((exercises.data ?? []).map((exercise) => [exercise.id, exercise]));
-  const filteredExercises = (exercises.data ?? []).filter((exercise) =>
+  const gymId = resolveWorkoutDraftGym(draft, preference.gymId);
+  const gym = gyms.data?.find((item) => item.id === gymId);
+  const missingGym = Boolean(gymId && !gym);
+  const availableExercises = filterExercisesByGym(exercises.data ?? [], gyms.data ?? [], gymId ?? "");
+  const outOfScope = gym && exercises.data
+    ? draft.exercises.filter(entry => exerciseById.get(entry.exerciseId)?.is_universal === false &&
+        !gym.exercise_ids.includes(entry.exerciseId))
+    : [];
+  const filteredExercises = availableExercises.filter((exercise) =>
     (!pickerGroupId || exercise.muscle_group_id === pickerGroupId) &&
     exercise.name.toLocaleLowerCase().includes(pickerSearch.trim().toLocaleLowerCase()),
   );
@@ -204,7 +213,7 @@ export function NewWorkoutScreen() {
     ? exercises.data?.find((exercise) => exercise.id === toolExercise.exerciseId)?.machine_settings ?? toolExercise.machineSettings
     : null;
   const comparisonSessions = toolExercise
-    ? (history.data ?? []).filter((workout) => workout.date < draft.date)
+    ? (history.data ?? []).filter((workout) => workout.date < workoutDate)
       .flatMap((workout) => workout.workout_exercises
         .filter((entry) => entry.exercise_id === toolExercise.exerciseId)
         .map((entry) => ({ workout, entry })))
@@ -219,14 +228,15 @@ export function NewWorkoutScreen() {
   const daysInCompareMonth = new Date(compareYear, compareMonthNumber, 0).getDate();
   const calendarCells = Array.from({ length: Math.ceil((calendarOffset + daysInCompareMonth) / 7) * 7 }, (_, index) => index - calendarOffset + 1);
   const availableCompareDates = new Set(compareDates);
-  const pastWorkouts = (history.data ?? []).filter((workout) => workout.date < draft.date && workout.workout_exercises.length > 0);
+  const gymHistory = (history.data ?? []).filter((workout) => !gymId || workout.gym_id === gymId);
+  const pastWorkouts = gymHistory.filter((workout) => workout.date < workoutDate && workout.workout_exercises.length > 0);
   const sameType = pastWorkouts.filter((workout) => workout.type === draft.type);
   const schedule = normalizeTrainingSchedule(profile.data?.training_schedule);
   const preferWeekday = schedule.filter((type) => type === draft.type).length >= 2;
   const lastOfType = preferWeekday
-    ? sameType.find((workout) => fromISO(workout.date).getDay() === pickerDate(draft.date).getDay()) ?? sameType[0]
+    ? sameType.find((workout) => fromISO(workout.date).getDay() === pickerDate(workoutDate).getDay()) ?? sameType[0]
     : sameType[0];
-  const copyWorkouts = (history.data ?? []).filter((workout) => workout.workout_exercises.length > 0);
+  const copyWorkouts = gymHistory.filter((workout) => workout.workout_exercises.length > 0);
   const copyMarkedDates = new Set(copyWorkouts.map((workout) => workout.date));
   const [copyYear, copyMonthNumber] = copyMonth.split("-").map(Number);
   const copyFirst = new Date(copyYear, copyMonthNumber - 1, 1, 12);
@@ -300,8 +310,12 @@ export function NewWorkoutScreen() {
   }
 
   function patch(change: (current: WorkoutDraft) => WorkoutDraft) {
-    if (!user || saveInFlight.current) return;
-    edit(user.id, change);
+    if (!user || useWorkoutDraft.getState().ownerId !== user.id || saveInFlight.current) return;
+    edit(user.id, current => change({
+      ...current,
+      date: resolveWorkoutDraftDate(current, localISO()),
+      gymId: resolveWorkoutDraftGym(current, preference.gymId),
+    }));
   }
 
   function updateExercise(key: string, change: (entry: DraftExercise) => DraftExercise) {
@@ -324,7 +338,7 @@ export function NewWorkoutScreen() {
     closeExercisePicker();
   }
 
-  async function applyTemplate(id: string) {
+  async function applyTemplate(id: string, launch: Partial<Pick<WorkoutDraft, "type" | "date" | "dateExplicit">> = {}) {
     if (saveInFlight.current) return;
     const { data, error: templateError } = await supabase
       .from("workout_templates")
@@ -339,18 +353,17 @@ export function NewWorkoutScreen() {
       setTemplatePicker(false);
       return;
     }
-    const next: WorkoutDraft = {
-      ...draft,
+    patch(current => ({
+      ...current,
       type: data.type,
+      ...launch,
       exercises: entries.map((entry) => exerciseToDraft(
         entry.exercise,
         groupName.get(entry.exercise.muscle_group_id) ?? "",
         unit,
-        draftBodyWeightKg(draft, unit),
+        draftBodyWeightKg(current, unit),
       )),
-    };
-    if (!user || saveInFlight.current) return;
-    replace(next, user.id, new Date().toISOString());
+    }));
     setTemplatePicker(false);
   }
 
@@ -378,64 +391,65 @@ export function NewWorkoutScreen() {
   }, []);
 
   useEffect(() => {
-    if (!syncReady || !user || !profile.data || saveInFlight.current) return;
-    const key = `${params.type ?? ""}|${params.date ?? ""}|${params.template ?? ""}`;
-    if (key === "||" || handledParams.current === key) return;
-    handledParams.current = key;
-    if (params.template) {
-      const perform = () => void applyTemplate(params.template!).catch((failure) =>
-        setError(userErrorMessage(t, failure)));
-      if (draftIsEmpty(useWorkoutDraft.getState().draft)) perform();
-      else requestReplace(perform);
+    const { type, date, template, repeat } = params;
+    if (!type && !date && !template && !repeat) {
+      handledParams.current = null;
       return;
     }
-    if (draftIsEmpty(useWorkoutDraft.getState().draft)) {
-      edit(user.id, (current) => ({
-        ...current,
-        type: params.type ?? current.type,
-        date: params.date && isValidDate(params.date) ? params.date : current.date,
-      }));
-    }
-  }, [syncReady, user?.id, profile.data?.id, params.type, params.date, params.template]);
-
-  useEffect(() => {
-    if (!syncReady || !user || !profile.data || !groups.data || !params.repeat || !repeatWorkout.isFetched || saveInFlight.current) return;
-    const key = `repeat:${params.repeat}`;
+    if (!syncReady || !user || !profile.data || !preference.ready || saveInFlight.current) return;
+    if (repeat && (!repeatWorkout.isFetched || !groups.data)) return;
+    const key = JSON.stringify([type, date, template, repeat]);
     if (handledParams.current === key) return;
     handledParams.current = key;
-    if (!repeatWorkout.data) {
-      setError(t("workout.notFound"));
-      router.setParams({ repeat: "" });
-      return;
-    }
-    const source = repeatWorkout.data;
-    const perform = () => {
-      const current = useWorkoutDraft.getState().draft;
-      const bodyWeightKg = draftBodyWeightKg(current, unit);
-      const copied = copiedExercises(source, "full", unit, bodyWeightKg).map((entry) => ({
-        ...entry,
-        muscleGroupName: groupName.get(exerciseById.get(entry.exerciseId)?.muscle_group_id ?? "") ?? entry.muscleGroupName,
-      }));
-      replace({
-        ...current,
-        type: params.type || source.type,
-        notes: "",
-        showNotes: false,
-        exercises: rebaseBodyweightExercises(copied, bodyWeightKg),
-      }, user.id, new Date().toISOString());
+
+    const launch = {
+      ...(type ? { type } : {}),
+      ...(date && isValidISODate(date) ? { date, dateExplicit: true } : {}),
     };
-    if (draftIsEmpty(useWorkoutDraft.getState().draft)) perform();
-    else requestReplace(perform);
-    router.setParams({ repeat: "" });
-  }, [syncReady, user?.id, profile.data?.id, groups.data, params.repeat, params.type, repeatWorkout.isFetched, repeatWorkout.data]);
+    const empty = draftIsEmpty(useWorkoutDraft.getState().draft);
+    if (template) {
+      const perform = () => void applyTemplate(template, launch).catch(failure => setError(userErrorMessage(t, failure)));
+      if (empty) perform();
+      else requestReplace(perform);
+    } else if (repeat) {
+      const source = repeatWorkout.data;
+      if (source) {
+        const perform = () => patch(current => {
+          const bodyWeightKg = draftBodyWeightKg(current, unit);
+          const copied = copiedExercises(source, "full", unit, bodyWeightKg).map(entry => ({
+            ...entry,
+            muscleGroupName: groupName.get(exerciseById.get(entry.exerciseId)?.muscle_group_id ?? "") ?? entry.muscleGroupName,
+          }));
+          return {
+            ...current,
+            type: source.type,
+            ...launch,
+            notes: "",
+            showNotes: false,
+            exercises: rebaseBodyweightExercises(copied, bodyWeightKg),
+          };
+        });
+        if (empty) perform();
+        else requestReplace(perform);
+      } else {
+        setError(t("workout.notFound"));
+      }
+    } else if (empty && (launch.type || launch.date)) {
+      edit(user.id, current => ({ ...current, ...launch }));
+    }
+    // The tab can remain mounted after saving. Consume this navigation once.
+    router.setParams({ type: "", date: "", template: "", repeat: "" });
+  }, [syncReady, user?.id, profile.data?.id, preference.ready, preference.gymId, groups.data,
+    params.type, params.date, params.template, params.repeat, repeatWorkout.isFetched, repeatWorkout.data]);
 
   // Keep an automatic workout snapshot aligned with the latest measurement
   // at or before the selected day. A manually entered weight remains sticky.
   useEffect(() => {
-    if (!syncReady || !user || !profile.data || bodyWeights.isLoading || !isValidDate(draft.date) || saveInFlight.current) return;
+    if (!syncReady || !user || !profile.data || bodyWeights.isLoading || !isValidISODate(workoutDate) || saveInFlight.current) return;
     const current = useWorkoutDraft.getState().draft;
     if (current.bodyWeightAuto !== true && current.bodyWeight.trim()) return;
-    const cutoff = new Date(`${current.date}T23:59:59.999`).getTime();
+    if (resolveWorkoutDraftDate(current, localISO()) !== workoutDate) return;
+    const cutoff = new Date(`${workoutDate}T23:59:59.999`).getTime();
     const recorded = bodyWeights.data?.[0];
     const cachedAt = profile.data.body_weight_measured_at
       ? new Date(profile.data.body_weight_measured_at).getTime()
@@ -451,7 +465,7 @@ export function NewWorkoutScreen() {
       bodyWeightAuto: true,
       exercises: rebaseBodyweightExercises(value.exercises, selectedKg),
     }));
-  }, [syncReady, user?.id, profile.data, bodyWeights.data, bodyWeights.isLoading, draft.date, draft.bodyWeightAuto, unit]);
+  }, [syncReady, user?.id, profile.data, bodyWeights.data, bodyWeights.isLoading, workoutDate, draft.bodyWeightAuto, unit]);
 
   function copyLast() {
     if (saveInFlight.current) return;
@@ -459,7 +473,7 @@ export function NewWorkoutScreen() {
   }
 
   function openCopyCalendar() {
-    setCopyMonth(isValidDate(draft.date) ? draft.date.slice(0, 7) : localISO().slice(0, 7));
+    setCopyMonth(isValidISODate(workoutDate) ? workoutDate.slice(0, 7) : localISO().slice(0, 7));
     setCopySelectedDay(null);
     setCopyModal({ kind: "day", source: null });
   }
@@ -469,18 +483,19 @@ export function NewWorkoutScreen() {
     if (!source || !user || saveInFlight.current) return;
     const kind = copyModal.kind;
     const apply = () => {
-      const current = useWorkoutDraft.getState().draft;
-      const exercises = copiedExercises(source, mode, unit, draftBodyWeightKg(current, unit)).map((entry) => ({
-        ...entry,
-        muscleGroupName: groupName.get(exerciseById.get(entry.exerciseId)?.muscle_group_id ?? "") ?? entry.muscleGroupName,
-      }));
-      replace({
-        ...current,
-        type: kind === "day" ? source.type : current.type,
-        exercises: draftIsEmpty(current) ? [...current.exercises, ...exercises] : exercises,
-        notes: "",
-        showNotes: false,
-      }, user.id, new Date().toISOString());
+      patch(current => {
+        const exercises = copiedExercises(source, mode, unit, draftBodyWeightKg(current, unit)).map((entry) => ({
+          ...entry,
+          muscleGroupName: groupName.get(exerciseById.get(entry.exerciseId)?.muscle_group_id ?? "") ?? entry.muscleGroupName,
+        }));
+        return {
+          ...current,
+          type: kind === "day" ? source.type : current.type,
+          exercises: draftIsEmpty(current) ? [...current.exercises, ...exercises] : exercises,
+          notes: "",
+          showNotes: false,
+        };
+      });
       setCopyModal(null);
     };
     if (draftIsEmpty(useWorkoutDraft.getState().draft)) apply();
@@ -498,10 +513,13 @@ export function NewWorkoutScreen() {
     setWeightError(null);
     const parsed = parseWeight(draft.bodyWeight);
     if (parsed == null) return setWeightError(t("bodyWeight.invalid"));
-    if (!isValidDate(draft.date)) return setWeightError(t("bodyWeight.invalidTimestamp"));
-    const measuredAt = draft.date === localISO()
-      ? new Date()
-      : new Date(`${draft.date}T12:00:00`);
+    const now = new Date();
+    const localDay = localISO(now);
+    const date = resolveWorkoutDraftDate(useWorkoutDraft.getState().draft, localDay);
+    if (!isValidISODate(date)) return setWeightError(t("bodyWeight.invalidTimestamp"));
+    const measuredAt = date === localDay
+      ? now
+      : new Date(`${date}T12:00:00`);
     if (!Number.isFinite(measuredAt.getTime()) || measuredAt.getTime() > Date.now() + 5 * 60_000) {
       return setWeightError(t("bodyWeight.invalidTimestamp"));
     }
@@ -533,7 +551,8 @@ export function NewWorkoutScreen() {
       return setError(t("workout.draftCloudPending"));
     }
     const currentDraft = current.draft;
-    if (!isValidDate(currentDraft.date)) return setError(t("workout.invalidDate"));
+    if (currentDraft.gymId && gyms.isSuccess && !gyms.data.some((item) => item.id === currentDraft.gymId)) return setError(t("gym.deletedHint"));
+    if (!isValidISODate(currentDraft.date)) return setError(t("workout.invalidDate"));
     if (currentDraft.exercises.length === 0) return setError(t("workout.addExercise"));
     const issue = bodyweightDraftError(currentDraft, unit);
     if (issue) return setError(t(
@@ -590,7 +609,10 @@ export function NewWorkoutScreen() {
     }
   }
 
-  if (!hydrated || !syncReady || draftOwnerId !== user?.id) {
+  if (profile.isError && !profile.data && draft.gymId === undefined && draftIsEmpty(draft)) {
+    return <Screen><Header title={t("workout.new")} back /><ErrorState message={t("common.error")} translated retry={() => void profile.refetch()} /></Screen>;
+  }
+  if (!hydrated || !syncReady || draftOwnerId !== user?.id || (!preference.ready && draft.gymId === undefined && draftIsEmpty(draft))) {
     return <Screen><Header title={t("workout.new")} back /><LoadingState /></Screen>;
   }
 
@@ -641,6 +663,16 @@ export function NewWorkoutScreen() {
           {t("workout.draftCloudPending")}
         </Text>
       ) : null}
+      <GymSelect preferenceError={preference.isError} gyms={gyms.data} retry={gyms.isError ? () => void gyms.refetch() : undefined} value={gymId ?? ""} onChange={(id) => {
+        patch(current => ({ ...current, gymId: id || null }));
+        preference.rememberGym(id || null);
+      }} />
+      {outOfScope.length > 0 && (
+        <View style={{ gap: 2, marginTop: 4 }}>
+          <Text variant="caption" tone="muted">{t("gym.draftScopeHint")}</Text>
+          <Text variant="caption" weight="semibold">{outOfScope.map(entry => entry.name).join(", ")}</Text>
+        </View>
+      )}
       <Text variant="caption" tone="muted" weight="medium" style={{ fontSize: 13, marginTop: 22, marginBottom: 7 }}>{t("workout.type")}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 20, paddingBottom: 15 }}>
         {[...BASE_WORKOUT_TYPES, ...(groups.data ?? []).map((group) => `Split ${group.name}`)].map((value) => (
@@ -649,7 +681,7 @@ export function NewWorkoutScreen() {
       </ScrollView>
       <Text variant="caption" tone="muted" weight="medium" style={{ fontSize: 13, marginTop: 8, marginBottom: 7 }}>{t("workout.date")}</Text>
       <Pressable onPress={() => setDatePickerOpen(true)} disabled={saving || logWeight.isPending} accessibilityRole="button" accessibilityLabel={t("workout.date")} style={dateButtonStyle}>
-        <Text>{inputDateLabel(draft.date)}</Text>
+        <Text>{inputDateLabel(workoutDate)}</Text>
         {Platform.OS === "ios" ? null : <Ionicons name="calendar-outline" size={18} color={colors.muted} />}
       </Pressable>
       {draft.showNotes || draft.notes ? (
@@ -925,6 +957,7 @@ export function NewWorkoutScreen() {
       >
         {creatingExercise ? (
           <InlineExerciseCreate
+            gymId={gymId}
             groups={groups.data ?? []}
             profileUnit={unit}
             defaultGroupId={pickerGroupId}
@@ -975,7 +1008,7 @@ export function NewWorkoutScreen() {
                   <Text tone="muted" style={{ paddingVertical: 16 }}>
                     {pickerSearch.trim()
                       ? t("picker.emptyFor", { query: pickerSearch.trim() })
-                      : t("picker.empty")}
+                      : t(missingGym ? "gym.unavailable" : gym && !availableExercises.length ? "gym.notAssigned" : "picker.empty")}
                   </Text>
                 ) : null}
               </>
@@ -985,7 +1018,7 @@ export function NewWorkoutScreen() {
               block
               dashed
               leading={<Ionicons name="add" size={18} color={colors.lime} />}
-              disabled={groups.isLoading || !groups.data?.length}
+              disabled={groups.isLoading || !groups.data?.length || missingGym}
               onPress={() => setCreatingExercise(true)}
               style={{ marginTop: 18 }}
             >
@@ -997,7 +1030,7 @@ export function NewWorkoutScreen() {
       {Platform.OS === "ios" ? (
         <BottomSheet open={datePickerOpen} onClose={() => setDatePickerOpen(false)} title={t("workout.date")} closeLabel={t("common.close")}>
           <DateTimePicker
-            value={pickerDate(draft.date)}
+            value={pickerDate(workoutDate)}
             mode="date"
             display="inline"
             themeVariant="dark"
@@ -1005,21 +1038,21 @@ export function NewWorkoutScreen() {
             onChange={(_event, selected) => {
               if (!selected) return;
               setWeightSaved(false);
-              patch((current) => ({ ...current, date: localISO(selected) }));
+              patch((current) => ({ ...current, date: localISO(selected), dateExplicit: true }));
             }}
           />
           <Button variant="surface" block onPress={() => setDatePickerOpen(false)} style={{ marginTop: 12 }}>{t("common.close")}</Button>
         </BottomSheet>
       ) : datePickerOpen ? (
         <DateTimePicker
-          value={pickerDate(draft.date)}
+          value={pickerDate(workoutDate)}
           mode="date"
           display="default"
           onChange={(event, selected) => {
             setDatePickerOpen(false);
             if (event.type !== "set" || !selected) return;
             setWeightSaved(false);
-            patch((current) => ({ ...current, date: localISO(selected) }));
+            patch((current) => ({ ...current, date: localISO(selected), dateExplicit: true }));
           }}
         />
       ) : null}
@@ -1274,7 +1307,7 @@ export function NewWorkoutScreen() {
           )
         ) : null}
       </BottomSheet>
-      <WorkoutPlateSheet context={plateContext} onClose={() => setPlateContext(null)} />
+      <WorkoutPlateSheet gymId={gymId} context={plateContext} onClose={() => setPlateContext(null)} />
       <WorkoutConfirmSheet
         open={confirmReplaceOpen}
         title={t("workout.templateReplaceTitle")}

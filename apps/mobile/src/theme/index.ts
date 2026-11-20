@@ -26,7 +26,7 @@ export const fonts = {
   medium: "Urbanist_500Medium",
   semibold: "Urbanist_600SemiBold",
   bold: "Urbanist_700Bold",
-  dot: "Matricha",
+  dot: "IBMPlexMonoMedium",
 } as const;
 
 export const radii = {

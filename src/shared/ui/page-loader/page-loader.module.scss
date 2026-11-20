@@ -70,24 +70,19 @@
   gap: 0.75rem;
 }
 
+// Reserve the layout immediately, but only paint placeholders for slower reads.
+// The branded startup indicator above stays visible from the first frame.
+.placeholder {
+  animation: revealPlaceholder 250ms step-end;
+}
+
 .bone {
-  position: relative;
   display: block;
   flex-shrink: 0;
-  overflow: hidden;
   width: 100%;
   height: 0.875rem;
   border-radius: 0.375rem;
   background: rgba(#fff, 0.055);
-
-  &::after {
-    position: absolute;
-    inset: 0;
-    content: "";
-    background: linear-gradient(100deg, transparent 15%, rgba(#fff, 0.045) 50%, transparent 85%);
-    transform: translateX(-100%);
-    animation: shimmer 1.8s ease-in-out infinite;
-  }
 }
 
 .row,
@@ -184,13 +179,11 @@
   50% { transform: translateX(225%); }
 }
 
-@keyframes shimmer {
-  100% { transform: translateX(100%); }
+@keyframes revealPlaceholder {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bone::after,
-  .loadingTrack span { animation: none; }
-
-  .loadingTrack span { width: 100%; opacity: 0.7; }
+  .loadingTrack span { animation: none; width: 100%; opacity: 0.7; }
 }

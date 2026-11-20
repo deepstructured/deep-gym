@@ -52,6 +52,10 @@ try {
   `);
   const migrations = readdirSync(join(root, "supabase/migrations")).filter(name => name.endsWith(".sql")).sort();
   for (const name of migrations) {
+    if (name.startsWith("0014_")) {
+      command("psql", ["-X", "-v", "ON_ERROR_STOP=1", "-f", join(root, "scripts/gym-scope-migration-regressions.sql")]);
+      console.log("PASS migration from a populated 0013 gym catalog");
+    }
     sql(readFileSync(join(root, "supabase/migrations", name), "utf8"));
     console.log(`PASS migration ${name}`);
   }

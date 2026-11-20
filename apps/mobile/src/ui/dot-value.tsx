@@ -11,7 +11,7 @@ export interface DotValueProps {
   suffixStyle?: StyleProp<TextStyle>;
 }
 
-/** The actual Matricha display face used by the web dashboard. */
+/** Tabular workout metrics use the same face on both clients. */
 export function DotValue({
   value,
   suffix,

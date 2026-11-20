@@ -1,7 +1,7 @@
 import { cn } from "@/shared/lib/cn";
 import styles from "./dot-value.module.scss";
 
-/** A number in the dot-matrix display font, with an optional unit suffix. */
+/** A number in the metrics font, with an optional unit suffix. */
 export function DotValue({
   value,
   suffix,

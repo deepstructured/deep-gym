@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
+import { GymSelect, useGyms } from "@/entities/gym";
 import { useProfile } from "@/entities/user";
 import type { Equipment } from "@/shared/config/workout";
 import { useI18n } from "@/shared/i18n";
@@ -18,10 +19,11 @@ import {
   type Unit,
 } from "@/shared/lib/weight";
 import { cn } from "@/shared/lib/cn";
-import { DotValue, IconArrowUp, Sheet, Tag } from "@/shared/ui";
+import { DotValue, ErrorNote, IconArrowUp, QueryError, Sheet, Tag } from "@/shared/ui";
 import styles from "./plate-sheet.module.scss";
 
 export interface PlateContext {
+  gymId?: string | null;
   weightKg: number;
   /** Changes how the weight is interpreted:
    *  dumbbell — weight of ONE dumbbell, no plate breakdown;
@@ -35,10 +37,12 @@ export interface PlateContext {
 
 interface PlateSheetProps {
   context: PlateContext | null;
+  onGymChange?: (id: string) => void;
+  preferenceError?: boolean;
   onClose: () => void;
 }
 
-export function PlateSheet({ context, onClose }: PlateSheetProps) {
+export function PlateSheet({ context, onClose, onGymChange, preferenceError }: PlateSheetProps) {
   const { t } = useI18n();
   const { data: profile } = useProfile();
 
@@ -47,14 +51,19 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
   const isBarbell = equipment === "free_weight";
 
   const unit: Unit = context?.displayUnit ?? profile?.unit ?? "kg";
-  const barKg = profile?.bar_weight_kg ?? 20;
+  const gymId = context?.gymId;
+  const gyms = useGyms(Boolean(context && (gymId || onGymChange)));
+  const gym = gymId ? gyms.data?.find(item => item.id === gymId) : undefined;
+  const inventory = gymId ? gym : profile;
+  const barKg = inventory?.bar_weight_kg ?? 20;
+  const settingsHref = gymId ? "/settings?open=gyms" : "/settings?open=plates";
 
   const open = context != null;
   const weightKg = context?.weightKg ?? 0;
 
   const specs = useMemo(
-    () => buildPlateSpecs(profile?.plates_kg ?? [], profile?.plates_lb ?? []),
-    [profile?.plates_kg, profile?.plates_lb],
+    () => buildPlateSpecs(inventory?.plates_kg ?? [], inventory?.plates_lb ?? []),
+    [inventory?.plates_kg, inventory?.plates_lb],
   );
 
   const variants = useMemo(
@@ -109,7 +118,17 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
             : t("plates.loadPlates")
       }
     >
-      {open && (
+      {open && onGymChange && (Boolean(gyms.data?.length) || gymId) && (
+        <div className={styles.gymControl}>
+          <GymSelect gyms={gyms.data ?? []} value={gymId ?? ""} onChange={onGymChange} />
+          {preferenceError && <ErrorNote message={t("gym.preferenceError")} />}
+        </div>
+      )}
+      {open && gymId && !gym && (
+        gyms.isError ? <QueryError message={t("gym.loadError")} retrying={gyms.isFetching} onRetry={() => void gyms.refetch()} /> :
+        gyms.isLoading ? <p role="status">{t("common.loading")}</p> : <ErrorNote message={t("gym.deletedHint")} />
+      )}
+      {open && (!gymId || gym) && (
         <div className={styles.body}>
           <div className={cn(styles.hero, "grad-indigo glow-indigo")}>
             <div className={cn(styles.heroDots, "dots-bg")} />
@@ -300,7 +319,7 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
                 {t("plates.missing", {
                   weight: formatWeight(greedy.remainderKg, unit),
                 })}{" "}
-                <Link href="/settings" className={styles.settingsLink} onClick={onClose}>
+                <Link href={settingsHref} className={styles.settingsLink} onClick={onClose}>
                   {t("plates.editPlates")}
                 </Link>
               </p>
@@ -308,7 +327,7 @@ export function PlateSheet({ context, onClose }: PlateSheetProps) {
           ) : (
             <p className={styles.centerNoteBare}>
               {t("plates.none")}{" "}
-              <Link href="/settings" className={styles.settingsLink} onClick={onClose}>
+              <Link href={settingsHref} className={styles.settingsLink} onClick={onClose}>
                 {t("plates.addInSettings")}
               </Link>
               .
